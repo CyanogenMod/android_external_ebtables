@@ -344,13 +344,13 @@ static void final_check(const struct ebt_u_entry *entry,
 		print_error("For IP filtering the protocol must be "
 		            "specified as IPv4");
 
- 	if (ipinfo->bitmask & (EBT_IP_SPORT|EBT_IP_DPORT) &&
- 		(!ipinfo->bitmask & EBT_IP_PROTO || 
- 		ipinfo->invflags & EBT_IP_PROTO ||
- 		(ipinfo->protocol!=IPPROTO_TCP && 
- 			ipinfo->protocol!=IPPROTO_UDP)))
- 		print_error("For port filtering the IP protocol must be "
- 		            "either 6 (tcp) or 17 (udp)");
+	if (ipinfo->bitmask & (EBT_IP_SPORT|EBT_IP_DPORT) &&
+		(!(ipinfo->bitmask & EBT_IP_PROTO) || 
+		ipinfo->invflags & EBT_IP_PROTO ||
+		(ipinfo->protocol!=IPPROTO_TCP && 
+			ipinfo->protocol!=IPPROTO_UDP)))
+		print_error("For port filtering the IP protocol must be "
+		            "either 6 (tcp) or 17 (udp)");
 }
 
 static void print(const struct ebt_u_entry *entry,
