@@ -231,7 +231,6 @@ print(const struct ebt_u_entry *entry, const struct ebt_entry_match *match)
 	struct ebt_vlan_info *vlaninfo =
 	    (struct ebt_vlan_info *) match->data;
 
-	char ethertype_name[21];
 	/*
 	 * Print VLAN ID if they are specified 
 	 */
