@@ -62,9 +62,6 @@ if [ "$CONFIG_BRIDGE" != "n" -a "$CONFIG_NETFILTER" != "n" ]; then
    source net/bridge/netfilter/Config.in
 fi
 if [ "$CONFIG_EXPERIMENTAL" = "y" ]; then
-   if [ "$CONFIG_BRIDGE" != "n" -a "$CONFIG_NETFILTER" != "n" ]; then
-      bool '  netfilter (firewalling) support' CONFIG_BRIDGE_NF
-   fi
    tristate 'CCITT X.25 Packet Layer (EXPERIMENTAL)' CONFIG_X25
    tristate 'LAPB Data Link Driver (EXPERIMENTAL)' CONFIG_LAPB
    tristate 'ANSI/IEEE 802.2 Data link layer protocol' CONFIG_LLC
