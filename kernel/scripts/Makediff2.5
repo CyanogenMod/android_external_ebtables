@@ -9,6 +9,7 @@
 # 20 August 2002: deleted br_db
 # 23 August 2002: made this file for patches vs 2.5, added Config.help
 # 10 September 2002: added br_forward.c
+# 11 September 2002: added MAINTAINERS
 
 export FROM=linux
 export TO=ebt2.0-rc2-dev
@@ -16,6 +17,9 @@ export FILE=ebtables-v2.0-rc2-dev_vs_2.5.31.diff
 
 echo "ebtables-v2.0-rc2-dev - 23 August 2002" >$FILE
 echo >>$FILE
+
+diff -urNp --exclude TAGS $FROM/MAINTAINERS $TO/MAINTAINERS >> $FILE
+
 echo "*** deal with NETFILTER_DEBUG ***" >>$FILE
 echo >>$FILE
 
