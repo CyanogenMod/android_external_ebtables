@@ -327,15 +327,15 @@ static int compare(const struct ebt_entry_match *m1,
 			return 0;
 	}
 	if (arpinfo1->bitmask & EBT_ARP_SRC_MAC) {
-		if (arpinfo1->smaddr != arpinfo2->smaddr)
+		if (memcmp(arpinfo1->smaddr, arpinfo2->smaddr, ETH_ALEN))
 			return 0;
-		if (arpinfo1->smmsk != arpinfo2->smmsk)
+		if (memcmp(arpinfo1->smmsk, arpinfo2->smmsk, ETH_ALEN))
 			return 0;
 	}
 	if (arpinfo1->bitmask & EBT_ARP_DST_MAC) {
-		if (arpinfo1->dmaddr != arpinfo2->dmaddr)
+		if (memcmp(arpinfo1->dmaddr, arpinfo2->dmaddr, ETH_ALEN))
 			return 0;
-		if (arpinfo1->dmmsk != arpinfo2->dmmsk)
+		if (memcmp(arpinfo1->dmmsk, arpinfo2->dmmsk, ETH_ALEN))
 			return 0;
 	}
 	return 1;
