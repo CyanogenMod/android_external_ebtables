@@ -46,6 +46,7 @@ static void init(struct ebt_entry_match *match)
 	struct ebt_pkttype_info *pt = (struct ebt_pkttype_info *)match->data;
 
 	pt->invert = 0;
+	match->version = VERSIONIZE(1,0);
 }
 
 static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,

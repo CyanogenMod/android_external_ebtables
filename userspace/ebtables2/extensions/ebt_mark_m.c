@@ -28,6 +28,7 @@ static void init(struct ebt_entry_match *match)
 	markinfo->mask    = 0;
 	markinfo->invert  = 0;
 	markinfo->bitmask = 0;
+	match->version = VERSIONIZE(1,0);
 }
 
 #define OPT_MARK 0x01
