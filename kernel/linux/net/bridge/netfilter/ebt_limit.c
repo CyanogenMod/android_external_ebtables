@@ -4,7 +4,7 @@
  *	Authors:
  *	Tom Marshall <tommy@home.tig-grr.com>
  *
- *	Mostly copied from netfilter's ipt_limit.c
+ *	Mostly copied from netfilter's ipt_limit.c, see that file for explanation
  *
  *  September, 2003
  *
@@ -17,29 +17,7 @@
 #include <linux/netdevice.h>
 #include <linux/spinlock.h>
 
-/* The algorithm used is the Simple Token Bucket Filter (TBF)
- * see net/sched/sch_tbf.c in the linux source tree
- */
-
 static spinlock_t limit_lock = SPIN_LOCK_UNLOCKED;
-
-/* Rusty: This is my (non-mathematically-inclined) understanding of
-   this algorithm.  The `average rate' in jiffies becomes your initial
-   amount of credit `credit' and the most credit you can ever have
-   `credit_cap'.  The `peak rate' becomes the cost of passing the
-   test, `cost'.
-
-   `prev' tracks the last packet hit: you gain one credit per jiffy.
-   If you get credit balance more than this, the extra credit is
-   discarded.  Every time the match passes, you lose `cost' credits;
-   if you don't have that many, the test fails.
-
-   See Alexey's formal explanation in net/sched/sch_tbf.c.
-
-   To avoid underflow, we multiply by 128 (ie. you get 128 credits per
-   jiffy).  Hence a cost of 2^32-1, means one pass per 32768 seconds
-   at 1024HZ (or one every 9 hours).  A cost of 1 means 12800 passes
-   per second at 100HZ.  */
 
 #define CREDITS_PER_JIFFY 128
 
