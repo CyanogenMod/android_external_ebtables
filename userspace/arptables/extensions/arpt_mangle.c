@@ -105,6 +105,8 @@ parse(int c, char **argv, int invert, unsigned int *flags,
 			exit_error(PARAMETER_PROBLEM, "only --h-length 6 "
 						      "supported");
 		macaddr = ether_aton(argv[optind-1]);
+		if (macaddr == NULL)
+			exit_error(PARAMETER_PROBLEM, "invalid source MAC");
 		memcpy(mangle->src_devaddr, macaddr, e->arp.arhln);
 		mangle->flags |= ARPT_MANGLE_SDEV;
 		break;
@@ -118,6 +120,8 @@ parse(int c, char **argv, int invert, unsigned int *flags,
 			exit_error(PARAMETER_PROBLEM, "only --h-length 6 "
 						      "supported");
 		macaddr = ether_aton(argv[optind-1]);
+		if (macaddr == NULL)
+			exit_error(PARAMETER_PROBLEM, "invalid target MAC");
 		memcpy(mangle->tgt_devaddr, macaddr, e->arp.arhln);
 		mangle->flags |= ARPT_MANGLE_TDEV;
 		break;
