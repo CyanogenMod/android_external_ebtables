@@ -1,4 +1,4 @@
-/* Library which manipulates firewall rules.  Version $Revision: 1.1 $ */
+/* Library which manipulates firewall rules.  Version $Revision: 1.2 $ */
 
 /* Architecture of firewall rules is as follows:
  *
@@ -22,9 +22,11 @@ GET_TARGET(STRUCT_ENTRY *e)
 static int sockfd = -1;
 static void *arptc_fn = NULL;
 
-static const char *hooknames[]
-= { [NF_ARP_IN]  "INPUT",
-    [NF_ARP_OUT]     "OUTPUT",
+static const char *hooknames[] =
+{
+	[NF_ARP_IN]		"INPUT",
+	[NF_ARP_OUT]		"OUTPUT",
+	[NF_ARP_FORWARD]	"FORWARD",
 };
 
 struct counter_map
