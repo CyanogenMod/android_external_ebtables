@@ -29,7 +29,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <linux/netfilter_bridge/ebtables.h>
-#include <linux/br_db.h> // the database
 #include <netinet/in.h>
 #include <netinet/ether.h>
 #include "include/ebtables_u.h"
@@ -44,9 +43,6 @@
 #ifndef PROC_SYS_MODPROBE
 #define PROC_SYS_MODPROBE "/proc/sys/kernel/modprobe"
 #endif
-
-#define DATABASEHOOKNR -2
-#define DATABASEHOOKNAME "DB"
 
 static char *prog_name = PROGNAME;
 static char *prog_version = PROGVERSION;
@@ -759,10 +755,6 @@ int get_hooknr(char* arg)
 	int i;
 	struct ebt_u_chain_list *cl = replace.udc;
 
-	// database is special case (not really a chain)
-	if (!strcmp(arg, DATABASEHOOKNAME))
-		return DATABASEHOOKNR;
-
 	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
 		if (!(replace.valid_hooks & (1 << i)))
 			continue;
@@ -797,7 +789,6 @@ static void print_help()
 "--delete -D chain rulenum     : Delete rule at position rulenum from chain\n"
 "--insert -I chain rulenum     : insert rule at position rulenum in chain\n"
 "--list   -L [chain]           : List the rules in a chain or in all chains\n"
-"--list   -L "DATABASEHOOKNAME"                : List the database (if present)\n"
 "--flush  -F [chain]           : Delete all rules in chain or in all chains\n"
 "--init-table                  : Replace the kernel table with the initial table\n"
 "--zero   -Z [chain]           : Put counters on zero in chain or in all chains\n"
@@ -1311,66 +1302,6 @@ static void zero_counters(int zerochain)
 	}
 }
 
-// list the database (optionally compiled into the kernel)
-static void list_db()
-{
-	struct brdb_dbinfo nr;
-	struct brdb_dbentry *db;
-	char name[21];
-	int i;
-
-	get_dbinfo(&nr);
-
-	// 0 : database disabled (-db n)
-	if (!(nr.nentries))
-		print_error("Database not present"
-		            " (disabled), try ebtables --db y");
-	nr.nentries--;
-	if (!nr.nentries) print_error("Database empty");
-	if ( !(db = (struct brdb_dbentry *)
-	   malloc(nr.nentries * sizeof(struct brdb_dbentry))) )
-		print_memory();
-
-	get_db(nr.nentries, db);
-	printf("number of entries: %d\n", nr.nentries);
-	for (i = 0; i < nr.nentries; i++) {
-		printf(
-		"%d:\n"
-		"hook    : %s\n"
-		"in-if   : %s\n"
-		"out-if  : %s\n"
-		"protocol: ", i + 1, hooknames[db->hook], db->in, db->out);
-		if (db->ethproto == IDENTIFY802_3)
-			printf("802.2/802.3 STYLE LENGTH FIELD\n");
-		else {
-			if (number_to_name(ntohs(db->ethproto), name))
-				printf("%x\n",ntohs(db->ethproto));
-			else
-				printf("%s\n", name);
-		}
-		db++;
-	}
-	exit(0);
-}
-
-// handle db [dis,en]abling
-static void allowdb(char yorn)
-{
-	__u16 decision;
-
-	if (yorn != 'y' && yorn != 'n')
-		print_error("Option [y] or [n] needed");
-
-	if (yorn == 'y')
-		decision = BRDB_DB;
-	else
-		decision = BRDB_NODB;
-
-	deliver_allowdb(&decision);
-
-	exit(0);
-}
-
 //  0 == success
 //  1 == success, but for the special 'protocol' LENGTH
 // -1 == failure
@@ -1576,7 +1507,7 @@ int main(int argc, char *argv[])
 
 	// getopt saves the day
 	while ((c = getopt_long(argc, argv,
-	   "-A:D:I:N:E:X:L::Z::F::P:Vhi:o:j:p:b:s:d:t:M:", ebt_options, NULL)) != -1) {
+	   "-A:D:I:N:E:X:L::Z::F::P:Vhi:o:j:p:s:d:t:M:", ebt_options, NULL)) != -1) {
 		switch (c) {
 
 		case 'A': // add a rule
@@ -1972,18 +1903,8 @@ int main(int argc, char *argv[])
 				            " or equal to 0x0600");
 			break;
 
-		case 'b': // allow database?
-			if (replace.flags & OPT_COMMAND)
-				print_error("Multiple commands not allowed");
-			replace.command = c;
-			allowbc = *optarg;
-			break;
-
 		case 4  : // Lc
 			check_option(&replace.flags, LIST_C);
-			if (replace.selected_hook == DATABASEHOOKNR)
-				print_error("--Lc not valid for listing"
-				   " the database");
 			if (replace.command != 'L')
 				print_error("Use --Lc with -L");
 			if (replace.flags & LIST_X)
@@ -1992,9 +1913,6 @@ int main(int argc, char *argv[])
 			break;
 		case 5  : // Ln
 			check_option(&replace.flags, LIST_N);
-			if (replace.selected_hook == DATABASEHOOKNR)
-				print_error("--Ln not valid for listing"
-				   " the database");
 			if (replace.command != 'L')
 				print_error("Use --Ln with -L");
 			if (replace.flags & LIST_X)
@@ -2003,9 +1921,6 @@ int main(int argc, char *argv[])
 			break;
 		case 6  : // Lx
 			check_option(&replace.flags, LIST_X);
-			if (replace.selected_hook == DATABASEHOOKNR)
-				print_error("--Lx not valid for listing"
-				   " the database");
 			if (replace.command != 'L')
 				print_error("Use --Lx with -L");
 			if (replace.flags & LIST_C)
@@ -2106,11 +2021,6 @@ check_extension:
 
 	if ( !table && !(table = find_table(replace.name)) )
 		print_error("Bad table name");
-	// database stuff before ebtables stuff
-	if (replace.command == 'b')
-		allowdb(allowbc);
-	if (replace.command == 'L' && replace.selected_hook == DATABASEHOOKNR)
-		list_db();
 
 	if ( (replace.flags & OPT_COMMAND) && replace.command != 'L' &&
 	   replace.flags & OPT_ZERO )

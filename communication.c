@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <linux/netfilter_bridge/ebtables.h>
-#include <linux/br_db.h>
 #include <netinet/in.h> // IPPROTO_IP
 #include "include/ebtables_u.h"
 
@@ -683,38 +682,4 @@ int get_table(struct ebt_u_replace *u_repl)
 	if (k != u_repl->nentries)
 		print_bug("Wrong total nentries");
 	return 0;
-}
-
-void get_dbinfo(struct brdb_dbinfo *nr)
-{
-	socklen_t optlen = sizeof(struct brdb_dbinfo);
-
-	get_sockfd();
-
-	if (getsockopt(sockfd, IPPROTO_IP, BRDB_SO_GET_DBINFO, nr, &optlen))
-		print_error("Sorry, br_db code probably not in kernel, "
-		            "try insmod br_db");
-}
-
-void get_db(int len, struct brdb_dbentry *db)
-{
-	socklen_t optlen = len;
-
-	get_sockfd();
-
-	if ( getsockopt(sockfd, IPPROTO_IP, BRDB_SO_GET_DB, db, &optlen) ) {
-		print_bug("hmm, what is wrong??? bug#2");
-	}
-}
-
-void deliver_allowdb(__u16 *decision)
-{
-	socklen_t optlen = sizeof(__u16);
-
-	get_sockfd();
-
-	if (setsockopt(sockfd, IPPROTO_IP, BRDB_SO_SET_ALLOWDB,
-	   decision, optlen))
-		print_error("Sorry, br_db code probably not in kernel, "
-		            "try insmod br_db");
 }
