@@ -100,18 +100,19 @@ static const char cmdflags[] = { 'I', 'D', 'D', 'R', 'A', 'L', 'F', 'Z',
 #define OPT_S_MAC	0x00008U
 #define OPT_D_MAC	0x00010U
 #define OPT_H_LENGTH	0x00020U
-#define OPT_OPCODE	0x00040U
-#define OPT_H_TYPE	0x00080U
-#define OPT_P_TYPE	0x00100U
-#define OPT_JUMP	0x00200U
-#define OPT_VERBOSE	0x00400U
-#define OPT_VIANAMEIN	0x00800U
-#define OPT_VIANAMEOUT	0x01000U
-#define OPT_LINENUMBERS 0x02000U
-#define OPT_COUNTERS	0x04000U
-#define NUMBER_OF_OPT	15
+#define OPT_P_LENGTH	0x00040U
+#define OPT_OPCODE	0x00080U
+#define OPT_H_TYPE	0x00100U
+#define OPT_P_TYPE	0x00200U
+#define OPT_JUMP	0x00400U
+#define OPT_VERBOSE	0x00800U
+#define OPT_VIANAMEIN	0x01000U
+#define OPT_VIANAMEOUT	0x02000U
+#define OPT_LINENUMBERS 0x04000U
+#define OPT_COUNTERS	0x08000U
+#define NUMBER_OF_OPT	16
 static const char optflags[NUMBER_OF_OPT]
-= { 'n', 's', 'd', 2, 3, 'l', 4, 5, 6, 'j', 'v', 'i', 'o', '0', 'c'};
+= { 'n', 's', 'd', 2, 3, 7, 8, 4, 5, 6, 'j', 'v', 'i', 'o', '0', 'c'};
 
 static struct option original_opts[] = {
 	{ "append", 1, 0, 'A' },
@@ -133,7 +134,8 @@ static struct option original_opts[] = {
 	{ "destination-mac", 1, 0, 3},
 	{ "src-mac", 1, 0, 2},
 	{ "dst-mac", 1, 0, 3},
-	{ "h-length", 1, 0,  'l' },
+	{ "h-length", 1, 0,  7 },
+	{ "p-length", 1, 0,  8 },
 	{ "opcode", 1, 0,  4 },
 	{ "h-type", 1, 0,  5 },
 	{ "proto-type", 1, 0,  6 },
@@ -701,7 +703,7 @@ addr_to_host(const struct in_addr *addr)
  *	return global static data.
 */
 
-static struct in_addr *
+struct in_addr *
 parse_hostnetwork(const char *name, unsigned int *naddrs)
 {
 	struct in_addr *addrp, *addrptmp;
@@ -1775,7 +1777,6 @@ int do_command(int argc, char *argv[], char **table, arptc_handle_t *handle)
 	const char *modprobe = NULL;
 
 	memset(&fw, 0, sizeof(fw));
-
 	opts = original_opts;
 	global_option_offset = 0;
 
@@ -1968,12 +1969,25 @@ int do_command(int argc, char *argv[], char **table, arptc_handle_t *handle)
 				            "destination mac");
 			break;
 
-		case 'l':/* hardware length */
+		case 7:/* hardware length */
 			check_inverse(optarg, &invert, &optind, argc);
 			set_option(&options, OPT_H_LENGTH, &fw.arp.invflags,
 				   invert);
-			getlength_and_mask(argv[optind - 1], &fw.arp.arhln, &fw.arp.arhln_mask);
+			getlength_and_mask(argv[optind - 1], &fw.arp.arhln,
+					   &fw.arp.arhln_mask);
 			break;
+
+		case 8:/* protocol length */
+		exit_error(PARAMETER_PROBLEM, "not supported");
+/*
+			check_inverse(optarg, &invert, &optind, argc);
+			set_option(&options, OPT_P_LENGTH, &fw.arp.invflags,
+				   invert);
+
+			getlength_and_mask(argv[optind - 1], &fw.arp.arpln,
+					   &fw.arp.arpln_mask);
+			break;
+*/
 
 		case 4:/* opcode */
 			check_inverse(optarg, &invert, &optind, argc);
