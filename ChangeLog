@@ -1,3 +1,14 @@
+20020730
+	* other things done before 2.0-rc1 that I can think of,
+	  including kernel:
+	* cache align counters for better smp performance
+	* simplify snat code
+	* check for --xxxx-target RETURN on base chain
+	* cleanup code
+	* minor bugfixes
+20020724
+	* code cleanup
+	* bugfix for --atomic-commit
 20020720
 	* added mark target+match
 20020714
