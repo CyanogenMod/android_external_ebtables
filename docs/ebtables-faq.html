@@ -7,7 +7,7 @@
     <LINK rel="STYLESHEET" type="text/css" href="ebtables.css">
     <META name="description" content=
     "Ethernet Bridge Tables Frequently Asked Questions">
-    <META name="author" content="Nick Fedchik">
+    <META name="author" content="Bart De Schuymer and Nick Fedchik">
     <META name="keywords" content=
     "Linux, netfilter, firewall, bridge, brouter, ebtables, iptables">
     <META name="keywords" content=
@@ -224,6 +224,13 @@ route -A -net 172.16.1.0 netmask 255.255.255.0 dev br0
         Without the routing table entry (last line above), it is obvious that this DNAT wouldn't work (because the bridge/router
         wouldn't know where to send 172.16.1.xx traffic). It is possible that the mentioned
         error message gets printed on the screen or in your logs when this routing table entry is omitted.
+        </DD>
+        <DT>I'm trying to create a brouter that routes all IP traffic using the command "ebtables -t broute -A BROUTING -p IPv4 -j DROP", but it's not working...</DT>
+        <DD>The DROP target in the BROUTING chain doesn't change the MAC destination to the bridge device, by default. You need
+        to explicitly do this by using the redirect target:
+<PRE>
+ebtables -t broute -A BROUTING -p IPv4 -j redirect --redirect-target DROP
+</PRE>
         </DD>
         </DL>
         <BR>
