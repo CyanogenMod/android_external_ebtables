@@ -1,3 +1,5 @@
+20020625
+	* user defined chains support: added -N, -X, -E options.
 20020621
 	* some unlogged changes (due to lazyness)
 	* change the output for -L to make it look like it would look when
