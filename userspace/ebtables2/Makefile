@@ -68,7 +68,6 @@ ebtables: $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ ebtables.o -I$(KERNEL_INCLUDES) -L/root/ \
 	-L. -Lextensions/ -lebtc $(EXT_LIBSI)
 	
-
 $(MANDIR)/man8/ebtables.8: ebtables.8
 	mkdir -p $(@D)
 	install -m 0644 -o root -g root $< $@
@@ -117,3 +116,12 @@ release:
 	touch include/linux/*
 	touch include/linux/netfilter_bridge/*
 	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz
+
+.PHONY: test_ulog
+test_ulog: examples/ulog/test_ulog.c getethertype.o
+	$(CC) $(CFLAGS)  $< -o test_ulog -I$(KERNEL_INCLUDES) -lc \
+	getethertype.o
+	mv test_ulog examples/ulog/
+
+.PHONY: examples
+examples: test_ulog
