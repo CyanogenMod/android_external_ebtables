@@ -17,7 +17,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
-#include <linux/netfilter_bridge/ebtables.h>
 #include "include/ebtables_u.h"
 
 extern char* hooknames[NF_BR_NUMHOOKS];
