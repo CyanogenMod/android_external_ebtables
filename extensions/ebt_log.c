@@ -87,7 +87,6 @@ static void init(struct ebt_entry_watcher *watcher)
 	loginfo->bitmask = 0;
 	loginfo->prefix[0] = '\0';
 	loginfo->loglevel = LOG_NOTICE;
-	watcher->version = VERSIONIZE(1,0);
 }
 
 #define OPT_PREFIX 0x01
@@ -177,15 +176,15 @@ static int compare(const struct ebt_entry_watcher *w1,
 
 static struct ebt_u_watcher log_watcher =
 {
-	.name		= EBT_LOG_WATCHER,
-	.size		= sizeof(struct ebt_log_info),
-	.help		= print_help,
-	.init		= init,
-	.parse		= parse,
-	.final_check	= final_check,
-	.print		= print,
-	.compare	= compare,
-	.extra_ops	= opts,
+	EBT_LOG_WATCHER,
+	sizeof(struct ebt_log_info),
+	print_help,
+	init,
+	parse,
+	final_check,
+	print,
+	compare,
+	opts
 };
 
 static void _init(void) __attribute__ ((constructor));

@@ -50,7 +50,7 @@ static void init_s(struct ebt_entry_target *target)
 
 	to_source_supplied = 0;
 	natinfo->target = EBT_ACCEPT;
-	target->version = VERSIONIZE(1,0);
+	return;
 }
 
 static void init_d(struct ebt_entry_target *target)
