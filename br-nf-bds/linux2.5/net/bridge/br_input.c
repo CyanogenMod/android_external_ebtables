@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_input.c,v 1.5 2002/10/19 14:27:48 bdschuym Exp $
+ *	$Id: br_input.c,v 1.6 2002/10/21 17:34:37 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -154,14 +154,8 @@ int br_handle_frame(struct sk_buff *skb)
 			return -1;
 		}
 
-#ifdef CONFIG_NETFILTER
-		/* Used by br_netfilter.c */
-		if (nf_bridge_alloc(skb) == NULL)
-			kfree_skb(skb);
-		else
-#endif
-			NF_HOOK(PF_BRIDGE, NF_BR_PRE_ROUTING, skb, skb->dev,
-				NULL, br_handle_frame_finish);
+		NF_HOOK(PF_BRIDGE, NF_BR_PRE_ROUTING, skb, skb->dev, NULL,
+			br_handle_frame_finish);
 		read_unlock(&br->lock);
 		return 0;
 	}
