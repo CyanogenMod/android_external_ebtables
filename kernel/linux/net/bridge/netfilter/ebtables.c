@@ -299,6 +299,7 @@ ebt_check_watcher(struct ebt_entry_watcher *w, struct ebt_entry *e,
 	struct ebt_watcher *watcher;
 	int ret;
 
+	w->u.name[EBT_FUNCTION_MAXNAMELEN - 1] = '\0';
 	watcher = find_watcher_lock(w->u.name, &ret, &ebt_mutex);
 	if (!watcher) 
 		return ret;
@@ -462,6 +463,7 @@ ebt_check_entry(struct ebt_entry *e, struct ebt_table_info *newinfo,
 	if (ret != 0)
 		goto cleanup_watchers;
 	t = (struct ebt_entry_target *)(((char *)e) + e->target_offset);
+	t->u.name[EBT_FUNCTION_MAXNAMELEN - 1] = '\0';
 	target = find_target_lock(t->u.name, &ret, &ebt_mutex);
 	if (!target) 
 		goto cleanup_watchers;
