@@ -26,7 +26,7 @@
 .SH NAME
 ebtables (v.2.0.7), ebtablesd, ebtablesu \- Ethernet bridge frame table administration
 .SH SYNOPSIS
-.BR "ebtables " [ -t " table ] " - [ ADI "] chain rule specification [match extensions] [watcher extensions] target"
+.BR "ebtables " [ -t " table ] " - [ ACDI "] chain rule specification [match extensions] [watcher extensions] target"
 .br
 .BR "ebtables " [ -t " table ] " -P " chain " ACCEPT " | " DROP " | " RETURN
 .br
@@ -117,6 +117,7 @@ Example usage:
 # echo "ebtablesu commit filter" >> $PIPE
 .br
 # echo "ebtablesu quit" >> $PIPE
+
 .SS CHAINS
 There are three ebtables tables with built-in chains in the
 Linux kernel. These tables are used to divide functionality into
@@ -233,20 +234,41 @@ is used.
 Append a rule to the end of the selected chain.
 .TP
 .B "-D, --delete"
-Delete the specified rule from the selected chain. There are two ways to
+Delete the specified rule or rules from the selected chain. There are two ways to
 use this command. The first is by specifying an interval of rule numbers
 to delete (directly after
 .BR -D ).
 Syntax: \fIstart_nr\fP[\fI:end_nr\fP] (use
 .B -L --Ln
-to list the rules with their rule number). When \fI:end_nr\fP is omitted, all rules starting
+to list the rules with their rule number). When \fIend_nr\fP is omitted, all rules starting
 from \fIstart_nr\fP are deleted. Using negative numbers is allowed, for more
 details about using negative numbers, see the
 .B -I
 command. The second usage is by
 specifying the complete rule as it would have been specified when it was added. Only
 the first encountered rule that is the same as this specified rule, in other
-words the matching rule with the lowest rule number, is deleted.
+words the matching rule with the lowest (positive) rule number, is deleted.
+.TP
+.B "-C, --change-counters"
+Change the counters of the specified rule or rules from the selected chain. There are two ways to
+use this command. The first is by specifying an interval of rule numbers
+to do the changes on (directly after
+.BR -C ).
+Syntax: \fIstart_nr\fP[\fI:end_nr\fP] (use
+.B -L --Ln
+to list the rules with their rule number). The details are the same as for the
+.BR -D " command. The second usage is by"
+specifying the complete rule as it would have been specified when it was added. Only
+the counters of the first encountered rule that is the same as this specified rule, in other
+words the matching rule with the lowest (positive) rule number, are changed.
+In the first usage, the counters are specified directly after the interval specification,
+in the second usage directly after
+.BR -C .
+First the packet counter is specified, then the byte counter. If the specified counters start
+with a '+', the counter values are added to the respective current counter values.
+If the specified counters start with a '-', the counter values are decreased from the respective
+current counter values. No bounds checking is done. If the counters don't start with '+' or '-',
+the current counters are changed to the specified counters.
 .TP
 .B "-I, --insert"
 Insert the specified rule into the selected chain at the specified rule number.
@@ -543,6 +565,14 @@ The destination MAC address. See
 (above) for more details on MAC addresses. The flag
 .B --dst
 is an alias for this option.
+.TP
+.BR "-c, --set-counter " "\fIpcnt bcnt\fP"
+If used with
+.BR -A " or " -I ", then the packet and byte counters of the new rule will be set to
+.IR pcnt ", resp. " bcnt ".
+If used with the
+.BR -C " or " -D " commands, only rules with a packet and byte count equal to"
+.IR pcnt ", resp. " bcnt " will match."
 
 .SS MATCH EXTENSIONS
 Ebtables extensions are dynamically loaded into the userspace tool,

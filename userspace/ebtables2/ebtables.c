@@ -33,49 +33,67 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 
+#define OPT_COMMANDS (replace->flags & OPT_COMMAND || replace->flags & OPT_ZERO)
+
+#define OPT_COMMAND	0x01
+#define OPT_TABLE	0x02
+#define OPT_IN		0x04
+#define OPT_OUT		0x08
+#define OPT_JUMP	0x10
+#define OPT_PROTOCOL	0x20
+#define OPT_SOURCE	0x40
+#define OPT_DEST	0x80
+#define OPT_ZERO	0x100
+#define OPT_LOGICALIN	0x200
+#define OPT_LOGICALOUT	0x400
+#define OPT_KERNELDATA	0x800 /* This value is also defined in ebtablesd.c */
+#define OPT_COUNT	0x1000 /* This value is also defined in libebtc.c */
+#define OPT_CNT_INCR	0x2000 /* This value is also defined in libebtc.c */
+#define OPT_CNT_DECR	0x4000 /* This value is also defined in libebtc.c */
+
 /* dDfault command line options. Do not mess around with the already
  * assigned numbers unless you know what you are doing */
 static struct option ebt_original_options[] =
 {
-	{ "append"        , required_argument, 0, 'A' },
-	{ "insert"        , required_argument, 0, 'I' },
-	{ "delete"        , required_argument, 0, 'D' },
-	{ "list"          , optional_argument, 0, 'L' },
-	{ "Lc"            , no_argument      , 0, 4   },
-	{ "Ln"            , no_argument      , 0, 5   },
-	{ "Lx"            , no_argument      , 0, 6   },
-	{ "Lmac2"         , no_argument      , 0, 12  },
-	{ "zero"          , optional_argument, 0, 'Z' },
-	{ "flush"         , optional_argument, 0, 'F' },
-	{ "policy"        , required_argument, 0, 'P' },
-	{ "in-interface"  , required_argument, 0, 'i' },
-	{ "in-if"         , required_argument, 0, 'i' },
-	{ "logical-in"    , required_argument, 0, 2   },
-	{ "logical-out"   , required_argument, 0, 3   },
-	{ "out-interface" , required_argument, 0, 'o' },
-	{ "out-if"        , required_argument, 0, 'o' },
-	{ "version"       , no_argument      , 0, 'V' },
-	{ "help"          , no_argument      , 0, 'h' },
-	{ "jump"          , required_argument, 0, 'j' },
-	{ "set-counter"   , required_argument, 0, 'c' },
-	{ "change-counter", required_argument, 0, 'C' },
-	{ "proto"         , required_argument, 0, 'p' },
-	{ "protocol"      , required_argument, 0, 'p' },
-	{ "db"            , required_argument, 0, 'b' },
-	{ "source"        , required_argument, 0, 's' },
-	{ "src"           , required_argument, 0, 's' },
-	{ "destination"   , required_argument, 0, 'd' },
-	{ "dst"           , required_argument, 0, 'd' },
-	{ "table"         , required_argument, 0, 't' },
-	{ "modprobe"      , required_argument, 0, 'M' },
-	{ "new-chain"     , required_argument, 0, 'N' },
-	{ "rename-chain"  , required_argument, 0, 'E' },
-	{ "delete-chain"  , optional_argument, 0, 'X' },
-	{ "atomic-init"   , no_argument      , 0, 7   },
-	{ "atomic-commit" , no_argument      , 0, 8   },
-	{ "atomic-file"   , required_argument, 0, 9   },
-	{ "atomic-save"   , no_argument      , 0, 10  },
-	{ "init-table"    , no_argument      , 0, 11  },
+	{ "append"         , required_argument, 0, 'A' },
+	{ "insert"         , required_argument, 0, 'I' },
+	{ "delete"         , required_argument, 0, 'D' },
+	{ "list"           , optional_argument, 0, 'L' },
+	{ "Lc"             , no_argument      , 0, 4   },
+	{ "Ln"             , no_argument      , 0, 5   },
+	{ "Lx"             , no_argument      , 0, 6   },
+	{ "Lmac2"          , no_argument      , 0, 12  },
+	{ "zero"           , optional_argument, 0, 'Z' },
+	{ "flush"          , optional_argument, 0, 'F' },
+	{ "policy"         , required_argument, 0, 'P' },
+	{ "in-interface"   , required_argument, 0, 'i' },
+	{ "in-if"          , required_argument, 0, 'i' },
+	{ "logical-in"     , required_argument, 0, 2   },
+	{ "logical-out"    , required_argument, 0, 3   },
+	{ "out-interface"  , required_argument, 0, 'o' },
+	{ "out-if"         , required_argument, 0, 'o' },
+	{ "version"        , no_argument      , 0, 'V' },
+	{ "help"           , no_argument      , 0, 'h' },
+	{ "jump"           , required_argument, 0, 'j' },
+	{ "set-counters"   , required_argument, 0, 'c' },
+	{ "change-counters", required_argument, 0, 'C' },
+	{ "proto"          , required_argument, 0, 'p' },
+	{ "protocol"       , required_argument, 0, 'p' },
+	{ "db"             , required_argument, 0, 'b' },
+	{ "source"         , required_argument, 0, 's' },
+	{ "src"            , required_argument, 0, 's' },
+	{ "destination"    , required_argument, 0, 'd' },
+	{ "dst"            , required_argument, 0, 'd' },
+	{ "table"          , required_argument, 0, 't' },
+	{ "modprobe"       , required_argument, 0, 'M' },
+	{ "new-chain"      , required_argument, 0, 'N' },
+	{ "rename-chain"   , required_argument, 0, 'E' },
+	{ "delete-chain"   , optional_argument, 0, 'X' },
+	{ "atomic-init"    , no_argument      , 0, 7   },
+	{ "atomic-commit"  , no_argument      , 0, 8   },
+	{ "atomic-file"    , required_argument, 0, 9   },
+	{ "atomic-save"    , no_argument      , 0, 10  },
+	{ "init-table"     , no_argument      , 0, 11  },
 	{ 0 }
 };
 
@@ -169,7 +187,7 @@ static void print_iface(const char *iface)
 #define LIST_MAC2 0x20
 
 /* Helper function for list_rules() */
-static void list_em(struct ebt_u_entries *entries)
+static void list_em(struct ebt_u_entries *entries, struct ebt_cntchanges *cc)
 {
 	int i, j, space = 0, digits;
 	struct ebt_u_entry *hlp;
@@ -301,10 +319,24 @@ static void list_em(struct ebt_u_entries *entries)
 			ebt_print_bug("Target '%s' not found", hlp->t->u.name);
 		t->print(hlp, hlp->t);
 		if (replace->flags & LIST_C) {
+			uint64_t pcnt = hlp->cnt.pcnt;
+			uint64_t bcnt = hlp->cnt.bcnt;
+
+			while (cc->type == CNT_DEL)
+				cc = cc->next;
+			/* This can only happen in daemon mode */
+			if (cc->type == CNT_INCR) {
+				pcnt += hlp->cnt_surplus.pcnt;
+				bcnt += hlp->cnt_surplus.bcnt;
+			} else if (cc->type == CNT_DECR) {
+				pcnt -= hlp->cnt_surplus.pcnt;
+				bcnt -= hlp->cnt_surplus.bcnt;
+			}
+			cc = cc->next;
 			if (replace->flags & LIST_X)
-				printf("-c %llu %llu", hlp->cnt.pcnt, hlp->cnt.bcnt);
+				printf("-c %llu %llu", pcnt, bcnt);
 			else
-				printf(", pcnt = %llu -- bcnt = %llu", hlp->cnt.pcnt, hlp->cnt.bcnt);
+				printf(", pcnt = %llu -- bcnt = %llu", pcnt, bcnt);
 		}
 		printf("\n");
 		hlp = hlp->next;
@@ -328,6 +360,8 @@ static void print_help()
 "--append -A chain             : append to chain\n"
 "--delete -D chain             : delete matching rule from chain\n"
 "--delete -D chain rulenum     : delete rule at position rulenum from chain\n"
+"--change-counters -C chain\n"
+"          [rulenum] pcnt bcnt : change counters of existing rule\n"
 "--insert -I chain rulenum     : insert rule at position rulenum in chain\n"
 "--list   -L [chain]           : list the rules in a chain or in all chains\n"
 "--flush  -F [chain]           : delete all rules in chain or in all chains\n"
@@ -349,6 +383,8 @@ static void print_help()
 "--out-if -o [!] name[+]       : network output interface name\n"
 "--logical-in  [!] name[+]     : logical bridge input interface name\n"
 "--logical-out [!] name[+]     : logical bridge output interface name\n"
+"--set-counters -c chain\n"
+"          pcnt bcnt           : set the counters of the to be added rule\n"
 "--modprobe -M program         : try to insert modules using this program\n"
 "--version -V                  : print package version\n\n"
 "Environment variable:\n"
@@ -375,12 +411,23 @@ ATOMIC_ENV_VARIABLE "          : if set <FILE> (see above) will equal its value"
 /* Execute command L */
 static void list_rules()
 {
-	int i;
+	int i, j;
+	struct ebt_cntchanges *cc = replace->counterchanges;
 
 	if (!(replace->flags & LIST_X))
 		printf("Bridge table: %s\n", table->name);
 	if (replace->selected_chain != -1) {
-		list_em(ebt_to_chain(replace));
+		for (i = 0; i < replace->selected_chain; i++) {
+			if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
+				continue;
+			j = ebt_nr_to_chain(replace, i)->nentries;
+			while (j) {
+				if (cc->type != CNT_DEL)
+					j--;
+				cc = cc->next;
+			}
+		}
+		list_em(ebt_to_chain(replace), cc);
 	} else {
 		struct ebt_u_chain_list *cl = replace->udc;
 
@@ -403,14 +450,27 @@ static void list_rules()
 		i = 0;
 		while (1) {
 			if (i < NF_BR_NUMHOOKS) {
-				if (replace->valid_hooks & (1 << i))
-					list_em(replace->hook_entry[i]);
+				if (replace->valid_hooks & (1 << i)) {
+					list_em(replace->hook_entry[i], cc);
+					j = ebt_nr_to_chain(replace, i)->nentries;
+					while (j) {
+						if (cc->type != CNT_DEL)
+							j--;
+						cc = cc->next;
+					}
+				}
 				i++;
 				continue;
 			} else {
 				if (!cl)
 					break;
-				list_em(cl->udc);
+				list_em(cl->udc, cc);
+				j = ebt_nr_to_chain(replace, i)->nentries;
+				while (j) {
+					if (cc->type != CNT_DEL)
+						j--;
+					cc = cc->next;
+				}
 				cl = cl->next;
 			}
 		}
@@ -450,7 +510,7 @@ static int parse_change_counters_rule(int argc, char **argv, int *rule_nr, int *
 	if (optind + 1 >= argc || (argv[optind][0] == '-' && (argv[optind][1] < '0' || argv[optind][1] > '9')) ||
 	    (argv[optind + 1][0] == '-' && (argv[optind + 1][1] < '0'  && argv[optind + 1][1] > '9')))
 		ebt_print_error2("The command -C needs at least 3 arguments");
-	if (optind + 2 < argc && (argv[optind + 2][0] != '-' || (argv[optind][1] >= '0' && argv[optind][1] <= '9'))) {
+	if (optind + 2 < argc && (argv[optind + 2][0] != '-' || (argv[optind + 2][1] >= '0' && argv[optind + 2][1] <= '9'))) {
 		if (optind + 3 != argc)
 			ebt_print_error2("No extra options allowed with -C start_nr[:end_nr] pcnt bcnt");
 		if (parse_delete_rule(argv[optind], rule_nr, rule_nr_end))
@@ -458,16 +518,39 @@ static int parse_change_counters_rule(int argc, char **argv, int *rule_nr, int *
 		optind++;
 	}
 
-	new_entry->cnt.pcnt = strtoull(argv[optind], &buffer, 10);
-	if (*buffer != '\0')
-		ebt_print_error2("Packet counter '%s' invalid", argv[optind])
-	optind++;
-	new_entry->cnt.bcnt = strtoull(argv[optind], &buffer, 10);
-	if (*buffer != '\0')
-		ebt_print_error2("Packet counter '%s' invalid", argv[optind])
+	if (argv[optind][0] == '+') {
+		if (argv[optind + 1][0] != '+')
+			ebt_print_error2("If one counter is increased, the other should be increased too (perhaps put a '+' before '%s')", argv[optind + 1]);
+		replace->flags |= OPT_CNT_INCR;
+		new_entry->cnt_surplus.pcnt = strtoull(argv[optind] + 1, &buffer, 10);
+		if (*buffer != '\0')
+			goto invalid;
+		optind++;
+		new_entry->cnt_surplus.bcnt = strtoull(argv[optind] + 1, &buffer, 10);
+	} else if (argv[optind][0] == '-') {
+		if (argv[optind + 1][0] != '-')
+			ebt_print_error2("If one counter is decreased, the other should be decreased too (perhaps put a '-' before '%s')", argv[optind + 1]);
+		replace->flags |= OPT_CNT_DECR;
+		new_entry->cnt_surplus.pcnt = strtoull(argv[optind] + 1, &buffer, 10);
+		if (*buffer != '\0')
+			goto invalid;
+		optind++;
+		new_entry->cnt_surplus.bcnt = strtoull(argv[optind] + 1, &buffer, 10);
+	} else {
+		if (argv[optind + 1][0] == '-' || argv[optind + 1][0] == '+')
+			ebt_print_error2("If one counter is %screased, the other should be %screased too (perhaps put a '%s' before '%s')",
+			   argv[optind + 1][0] == '-' ? "de" : "in", argv[optind + 1][0] == '-' ? "de" : "in", argv[optind]);
+		new_entry->cnt_surplus.pcnt = strtoull(argv[optind], &buffer, 10);
+		optind++;
+		new_entry->cnt_surplus.bcnt = strtoull(argv[optind], &buffer, 10);
+	}
 
+	if (*buffer != '\0')
+		goto invalid;
 	optind++;
 	return 0;
+invalid:
+	ebt_print_error2("Packet counter '%s' invalid", argv[optind]);
 }
 
 static int parse_iface(char *iface, char *option)
@@ -492,21 +575,6 @@ void ebt_early_init_once()
 	ebt_iterate_targets(merge_target);
 }
 
-#define OPT_COMMANDS (replace->flags & OPT_COMMAND || replace->flags & OPT_ZERO)
-
-#define OPT_COMMAND	0x01
-#define OPT_TABLE	0x02
-#define OPT_IN		0x04
-#define OPT_OUT		0x08
-#define OPT_JUMP	0x10
-#define OPT_PROTOCOL	0x20
-#define OPT_SOURCE	0x40
-#define OPT_DEST	0x80
-#define OPT_ZERO	0x100
-#define OPT_LOGICALIN	0x200
-#define OPT_LOGICALOUT	0x400
-#define OPT_KERNELDATA	0x800 /* This value is also defined in ebtablesd.c */
-#define OPT_COUNT	0x1000
 int do_command(int argc, char *argv[], int exec_style,
                struct ebt_u_replace *replace_)
 {
@@ -758,7 +826,7 @@ print_zero:
 		case 'c': /* Set counters */
 			if (!OPT_COMMANDS)
 				ebt_print_error2("No command specified");
-			if (replace->command != 'A' && replace->command != 'D' && replace->command != 'I')
+			if (replace->command != 'A' && replace->command != 'D' && replace->command != 'I' && replace->command != 'C')
 				ebt_print_error2("Command and option do not match");
 			if (c == 'i') {
 				ebt_check_option2(&(replace->flags), OPT_IN);
@@ -1167,7 +1235,7 @@ delete_the_rule:
 		if (ebt_errormsg[0] != '\0')
 			return -1;
 	} else if (replace->command == 'C') {
-		ebt_change_counters(replace, new_entry, rule_nr, rule_nr_end, &(new_entry->cnt));
+		ebt_change_counters(replace, new_entry, rule_nr, rule_nr_end, &(new_entry->cnt_surplus));
 		if (ebt_errormsg[0] != '\0')
 			return -1;
 	}

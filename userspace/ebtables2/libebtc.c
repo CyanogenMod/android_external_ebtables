@@ -170,7 +170,7 @@ void ebt_initialize_entry(struct ebt_u_entry *e)
 	e->w_list = NULL;
 	e->t = (struct ebt_entry_target *)ebt_find_target(EBT_STANDARD_TARGET);
 	ebt_find_target(EBT_STANDARD_TARGET)->used = 1;
-	e->cnt.pcnt = e->cnt.bcnt = 0;
+	e->cnt.pcnt = e->cnt.bcnt = e->cnt_surplus.pcnt = e->cnt_surplus.bcnt = 0;
 
 	if (!e->t)
 		ebt_print_bug("Couldn't load standard target");
@@ -580,6 +580,7 @@ letscontinue:
 	entries->entries = NULL;
 }
 
+#define OPT_COUNT	0x1000 /* This value is also defined in ebtables.c */
 /* Returns the rule number on success (starting from 0), -1 on failure
  *
  * This function expects the ebt_{match,watcher,target} members of new_entry
@@ -620,6 +621,9 @@ int ebt_check_rule_exists(struct ebt_u_replace *replace,
 			continue;
 		if (new_entry->bitmask != u_e->bitmask ||
 		    new_entry->invflags != u_e->invflags)
+			continue;
+		if (replace->flags & OPT_COUNT && (new_entry->cnt.pcnt !=
+		    u_e->cnt.pcnt || new_entry->cnt.bcnt != u_e->cnt.bcnt))
 			continue;
 		/* Compare all matches */
 		m_l = new_entry->m_list;
@@ -895,6 +899,8 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 	}
 }
 
+#define OPT_CNT_INCR	0x2000 /* This value is also defined in ebtables.c */
+#define OPT_CNT_DECR	0x4000 /* This value is also defined in ebtables.c */
 /* Change the counters of a rule or rules
  * begin == end == 0: change counters of the rule corresponding to new_entry
  *
@@ -909,7 +915,6 @@ void ebt_change_counters(struct ebt_u_replace *replace,
 	struct ebt_u_entry *u_e;
 	struct ebt_u_entries *entries = ebt_to_chain(replace);
 	struct ebt_cntchanges *cc = replace->counterchanges;
-	struct ebt_cntchanges **prev_cc =  &(replace->counterchanges);
 
 	if (check_and_change_rule_number(replace, new_entry, &begin, &end))
 		return;
@@ -921,7 +926,6 @@ void ebt_change_counters(struct ebt_u_replace *replace,
 		while (j) {
 			if (cc->type != CNT_DEL)
 				j--;
-			prev_cc = &(cc->next);
 			cc = cc->next;
 		}
 	}
@@ -929,27 +933,44 @@ void ebt_change_counters(struct ebt_u_replace *replace,
 	while (i) {
 		if (cc->type != CNT_DEL)
 			i--;
-		prev_cc = &(cc->next);
-		cc = cc->next;
-	}
-	i = end - begin + 1;
-	while (i) {
-		if (cc->type != CNT_DEL) {
-			i--;
-			/* A -C after a -A remains a -A */
-			if (cc->type != CNT_ADD && cc->type != CNT_OWRITE)
-				cc->type = CNT_CHANGE;
-		}
-		prev_cc = &(cc->next);
 		cc = cc->next;
 	}
 	u_e = entries->entries;
 	for (i = 0; i < begin; i++)
 		u_e = u_e->next;
 	i = end - begin + 1;
-	while(i--) {
-		u_e->cnt = *cnt;
-		u_e = u_e->next;
+	while (i) {
+		if (cc->type != CNT_DEL) {
+			i--;
+			if (cc->type != CNT_ADD && cc->type != CNT_OWRITE) {
+				/* In daemon mode, we want to make sure we don't lose
+				 * any counted packets/bytes (the kernel is still counting
+				 * while we are changing things in userspace). Therefore,
+				 * we need to add the amount to the counters in the kernel,
+				 * not the counters copied earlier from the kernel. */
+				u_e->cnt_surplus = *cnt;
+				if (replace->flags & OPT_CNT_INCR) {
+					cc->type = CNT_INCR;
+				} else if (replace->flags & OPT_CNT_DECR)
+					cc->type = CNT_DECR;
+				else {
+					cc->type = CNT_CHANGE;
+					u_e->cnt = *cnt;
+					u_e->cnt_surplus.pcnt = u_e->cnt_surplus.bcnt = 0;
+				}
+			} else { /* A -C after a -A remains a -A */
+				if (replace->flags & OPT_CNT_INCR) {
+					u_e->cnt.pcnt += cnt->pcnt;
+					u_e->cnt.bcnt += cnt->bcnt;
+				} else if (replace->flags & OPT_CNT_DECR) {
+					u_e->cnt.pcnt -= cnt->pcnt;
+					u_e->cnt.bcnt -= cnt->bcnt;
+				} else
+					u_e->cnt = *cnt;
+			}
+			u_e = u_e->next;
+		}
+		cc = cc->next;
 	}
 }
 
