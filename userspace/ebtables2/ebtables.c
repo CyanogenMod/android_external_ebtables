@@ -470,6 +470,8 @@ static void parse_iface(char *iface, char *option)
 
 #define print_if_l_error ebt_print_error("Interface name length must be less " \
    "than %d", IFNAMSIZ)
+#define print_epoto_error(__proto) ebt_print_error("Problem with the specified"\
+   " Ethernet protocol (%s), perhaps "_PATH_ETHERTYPES " is missing", __proto);
 #define OPT_COMMAND	0x01
 #define OPT_TABLE	0x02
 #define OPT_IN		0x04
@@ -964,8 +966,7 @@ handle_P:
 				}
 				ent = getethertypebyname(argv[optind - 1]);
 				if (!ent)
-					ebt_print_error("Problem with the "
-							"specified protocol");
+					print_epoto_error(argv[optind - 1]);
 				new_entry->ethproto = ent->e_ethertype;
 			}
 			if (new_entry->ethproto < 1536 &&
