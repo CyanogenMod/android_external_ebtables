@@ -1395,15 +1395,17 @@ static void allowdb(char yorn)
 	exit(0);
 }
 
-// set ethproto
-int name_to_protocol(char *name)
+//  0 == success
+//  1 == success, but for the special 'protocol' LENGTH
+// -1 == failure
+int name_to_number(char *name, __u16 *proto)
 {
 	FILE *ifp;
 	char buffer[21], value[5], *bfr;
 	unsigned short i;
 
 	if (!strcasecmp("LENGTH", name)) {
-		new_entry->ethproto = 0;
+		*proto = 0;
 		new_entry->bitmask |= EBT_802_3;
 		return 1;
 	}
@@ -1416,7 +1418,7 @@ int name_to_protocol(char *name)
 		i = (unsigned short) strtol(value, &bfr, 16);
 		if (*bfr != '\0')
 			return -1;
-		new_entry->ethproto = i;
+		*proto = i;
 		fclose(ifp);
 		return 0;
 	}
@@ -1990,10 +1992,14 @@ int main(int argc, char *argv[])
 				print_error("Problem with the specified "
 				            "protocol");
 			new_entry->ethproto = i;
-			if (*buffer != '\0')
-				if (name_to_protocol(argv[optind - 1]) == -1)
+			if (*buffer != '\0') {
+				if ((i = name_to_number(argv[optind - 1],
+				   &new_entry->ethproto)) == -1)
 					print_error("Problem with the specified"
 					            " protocol");
+				if (i == 1)
+					new_entry->bitmask |= EBT_802_3;
+			}
 			if (new_entry->ethproto < 1536 &&
 			   !(new_entry->bitmask & EBT_802_3))
 				print_error("Sorry, protocols have values above"

@@ -197,7 +197,7 @@ void deliver_table(struct ebt_u_replace *repl);
 void get_dbinfo(struct brdb_dbinfo *nr);
 void get_db(int len, struct brdb_dbentry *db);
 void deliver_allowdb(__u16 *decision);
-int name_to_protocol(char *name);
+int name_to_number(char *name, __u16 *proto);
 int number_to_name(unsigned short proto, char *name);
 void check_option(unsigned int *flags, unsigned int mask);
 int check_inverse(const char option[]);
