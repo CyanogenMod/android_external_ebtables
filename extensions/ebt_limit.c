@@ -144,7 +144,9 @@ static int parse(int c, char **argv, int argc,
 	return 1;
 }
 
-static void final_check(unsigned int flags)
+static void final_check(const struct ebt_u_entry *entry,
+   const struct ebt_entry_match *match, const char *name,
+   unsigned int hookmask, unsigned int time)
 {
 	/* empty */
 }
