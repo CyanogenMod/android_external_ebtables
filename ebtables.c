@@ -201,8 +201,10 @@ static void initialize_entry(struct ebt_u_entry *e)
 	strcpy(e->logical_out, "");
 	e->m_list = NULL;
 	e->w_list = NULL;
-	// the init function of the standard target should have put the verdict
-	// on CONTINUE
+	/*
+	 * the init function of the standard target should have put the verdict
+	 * on CONTINUE
+	 */
 	e->t = (struct ebt_entry_target *)find_target(EBT_STANDARD_TARGET);
 	if (!e->t)
 		print_bug("Couldn't load standard target");
@@ -1473,14 +1475,20 @@ static void check_for_references(int chain_nr)
 		e = entries->entries;
 		j = 0;
 		while (e) {
+			int chain_jmp;
+
 			j++;
 			if (strcmp(e->t->u.name, EBT_STANDARD_TARGET)) {
 				e = e->next;
 				continue;
 			}
-			if (((struct ebt_standard_target *)e->t)->verdict == chain_nr)
+			chain_jmp = ((struct ebt_standard_target *)e->t)->verdict;
+			if (chain_jmp == chain_nr)
 				print_error("Can't delete the chain, it's referenced "
 				   "in chain %s, rule %d", entries->name, j);
+			/* adjust the chain jumps when necessary */
+			if (chain_jmp > chain_nr)
+				((struct ebt_standard_target *)e->t)->verdict--;
 			e = e->next;
 		}
 	}
@@ -1698,7 +1706,9 @@ int main(int argc, char *argv[])
 				if (replace.selected_hook < NF_BR_NUMHOOKS)
 					print_error("You can't remove a standard chain");
 				/*
-				 * if the chain is referenced, don't delete it
+				 * if the chain is referenced, don't delete it,
+				 * also decrement jumps to a chain behind the
+				 * one we're deleting
 				 */
 				check_for_references(replace.selected_hook - NF_BR_NUMHOOKS);
 				flush_chains();
