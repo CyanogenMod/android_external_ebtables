@@ -63,7 +63,7 @@ clean:
 	rm -f arptables
 	rm -f *.o *.c~
 	rm -f extensions/*.o extensions/*.c~
-	rm -f libarpt/*.o libarpt/*.c~
+	rm -f libarptc/*.o libarptc/*.c~
 
 DIR:=arptables-v$(ARPTABLES_VERSION)
 # This is used to make a new userspace release
