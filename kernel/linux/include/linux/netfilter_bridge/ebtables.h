@@ -29,7 +29,9 @@
 
 #define EBT_SO_GET_INFO         (EBT_BASE_CTL)
 #define EBT_SO_GET_ENTRIES      (EBT_SO_GET_INFO+1)
-#define EBT_SO_GET_MAX          (EBT_SO_GET_ENTRIES+1)
+#define EBT_SO_GET_INIT_INFO    (EBT_SO_GET_ENTRIES+1)
+#define EBT_SO_GET_INIT_ENTRIES (EBT_SO_GET_INIT_INFO+1)
+#define EBT_SO_GET_MAX          (EBT_SO_GET_INIT_ENTRIES+1)
 
 // verdicts >0 are "branches"
 #define EBT_ACCEPT   -1
@@ -55,9 +57,9 @@ struct ebt_entries {
 	// one standard (accept, drop, return) per hook
 	int policy;
 	// nr. of entries
-	__u32 nentries;
+	unsigned int nentries;
 	// entry list
-	__u8 data[0];
+	char data[0];
 };
 
 // used for the bitmask of struct ebt_entry

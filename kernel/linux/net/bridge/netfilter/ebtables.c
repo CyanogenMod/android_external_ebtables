@@ -105,15 +105,19 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 	struct ebt_chainstack *cs;
 	struct ebt_entries *chaininfo;
 	char *base;
+	struct ebt_table_info *private = table->private;
 
 	read_lock_bh(&table->lock);
-	cs = table->private->chainstack[cpu_number_map(smp_processor_id())];
-	chaininfo = table->private->hook_entry[hook];
-	nentries = table->private->hook_entry[hook]->nentries;
-	point = (struct ebt_entry *)(table->private->hook_entry[hook]->data);
+	if (private->chainstack)
+		cs = private->chainstack[cpu_number_map(smp_processor_id())];
+	else
+		cs = NULL;
+	chaininfo = private->hook_entry[hook];
+	nentries = private->hook_entry[hook]->nentries;
+	point = (struct ebt_entry *)(private->hook_entry[hook]->data);
 	#define cb_base table->private->counters + \
 	   cpu_number_map(smp_processor_id()) * table->private->nentries
-	counter_base = cb_base + table->private->hook_entry[hook]->counter_offset;
+	counter_base = cb_base + private->hook_entry[hook]->counter_offset;
 	#define FWINV(bool,invflg) ((bool) ^ !!(point->invflags & invflg))
 	// base for chain jumps
 	base = (char *)chaininfo;
@@ -837,20 +841,20 @@ static int translate_table(struct ebt_replace *repl,
 }
 
 // called under write_lock
-static inline void get_counters(struct ebt_table_info *info,
-   struct ebt_counter *counters)
+static inline void get_counters(struct ebt_counter *oldcounters,
+   struct ebt_counter *counters, unsigned int nentries)
 {
 	int i, cpu, counter_base;
 
 	// counters of cpu 0
-	memcpy(counters, info->counters,
-	   sizeof(struct ebt_counter) * info->nentries);
+	memcpy(counters, oldcounters,
+	   sizeof(struct ebt_counter) * nentries);
 	// add other counters to those of cpu 0
 	for (cpu = 1; cpu < smp_num_cpus; cpu++) {
-		counter_base = cpu * info->nentries;
-		for (i = 0; i < info->nentries; i++)
+		counter_base = cpu * nentries;
+		for (i = 0; i < nentries; i++)
 			counters[i].pcnt +=
-			   info->counters[counter_base + i].pcnt;
+			   oldcounters[counter_base + i].pcnt;
 	}
 }
 
@@ -946,7 +950,8 @@ static int do_replace(void *user, unsigned int len)
 	// we need an atomic snapshot of the counters
 	write_lock_bh(&t->lock);
 	if (tmp.num_counters)
-		get_counters(t->private, counterstmp);
+		get_counters(t->private->counters, counterstmp,
+		   t->private->nentries);
 
 	t->private = newinfo;
 	write_unlock_bh(&t->lock);
@@ -1289,52 +1294,65 @@ static inline int ebt_make_names(struct ebt_entry *e, char *base, char *ubase)
 }
 
 // called with ebt_mutex down
-static int copy_everything_to_user(struct ebt_table *t, void *user, int *len)
+static int copy_everything_to_user(struct ebt_table *t, void *user,
+   int *len, int cmd)
 {
 	struct ebt_replace tmp;
-	struct ebt_table_info *info = t->private;
-	struct ebt_counter *counterstmp;
-	int i;
+	struct ebt_counter *counterstmp, *oldcounters;
+	unsigned int entries_size, nentries;
+	char *entries;
+
+	if (cmd == EBT_SO_GET_ENTRIES) {
+		entries_size = t->private->entries_size;
+		nentries = t->private->nentries;
+		entries = t->private->entries;
+		oldcounters = t->private->counters;
+	} else {
+		entries_size = t->table->entries_size;
+		nentries = t->table->nentries;
+		entries = t->table->entries;
+		oldcounters = t->table->counters;
+	}
 
 	if (copy_from_user(&tmp, user, sizeof(tmp))) {
 		BUGPRINT("Cfu didn't work\n");
 		return -EFAULT;
 	}
 
-	if (*len != sizeof(struct ebt_replace) + info->entries_size +
-	   (tmp.num_counters? info->nentries * sizeof(struct ebt_counter): 0)) {
+	if (*len != sizeof(struct ebt_replace) + entries_size +
+	   (tmp.num_counters? nentries * sizeof(struct ebt_counter): 0)) {
 		BUGPRINT("Wrong size\n");
 		return -EINVAL;
 	}
 
-	if (tmp.nentries != info->nentries) {
+	if (tmp.nentries != nentries) {
 		BUGPRINT("Nentries wrong\n");
 		return -EINVAL;
 	}
 
-	if (tmp.entries_size != info->entries_size) {
+	if (tmp.entries_size != entries_size) {
 		BUGPRINT("Wrong size\n");
 		return -EINVAL;
 	}
 
 	// userspace might not need the counters
 	if (tmp.num_counters) {
-		if (tmp.num_counters != info->nentries) {
+		if (tmp.num_counters != nentries) {
 			BUGPRINT("Num_counters wrong\n");
 			return -EINVAL;
 		}
 		counterstmp = (struct ebt_counter *)
-		   vmalloc(info->nentries * sizeof(struct ebt_counter));
+		   vmalloc(nentries * sizeof(struct ebt_counter));
 		if (!counterstmp) {
 			BUGPRINT("Couldn't copy counters, out of memory\n");
 			return -ENOMEM;
 		}
 		write_lock_bh(&t->lock);
-		get_counters(info, counterstmp);
+		get_counters(oldcounters, counterstmp, nentries);
 		write_unlock_bh(&t->lock);
 
 		if (copy_to_user(tmp.counters, counterstmp,
-		   info->nentries * sizeof(struct ebt_counter))) {
+		   nentries * sizeof(struct ebt_counter))) {
 			BUGPRINT("Couldn't copy counters to userspace\n");
 			vfree(counterstmp);
 			return -EFAULT;
@@ -1342,23 +1360,17 @@ static int copy_everything_to_user(struct ebt_table *t, void *user, int *len)
 		vfree(counterstmp);
 	}
 
-	if (copy_to_user(tmp.entries, info->entries, info->entries_size)) {
+	if (copy_to_user(tmp.entries, entries, entries_size)) {
 		BUGPRINT("Couldn't copy entries to userspace\n");
 		return -EFAULT;
 	}
-	// make userspace's life easier
-	memcpy(tmp.hook_entry, info->hook_entry,
-	   NF_BR_NUMHOOKS * sizeof(struct ebt_entries *));
-	for (i = 0; i < NF_BR_NUMHOOKS; i++)
-		tmp.hook_entry[i] = (struct ebt_entries *)(((char *)
-		   (info->hook_entry[i])) - info->entries + tmp.entries);
 	if (copy_to_user(user, &tmp, sizeof(struct ebt_replace))) {
 		BUGPRINT("Couldn't copy ebt_replace to userspace\n");
 		return -EFAULT;
 	}
 	// set the match/watcher/target names right
-	return EBT_ENTRY_ITERATE(info->entries, info->entries_size,
-	   ebt_make_names, info->entries, tmp.entries);
+	return EBT_ENTRY_ITERATE(entries, entries_size,
+	   ebt_make_names, entries, tmp.entries);
 }
 
 static int do_ebt_set_ctl(struct sock *sk,
@@ -1394,15 +1406,21 @@ static int do_ebt_get_ctl(struct sock *sk, int cmd, void *user, int *len)
 
 	switch(cmd) {
 	case EBT_SO_GET_INFO:
+	case EBT_SO_GET_INIT_INFO:
 		if (*len != sizeof(struct ebt_replace)){
 			ret = -EINVAL;
 			up(&ebt_mutex);
 			break;
 		}
-		tmp.nentries = t->private->nentries;
-		tmp.entries_size = t->private->entries_size;
-		// userspace needs this to check the chain names
-		tmp.valid_hooks = t->valid_hooks;
+		if (cmd == EBT_SO_GET_INFO) {
+			tmp.nentries = t->private->nentries;
+			tmp.entries_size = t->private->entries_size;
+			tmp.valid_hooks = t->valid_hooks;
+		} else {
+			tmp.nentries = t->table->nentries;
+			tmp.entries_size = t->table->entries_size;
+			tmp.valid_hooks = t->table->valid_hooks;
+		}
 		up(&ebt_mutex);
 		if (copy_to_user(user, &tmp, *len) != 0){
 			BUGPRINT("c2u Didn't work\n");
@@ -1413,9 +1431,10 @@ static int do_ebt_get_ctl(struct sock *sk, int cmd, void *user, int *len)
 		break;
 
 	case EBT_SO_GET_ENTRIES:
-		ret = copy_everything_to_user(t, user, len);
+	case EBT_SO_GET_INIT_ENTRIES:
+		ret = copy_everything_to_user(t, user, len, cmd);
 		up(&ebt_mutex);
-		break;			
+		break;
 
 	default:
 		up(&ebt_mutex);
