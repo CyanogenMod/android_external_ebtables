@@ -4,12 +4,14 @@
 # br-nf patch.
 
 # 6 June 2002: added ebt_snat.c, ebt_dnat.c files, removed ebt_nat.c file
+# 31 July 2002: added mark match/target, bridge/br.c, bridge/Makefile;
+#               deleted netsyms
 
 export FROM=linux
-export TO=ebt2.0pre8
-export FILE=ebtables-v2.0pre8_vs_2.4.18.diff
+export TO=ebt2.0-rc1
+export FILE=ebtables-v2.0-rc1_vs_2.4.18.diff
 
-echo "ebtables-v2.0pre8 - 06 June" >$FILE
+echo "ebtables-v2.0-rc1 - 31 July" >$FILE
 echo >>$FILE
 echo "*** modifications for brouter support ***" >>$FILE
 echo >>$FILE
@@ -18,7 +20,8 @@ diff -urN $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h >> $FILE
 diff -urN $FROM/include/linux/if_bridge.h $TO/include/linux/if_bridge.h >> $FILE
 diff -urN $FROM/net/core/dev.c $TO/net/core/dev.c >> $FILE
 diff -urN $FROM/net/bridge/br_input.c $TO/net/bridge/br_input.c >> $FILE
-diff -urN $FROM/net/netsyms.c $TO/net/netsyms.c >> $FILE
+diff -urN $FROM/net/bridge/br.c $TO/net/bridge/br.c >> $FILE
+diff -urN $FROM/net/bridge/Makefile $TO/net/bridge/Makefile >> $FILE
 diff -urN $FROM/include/linux/netfilter_bridge.h $TO/include/linux/netfilter_bridge.h >> $FILE
 
 echo >>$FILE
@@ -38,6 +41,8 @@ diff -urN /dev/null $TO/net/bridge/netfilter/br_db.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_filter.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_nat.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_broute.c >> $FILE
+diff -urN /dev/null $TO/net/bridge/netfilter/ebt_mark.c >> $FILE
+diff -urN /dev/null $TO/net/bridge/netfilter/ebt_mark_m.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_redirect.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_arp.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_ip.c >> $FILE
@@ -53,4 +58,6 @@ diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_vlan.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_log.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_nat.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_redirect.h >> $FILE
+diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_mark_m.h >> $FILE
+diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_mark_t.h >> $FILE
 diff -urN /dev/null $TO/include/linux/br_db.h >> $FILE

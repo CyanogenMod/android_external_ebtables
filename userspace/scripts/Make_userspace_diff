@@ -1,9 +1,10 @@
 #!/bin/bash
 # Used to make incremental diffs for ebtables userspace
+# 31 July 2002, added mark match/target
 
-export FROM=ebtables-v2.0pre6
-export TO=ebtables-v2.0pre7.001
-export FILE=ebtables-v2.0pre7.001.diff
+export FROM=ebtables-v2.0pre10
+export TO=ebtables-v2.0-rc1.001
+export FILE=ebtables-v2.0-rc1.001.diff
 
 diff -urN $FROM/Makefile $TO/Makefile > $FILE
 diff -urN $FROM/ebtables.c $TO/ebtables.c >> $FILE
@@ -18,6 +19,8 @@ diff -urN $FROM/extensions/ebt_log.c $TO/extensions/ebt_log.c >> $FILE
 diff -urN $FROM/extensions/ebt_standard.c $TO/extensions/ebt_standard.c >> $FILE
 diff -urN $FROM/extensions/ebtable_filter.c $TO/extensions/ebtable_filter.c >> $FILE
 diff -urN $FROM/extensions/ebtable_nat.c $TO/extensions/ebtable_nat.c >> $FILE
+diff -urN $FROM/extensions/ebt_mark.c $TO/extensions/ebt_mark.c >> $FILE
+diff -urN $FROM/extensions/ebt_mark_m.c $TO/extensions/ebt_mark_m.c >> $FILE
 diff -urN $FROM/extensions/Makefile $TO/extensions/Makefile >> $FILE
 diff -urN $FROM/COPYING $TO/COPYING >> $FILE
 diff -urN $FROM/THANKS $TO/THANKS >> $FILE
