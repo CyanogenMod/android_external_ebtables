@@ -24,6 +24,6 @@ diff -urN $FROM/net/bridge/Makefile $TO/net/bridge/Makefile >> $FILE
 diff -urN $FROM/net/core/netfilter.c $TO/net/core/netfilter.c >> $FILE
 diff -urN $FROM/net/core/skbuff.c $TO/net/core/skbuff.c >> $FILE
 diff -urN $FROM/net/ipv4/netfilter/ip_tables.c $TO/net/ipv4/netfilter/ip_tables.c >> $FILE
-diff -urN $FROM/net/ipv4/netfilter/ip_tables.c $TO/net/ipv4/ip_output.c >> $FILE
+diff -urN $FROM/net/ipv4/ip_output.c $TO/net/ipv4/ip_output.c >> $FILE
 diff -urN $FROM/net/ipv4/netfilter/ipt_LOG.c $TO/net/ipv4/netfilter/ipt_LOG.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/br_netfilter.c >> $FILE
