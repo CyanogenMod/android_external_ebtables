@@ -114,7 +114,7 @@ struct ebt_u_entry
 struct ebt_u_match
 {
 	char name[EBT_FUNCTION_MAXNAMELEN];
-	// size of the real match data + sizeof struct ebt_match
+	// size of the real match data
 	unsigned int size;
 	void (*help)(void);
 	void (*init)(struct ebt_entry_match *m);
@@ -123,7 +123,7 @@ struct ebt_u_match
 	        struct ebt_entry_match **match);
 	void (*final_check)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_match *match,
-	   const char *name, unsigned int hook_mask, unsigned int time);
+	   const char *name, unsigned int hookmask, unsigned int time);
 	void (*print)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_match *match);
 	int (*compare)(const struct ebt_entry_match *m1,
@@ -150,7 +150,7 @@ struct ebt_u_watcher
 	   struct ebt_entry_watcher **watcher);
 	void (*final_check)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_watcher *watch, const char *name,
-	   unsigned int hook_mask, unsigned int time);
+	   unsigned int hookmask, unsigned int time);
 	void (*print)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_watcher *watcher);
 	int (*compare)(const struct ebt_entry_watcher *w1,
@@ -174,7 +174,7 @@ struct ebt_u_target
 	   struct ebt_entry_target **target);
 	void (*final_check)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_target *target, const char *name,
-	   unsigned int hook_mask, unsigned int time);
+	   unsigned int hookmask, unsigned int time);
 	void (*print)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_target *target);
 	int (*compare)(const struct ebt_entry_target *t1,
@@ -236,7 +236,7 @@ extern char *standard_targets[NUM_STANDARD_TARGETS];
 // Returns a target string corresponding to the value
 #define TARGET_NAME(_value) (standard_targets[TARGET_INDEX(_value)])
 // True if the hook mask denotes that the rule is in a base chain
-#define BASE_CHAIN (hook_mask & (1 << NF_BR_NUMHOOKS))
+#define BASE_CHAIN (hookmask & (1 << NF_BR_NUMHOOKS))
 // Clear the bit in the hook_mask that tells if the rule is on a base chain
-#define CLEAR_BASE_CHAIN_BIT (hook_mask &= ~(1 << NF_BR_NUMHOOKS))
+#define CLEAR_BASE_CHAIN_BIT (hookmask &= ~(1 << NF_BR_NUMHOOKS))
 #endif /* EBTABLES_U_H */
