@@ -20,6 +20,7 @@ obj-$(CONFIG_BRIDGE_EBT_IPF) += ebt_ip.o
 obj-$(CONFIG_BRIDGE_EBT_ARPF) += ebt_arp.o
 obj-$(CONFIG_BRIDGE_EBT_VLANF) += ebt_vlan.o
 obj-$(CONFIG_BRIDGE_EBT_LOG) += ebt_log.o
-obj-$(CONFIG_BRIDGE_EBT_NAT) += ebt_nat.o
+obj-$(CONFIG_BRIDGE_EBT_SNAT) += ebt_snat.o
+obj-$(CONFIG_BRIDGE_EBT_DNAT) += ebt_dnat.o
 obj-$(CONFIG_BRIDGE_EBT_REDIRECT) += ebt_redirect.o
 include $(TOPDIR)/Rules.make
