@@ -1,3 +1,7 @@
+20021203
+	* changed the way to use the atomic operations. It's now possible
+	  to use the EBTABLES_ATOMIC_FILE environment variable, so it's no
+	  longer necessary to explicitly state the file name. See the man.
 20021120
 	* changed the way of compiling. New releases will now contain their
 	  own set of kernel includes. No more copying of kernel includes to
