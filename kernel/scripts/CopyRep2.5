@@ -8,13 +8,25 @@
 # FROM points to the CVS base of ebtables
 # TO points to the base of the kernel source tree where we want the files
 export FROM=/ebtables-cvs/ebtables2/
-export TO=/usr/src/linux-2.5.31
+export TO=/usr/src/linux-2.5.37
 
 mkdir -p $TO/net/bridge/netfilter
-mkdir -p $TO/include/netfilter_bridge
+mkdir -p $TO/include/linux/netfilter_bridge
 
-# only the different files are in kernel/linux2.5
-/bin/cp -r -f $FROM/kernel/linux/* $TO/
-/bin/cp -r -f $FROM/kernel/linux2.5/* $TO/
+# the non-ebtables specific files shouldn't change often
+# /bin/cp -r -f $FROM/kernel/linux2.5/* $TO/
+/bin/cp -r -f $FROM/kernel/linux2.5/net/bridge/netfilter/* $TO/net/bridge/netfilter/
+/bin/cp -r -f $FROM/kernel/linux2.5/include/linux/netfilter_bridge/* $TO/include/linux/netfilter_bridge/
+/bin/rm -r -f $TO/kernel/linux2.5/net/bridge/netfilter/CVS
+/bin/rm -r -f $TO/kernel/linux2.5/include/linux/netfilter_bridge/CVS
 
 /bin/cp -r -f $FROM/br-nf-bds/linux2.5/* $TO/
+/bin/rm -r -f $TO/CVS
+/bin/rm -r -f $TO/include/CVS
+/bin/rm -r -f $TO/include/linux/CVS
+/bin/rm -r -f $TO/net/CVS
+/bin/rm -r -f $TO/net/bridge/CVS
+/bin/rm -r -f $TO/core/CVS
+/bin/rm -r -f $TO/ipv4/CVS
+
+

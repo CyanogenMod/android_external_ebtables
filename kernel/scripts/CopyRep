@@ -5,10 +5,10 @@
 # 23 August 2002 - permute br-nf-bds and ebtables copy order
 
 export FROM=/ebtables-cvs/ebtables2/
-export TO=/usr/src/ebt2.0pre11
+export TO=/usr/src/linux-2.4.20-pre5
 
 mkdir -p $TO/net/bridge/netfilter
-mkdir -p $TO/include/netfilter_bridge
+mkdir -p $TO/include/linux/netfilter_bridge
 cp -r -f $FROM/kernel/linux/* $TO/
 cp -r -f $FROM/br-nf-bds/linux/* $TO/
 
