@@ -7,17 +7,25 @@
 #include <fcntl.h>
 #include <errno.h>
 
+static void print_help()
+{
+	printf("ebtablesu v"PROGVERSION" ("PROGDATE")\n");
+	printf(
+"Usage:\n"
+"ebtablesu open table         : copy the kernel table\n"
+"ebtablesu fopen table file   : copy the table from the specified file\n"
+"ebtablesu free table         : remove the table from memory\n"
+"ebtablesu commit table       : commit the table to the kernel\n"
+"ebtablesu fcommit table file : commit the table to the specified file\n\n"
+"ebtablesu <ebtables options> : the ebtables specifications\n"
+"                               use spaces only to separate options and commands\n"
+"For the ebtables options, see\n# ebtables -h\nor\n# man ebtables\n"
+	);
+}
 int main(int argc, char *argv[])
 {
 	char *arguments, *pos;
 	int i, writefd, len = 0;
-
-	if ((writefd = open(EBTD_PIPE, O_WRONLY, 0)) == -1) {
-		fprintf(stderr, "Could not open the pipe, perhaps ebtablesd is "
-		        "not running or you don't have write permission (try "
-		        "running as root).\n");
-		return -1;
-	}
 
 	if (argc > EBTD_ARGC_MAX) {
 		fprintf(stderr, "ebtablesd accepts at most %d arguments, %d "
@@ -43,8 +51,24 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
+		if (argc != 2) {
+			fprintf(stderr, "%s does not accept options.\n", argv[1]);
+			return -1;
+		}
+		print_help();
+		exit(0);
+	}
+
 	if (!(arguments = (char *)malloc(len))) {
 		fprintf(stderr, "ebtablesu: out of memory.\n");
+		return -1;
+	}
+
+	if ((writefd = open(EBTD_PIPE, O_WRONLY, 0)) == -1) {
+		fprintf(stderr, "Could not open the pipe, perhaps ebtablesd is "
+		        "not running or you don't have write permission (try "
+		        "running as root).\n");
 		return -1;
 	}
 
