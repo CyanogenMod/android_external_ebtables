@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/socket.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 
@@ -11,7 +10,8 @@ static struct option opts[] =
 
 static void print_help()
 {
-	printf("Standard targets: DROP, ACCEPT and CONTINUE\n");
+	printf("Standard targets: DROP, ACCEPT, RETURN or CONTINUE;\n"
+	       "The target can also be a user defined chain.\n");
 }
 
 static void init(struct ebt_entry_target *t)
@@ -32,6 +32,7 @@ static void final_check(const struct ebt_u_entry *entry,
 }
 
 struct ebt_u_entries *nr_to_chain(int nr);
+
 static void print(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target)
 {
@@ -53,7 +54,7 @@ static void print(const struct ebt_u_entry *entry,
 	else if (verdict == EBT_RETURN)
 		printf("RETURN ");
 	else
-		print_error("BUG: Bad standard target"); // this is a bug
+		print_bug("Bad standard target");
 }
 
 static int compare(const struct ebt_entry_target *t1,

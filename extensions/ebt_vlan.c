@@ -32,8 +32,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <string.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
@@ -106,7 +104,7 @@ parse (int c,
 	    (struct ebt_vlan_info *) (*match)->data;
 	unsigned long i;
 	char *end;
-	__u16 encap;
+	uint16_t encap;
 	switch (c) {
 	case VLAN_ID:
 		/*
@@ -128,7 +126,7 @@ parse (int c,
 		/*
 		 * Convert argv to long int,
 		 * set *end to end of argv string, 
-		 * base set 10 for decimal only 
+		 * base set 10 for decimal only
 		 */
 		(unsigned short) i = strtol (argv[optind - 1], &end, 10);
 		/*
@@ -335,7 +333,7 @@ static struct ebt_u_match vlan_match = {
 	final_check,
 	print,
 	compare,
-	opts,
+	opts
 };
 
 static void _init (void) __attribute__ ((constructor));

@@ -1,16 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <netinet/ether.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_nat.h>
 
-extern char *standard_targets[NUM_STANDARD_TARGETS];
-
-int to_source_supplied, to_dest_supplied;
+static int to_source_supplied, to_dest_supplied;
 
 #define NAT_S '1'
 #define NAT_D '1'
@@ -20,7 +16,7 @@ static struct option opts_s[] =
 {
 	{ "to-source"     , required_argument, 0, NAT_S },
 	{ "to-src"        , required_argument, 0, NAT_S },
-	{ "snat-target"    , required_argument, 0, NAT_S_TARGET },
+	{ "snat-target"   , required_argument, 0, NAT_S_TARGET },
 	{ 0 }
 };
 
@@ -28,7 +24,7 @@ static struct option opts_d[] =
 {
 	{ "to-destination", required_argument, 0, NAT_D },
 	{ "to-dst"        , required_argument, 0, NAT_D },
-	{ "dnat-target"    , required_argument, 0, NAT_D_TARGET },
+	{ "dnat-target"   , required_argument, 0, NAT_D_TARGET },
 	{ 0 }
 };
 
@@ -72,7 +68,6 @@ static int parse_s(int c, char **argv, int argc,
    const struct ebt_u_entry *entry, unsigned int *flags,
    struct ebt_entry_target **target)
 {
-	int i;
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)(*target)->data;
 	struct ether_addr *addr;
 
@@ -86,12 +81,7 @@ static int parse_s(int c, char **argv, int argc,
 		break;
 	case NAT_S_TARGET:
 		check_option(flags, OPT_SNAT_TARGET);
-		for (i = 0; i < NUM_STANDARD_TARGETS; i++)
-			if (!strcmp(optarg, standard_targets[i])) {
-				natinfo->target = -i - 1;
-				break;
-			}
-		if (i == NUM_STANDARD_TARGETS)
+		if (FILL_TARGET(optarg, natinfo->target))
 			print_error("Illegal --snat-target target");
 		break;
 	default:
@@ -106,7 +96,6 @@ static int parse_d(int c, char **argv, int argc,
    const struct ebt_u_entry *entry, unsigned int *flags,
    struct ebt_entry_target **target)
 {
-	int i;
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)(*target)->data;
 	struct ether_addr *addr;
 
@@ -121,12 +110,7 @@ static int parse_d(int c, char **argv, int argc,
 		break;
 	case NAT_D_TARGET:
 		check_option(flags, OPT_DNAT_TARGET);
-		for (i = 0; i < NUM_STANDARD_TARGETS; i++)
-			if (!strcmp(optarg, standard_targets[i])) {
-				natinfo->target = -i - 1;
-				break;
-			}
-		if (i == NUM_STANDARD_TARGETS)
+		if (FILL_TARGET(optarg, natinfo->target))
 			print_error("Illegal --dnat-target target");
 		break;
 	default:
@@ -141,10 +125,10 @@ static void final_check_s(const struct ebt_u_entry *entry,
 {
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
 
-	if ((hook_mask & (1 << NF_BR_NUMHOOKS)) && natinfo->target == EBT_RETURN)
+	if (BASE_CHAIN && natinfo->target == EBT_RETURN)
 		print_error("--snat-target RETURN not allowed on base chain");
-	hook_mask &= ~(1 << NF_BR_NUMHOOKS);
-	if (!(hook_mask & (1 << NF_BR_POST_ROUTING)) || strcmp(name, "nat"))
+	CLEAR_BASE_CHAIN_BIT;
+	if ((hook_mask & ~(1 << NF_BR_POST_ROUTING)) || strcmp(name, "nat"))
 		print_error("Wrong chain for snat");
 	if (time == 0 && to_source_supplied == 0)
 		print_error("No snat address supplied");
@@ -156,9 +140,9 @@ static void final_check_d(const struct ebt_u_entry *entry,
 {
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
 
-	if ((hook_mask & (1 << NF_BR_NUMHOOKS)) && natinfo->target == EBT_RETURN)
+	if (BASE_CHAIN && natinfo->target == EBT_RETURN)
 		print_error("--dnat-target RETURN not allowed on base chain");
-	hook_mask &= ~(1 << NF_BR_NUMHOOKS);
+	CLEAR_BASE_CHAIN_BIT;
 	if (((hook_mask & ~((1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_LOCAL_OUT))) ||
 	   strcmp(name, "nat")) &&
 	   ((hook_mask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute")))
@@ -174,7 +158,7 @@ static void print_s(const struct ebt_u_entry *entry,
 
 	printf("--to-src ");
 	printf("%s", ether_ntoa((struct ether_addr *)natinfo->mac));
-	printf(" --snat-target %s", standard_targets[-natinfo->target - 1]);
+	printf(" --snat-target %s", TARGET_NAME(natinfo->target));
 }
 
 static void print_d(const struct ebt_u_entry *entry,
@@ -184,7 +168,7 @@ static void print_d(const struct ebt_u_entry *entry,
 
 	printf("--to-dst ");
 	printf("%s", ether_ntoa((struct ether_addr *)natinfo->mac));
-	printf(" --dnat-target %s", standard_targets[-natinfo->target - 1]);
+	printf(" --dnat-target %s", TARGET_NAME(natinfo->target));
 }
 
 static int compare(const struct ebt_entry_target *t1,

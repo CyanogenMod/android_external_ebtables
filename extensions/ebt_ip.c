@@ -1,7 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <string.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
@@ -28,7 +26,8 @@ static struct option opts[] =
 static int undot_ip(char *ip, unsigned char *ip2)
 {
 	char *p, *q, *end;
-	int onebyte, i;
+	long int onebyte;
+	int i;
 	char buf[20];
 
 	strncpy(buf, ip, sizeof(buf) - 1);
@@ -46,7 +45,7 @@ static int undot_ip(char *ip, unsigned char *ip2)
 	}
 
 	onebyte = strtol(p, &end, 10);
-	if (*end != '\0' || onebyte >255 || onebyte < 0)
+	if (*end != '\0' || onebyte > 255 || onebyte < 0)
 		return -1;
 	ip2[3] = (unsigned char)onebyte;
 
@@ -57,8 +56,8 @@ static int undot_ip(char *ip, unsigned char *ip2)
 static int ip_mask(char *mask, unsigned char *mask2)
 {
 	char *end;
-	int bits;
-	__u32 mask22;
+	long int bits;
+	uint32_t mask22;
 
 	if (undot_ip(mask, mask2)) {
 		// not the /a.b.c.e format, maybe the /x format
@@ -77,39 +76,38 @@ static int ip_mask(char *mask, unsigned char *mask2)
 }
 
 // set the ip mask and ip address
-void parse_ip_address(char *address, __u32 *addr, __u32 *msk)
+void parse_ip_address(char *address, uint32_t *addr, uint32_t *msk)
 {
 	char *p;
-	int i;
 
 	// first the mask
 	if ((p = strrchr(address, '/')) != NULL) {
 		*p = '\0';
-		i = ip_mask(p + 1, (unsigned char *)msk);
-		if (i)
+		if (ip_mask(p + 1, (unsigned char *)msk))
 			print_error("Problem with the ip mask");
 	}
 	else
 		*msk = 0xFFFFFFFF;
 
-	i = undot_ip(address, (unsigned char *)addr);
-	if (i)
+	if (undot_ip(address, (unsigned char *)addr))
 		print_error("Problem with the ip address");
 	*addr = *addr & *msk;
 }
 
 // transform the ip mask into a string ready for output
-char *mask_to_dotted(__u32 mask)
+char *mask_to_dotted(uint32_t mask)
 {
 	int i;
 	static char buf[20];
-	__u32 maskaddr, bits;
+	uint32_t maskaddr, bits;
 
 	maskaddr = ntohl(mask);
 
 	// don't print /32
-	if (mask == 0xFFFFFFFFL)
-		return "";
+	if (mask == 0xFFFFFFFFL) {
+		*buf = '\0';
+		return buf;
+	}
 
 	i = 32;
 	bits = 0xFFFFFFFEL; // case 0xFFFFFFFF has just been dealt with
@@ -156,7 +154,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 {
 	struct ebt_ip_info *ipinfo = (struct ebt_ip_info *)(*match)->data;
 	char *end;
-	int i;
+	long int i;
 
 	switch (c) {
 	case IP_SOURCE:
@@ -176,7 +174,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		}
 
 		if (optind > argc)
-			print_error("Missing ip address argument");
+			print_error("Missing IP address argument");
 		if (c == IP_SOURCE)
 			parse_ip_address(argv[optind - 1], &ipinfo->saddr,
 			   &ipinfo->smsk);
@@ -191,10 +189,10 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			ipinfo->invflags |= EBT_IP_TOS;
 
 		if (optind > argc)
-			print_error("Missing ip tos argument");
+			print_error("Missing IP tos argument");
 		i = strtol(argv[optind - 1], &end, 16);
 		if (i < 0 || i > 255 || *end != '\0')
-			print_error("Problem with specified ip tos");
+			print_error("Problem with specified IP tos");
 		ipinfo->tos = i;
 		ipinfo->bitmask |= EBT_IP_TOS;
 		break;
@@ -204,10 +202,10 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		if (check_inverse(optarg))
 			ipinfo->invflags |= EBT_IP_PROTO;
 		if (optind > argc)
-			print_error("Missing ip protocol argument");
+			print_error("Missing IP protocol argument");
 		i = strtol(argv[optind - 1], &end, 10);
 		if (i < 0 || i > 255 || *end != '\0')
-			print_error("Problem with specified ip protocol");
+			print_error("Problem with specified IP protocol");
 		ipinfo->protocol = i;
 		ipinfo->bitmask |= EBT_IP_PROTO;
 		break;
@@ -259,7 +257,7 @@ static void print(const struct ebt_u_entry *entry,
 	}
 	if (ipinfo->bitmask & EBT_IP_PROTO) {
 		printf("--ip-proto ");
-		if (ipinfo->invflags & EBT_IP_DEST)
+		if (ipinfo->invflags & EBT_IP_PROTO)
 			printf("! ");
 		printf("%d ", ipinfo->protocol);
 	}
@@ -308,7 +306,7 @@ static struct ebt_u_match ip_match =
 	final_check,
 	print,
 	compare,
-	opts,
+	opts
 };
 
 static void _init(void) __attribute((constructor));

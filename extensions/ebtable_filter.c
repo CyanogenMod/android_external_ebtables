@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include <sys/socket.h>
-#include <linux/netfilter_bridge/ebtables.h>
 #include "../include/ebtables_u.h"
 
 #define FILTER_VALID_HOOKS ((1 << NF_BR_LOCAL_IN) | (1 << NF_BR_FORWARD) | \

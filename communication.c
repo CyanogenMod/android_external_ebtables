@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <linux/netfilter_bridge/ebtables.h>
-#include <netinet/in.h> // IPPROTO_IP
 #include "include/ebtables_u.h"
 
 extern char* hooknames[NF_BR_NUMHOOKS];
