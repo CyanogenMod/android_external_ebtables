@@ -2,7 +2,7 @@
 
 KERNEL_DIR?=/usr/src/linux
 PROGNAME:=ebtables
-PROGVERSION:="2.0pre8 (June 2002)"
+PROGVERSION:="2.0pre9 (July 2002)"
 
 MANDIR?=/usr/local/man
 CFLAGS:=-Wall -Wunused
@@ -26,6 +26,8 @@ headers:
 		/usr/include/linux/br_db.h
 	cp -f $(KERNEL_DIR)/include/linux/netfilter_bridge.h \
 		/usr/include/linux/netfilter_bridge.h
+	cp -f $(KERNEL_DIR)/include/linux/if_ether.h \
+		/usr/include/linux/if_ether.h
 
 .PHONY: symlink
 symlink:
