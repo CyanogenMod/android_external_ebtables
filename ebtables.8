@@ -21,7 +21,7 @@
 .\"     
 .\"
 .SH NAME
-ebtables (v.2.0) \- Ethernet bridge packet table administration
+ebtables (v.2.0) \- Ethernet bridge frame table administration
 .SH SYNOPSIS
 .BR "ebtables -[ADI] " "chain rule-specification " [ options ]
 .br
@@ -196,7 +196,8 @@ Set the policy for the chain to the given target. The policy is either
 .BR DROP .
 .TP
 .B "-N, --new-chain"
-Create a new user-defined chain by the given name.
+Create a new user-defined chain by the given name. The number of
+user-defined chains is unlimited. A chain name has max length of 31.
 .TP
 .B "-X, --delete-chain"
 Delete the specified user-defined chain. There must be no references to the
@@ -343,8 +344,10 @@ The target of the rule. This is one of the following values:
 .BR ACCEPT ,
 .BR DROP ,
 .BR CONTINUE ,
-or a target extension, see
-.BR "TARGET EXTENSIONS" .
+.BR RETURN ,
+a target extension (see
+.BR "TARGET EXTENSIONS" ")"
+or a user defined chain name.
 .TP
 .B --atomic file
 Let the command operate on the specified file. The data of the table to
