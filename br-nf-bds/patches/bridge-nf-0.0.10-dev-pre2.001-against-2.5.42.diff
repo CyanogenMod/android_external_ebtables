@@ -1,7 +1,7 @@
-bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
+bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 20 October
 
---- linux-2.5.42/include/linux/netfilter_bridge.h	Sat Oct 19 12:51:50 2002
-+++ linux-2.5.42-brnf/include/linux/netfilter_bridge.h	Sat Oct 19 12:48:58 2002
+--- linux-2.5.42/include/linux/netfilter_bridge.h	Sun Oct 20 21:27:40 2002
++++ linux-2.5.42-brnf/include/linux/netfilter_bridge.h	Sun Oct 20 21:20:53 2002
 @@ -6,6 +6,7 @@
  
  #include <linux/config.h>
@@ -10,7 +10,7 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  
  /* Bridge Hooks */
  /* After promisc drops, checksum checks. */
-@@ -22,11 +23,10 @@
+@@ -22,11 +23,9 @@
  #define NF_BR_BROUTING		5
  #define NF_BR_NUMHOOKS		6
  
@@ -20,14 +20,14 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
 -#define BRNF_COPY_HEADER		0x04
 -#define BRNF_DONT_TAKE_PARENT		0x08
 +#define BRNF_DONT_TAKE_PARENT		0x04
-+#define BRNF_COPY_HEADER		0x08
  
  enum nf_br_hook_priorities {
  	NF_BR_PRI_FIRST = INT_MIN,
-@@ -40,9 +40,24 @@
+@@ -39,10 +38,24 @@
+ 	NF_BR_PRI_LAST = INT_MAX,
  };
  
- /* Used in br_netfilter.c */
+-/* Used in br_netfilter.c */
 +static inline
 +struct nf_bridge_info *nf_bridge_alloc(struct sk_buff *skb)
 +{
@@ -49,8 +49,8 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  };
 +
  #endif
---- linux-2.5.42/include/linux/skbuff.h	Sat Oct 19 12:51:50 2002
-+++ linux-2.5.42-brnf/include/linux/skbuff.h	Wed Oct 16 20:39:52 2002
+--- linux-2.5.42/include/linux/skbuff.h	Sun Oct 20 21:27:40 2002
++++ linux-2.5.42-brnf/include/linux/skbuff.h	Sun Oct 20 15:33:11 2002
 @@ -96,6 +96,14 @@
  struct nf_ct_info {
  	struct nf_conntrack *master;
@@ -120,57 +120,46 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  }
  #endif
  
---- linux-2.5.42/net/bridge/br_forward.c	Sat Oct 19 12:51:50 2002
-+++ linux-2.5.42-brnf/net/bridge/br_forward.c	Sat Oct 19 12:23:23 2002
-@@ -33,6 +33,12 @@
+--- linux-2.5.42/net/bridge/br.c	Sun Oct 20 21:27:40 2002
++++ linux-2.5.42-brnf/net/bridge/br.c	Sun Oct 20 21:24:42 2002
+@@ -45,8 +45,10 @@
+ {
+ 	printk(KERN_INFO "NET4: Ethernet Bridge 008 for NET4.0\n");
+ 
++#ifdef CONFIG_NETFILTER
+ 	if (br_netfilter_init())
+ 		return 1;
++#endif
+ 	br_handle_frame_hook = br_handle_frame;
+ 	br_ioctl_hook = br_ioctl_deviceless_stub;
+ #if defined(CONFIG_ATM_LANE) || defined(CONFIG_ATM_LANE_MODULE)
+@@ -65,7 +67,9 @@
+ 
+ static void __exit br_deinit(void)
+ {
++#ifdef CONFIG_NETFILTER
+ 	br_netfilter_fini();
++#endif
+ 	unregister_netdevice_notifier(&br_device_notifier);
+ 	br_call_ioctl_atomic(__br_clear_ioctl_hook);
+ 
+--- linux-2.5.42/net/bridge/br_forward.c	Sun Oct 20 21:27:40 2002
++++ linux-2.5.42-brnf/net/bridge/br_forward.c	Sun Oct 20 21:22:52 2002
+@@ -32,7 +32,12 @@
+ 
  int br_dev_queue_push_xmit(struct sk_buff *skb)
  {
- 	skb_push(skb, ETH_HLEN);
-+
 +#ifdef CONFIG_NETFILTER
-+	if (skb->nf_bridge->mask & BRNF_COPY_HEADER)
++	if (skb->nf_bridge)
 +		memcpy(skb->data - 16, skb->nf_bridge->hh, 16);
 +#endif
+ 	skb_push(skb, ETH_HLEN);
 +
  	dev_queue_xmit(skb);
  
  	return 0;
-@@ -52,7 +58,13 @@
- #ifdef CONFIG_NETFILTER_DEBUG
- 	skb->nf_debug = 0;
- #endif
--	NF_HOOK(PF_BRIDGE, NF_BR_LOCAL_OUT, skb, NULL, skb->dev,
-+#ifdef CONFIG_NETFILTER
-+	/* Used by br_netfilter.c */
-+	if (!skb->nf_bridge && nf_bridge_alloc(skb) == NULL)
-+		kfree_skb(skb);
-+	else
-+#endif
-+		NF_HOOK(PF_BRIDGE, NF_BR_LOCAL_OUT, skb, NULL, skb->dev,
- 			br_forward_finish);
- }
- 
---- linux-2.5.42/net/bridge/br_input.c	Sat Oct 19 12:51:50 2002
-+++ linux-2.5.42-brnf/net/bridge/br_input.c	Sat Oct 19 12:16:10 2002
-@@ -154,8 +154,14 @@
- 			return -1;
- 		}
- 
--		NF_HOOK(PF_BRIDGE, NF_BR_PRE_ROUTING, skb, skb->dev, NULL,
--			br_handle_frame_finish);
-+#ifdef CONFIG_NETFILTER
-+		/* Used by br_netfilter.c */
-+		if (nf_bridge_alloc(skb) == NULL)
-+			kfree_skb(skb);
-+		else
-+#endif
-+			NF_HOOK(PF_BRIDGE, NF_BR_PRE_ROUTING, skb, skb->dev,
-+				NULL, br_handle_frame_finish);
- 		read_unlock(&br->lock);
- 		return 0;
- 	}
---- linux-2.5.42/net/core/netfilter.c	Sat Oct 19 12:51:50 2002
-+++ linux-2.5.42-brnf/net/core/netfilter.c	Sat Oct 19 12:36:18 2002
+--- linux-2.5.42/net/core/netfilter.c	Sun Oct 20 21:27:40 2002
++++ linux-2.5.42-brnf/net/core/netfilter.c	Sun Oct 20 15:33:11 2002
 @@ -418,8 +418,8 @@
  {
  	int status;
@@ -197,8 +186,8 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  
  	status = queue_handler[pf].outfn(skb, info, queue_handler[pf].data);
  	if (status < 0) {
---- linux-2.5.42/net/core/skbuff.c	Sat Oct 19 12:51:50 2002
-+++ linux-2.5.42-brnf/net/core/skbuff.c	Wed Oct 16 21:16:25 2002
+--- linux-2.5.42/net/core/skbuff.c	Sun Oct 20 21:27:40 2002
++++ linux-2.5.42-brnf/net/core/skbuff.c	Sun Oct 20 15:33:11 2002
 @@ -234,8 +234,6 @@
  	skb->sk		  = NULL;
  	skb->stamp.tv_sec = 0;	/* No idea about time */
@@ -270,8 +259,46 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  #endif
  #ifdef CONFIG_NET_SCHED
  	new->tc_index	= old->tc_index;
---- linux-2.5.42/net/ipv4/netfilter/ip_tables.c	Sat Oct 19 12:51:50 2002
-+++ linux-2.5.42-brnf/net/ipv4/netfilter/ip_tables.c	Thu Oct 17 22:39:25 2002
+--- linux-2.5.42/net/ipv4/ip_output.c	Sun Oct 20 21:27:40 2002
++++ linux-2.5.42-brnf/net/ipv4/ip_output.c	Sun Oct 20 16:15:47 2002
+@@ -75,7 +75,6 @@
+ #include <net/inetpeer.h>
+ #include <linux/igmp.h>
+ #include <linux/netfilter_ipv4.h>
+-#include <linux/netfilter_bridge.h>
+ #include <linux/mroute.h>
+ #include <linux/netlink.h>
+ 
+@@ -895,6 +894,8 @@
+ 		/* Connection association is same as pre-frag packet */
+ 		skb2->nfct = skb->nfct;
+ 		nf_conntrack_get(skb2->nfct);
++		skb2->nf_bridge = skb->nf_bridge;
++		nf_bridge_get(skb2->nf_bridge);
+ #ifdef CONFIG_NETFILTER_DEBUG
+ 		skb2->nf_debug = skb->nf_debug;
+ #endif
+@@ -909,18 +910,6 @@
+ 		iph->tot_len = htons(len + hlen);
+ 
+ 		ip_send_check(iph);
+-
+-		/*
+-		 *	Fragments with a bridge device destination need
+-		 *	to get the Ethernet header copied here, as
+-		 *	br_dev_queue_push_xmit() can't do this.
+-		 *	See net/bridge/br_netfilter.c
+-		 */
+-
+-#ifdef CONFIG_NETFILTER
+-		if (skb->brnfmask & BRNF_COPY_HEADER)
+-			memcpy(skb2->data - 16, skb->data - 16, 16);
+-#endif
+ 
+ 		err = output(skb2);
+ 		if (err)
+--- linux-2.5.42/net/ipv4/netfilter/ip_tables.c	Sun Oct 20 21:27:40 2002
++++ linux-2.5.42-brnf/net/ipv4/netfilter/ip_tables.c	Sun Oct 20 15:33:11 2002
 @@ -292,8 +292,15 @@
  	datalen = (*pskb)->len - ip->ihl * 4;
  	indev = in ? in->name : nulldevname;
@@ -290,8 +317,8 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  
  	/* We handle fragments by dealing with the first fragment as
  	 * if it was a normal packet.  All other fragments are treated
---- linux-2.5.42/net/ipv4/netfilter/ipt_LOG.c	Sat Oct 19 12:51:50 2002
-+++ linux-2.5.42-brnf/net/ipv4/netfilter/ipt_LOG.c	Wed Oct 16 21:54:13 2002
+--- linux-2.5.42/net/ipv4/netfilter/ipt_LOG.c	Sun Oct 20 21:27:40 2002
++++ linux-2.5.42-brnf/net/ipv4/netfilter/ipt_LOG.c	Sun Oct 20 15:33:11 2002
 @@ -286,11 +286,16 @@
  	spin_lock_bh(&log_lock);
  	printk(level_string);
@@ -314,8 +341,8 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  
  	if (in && !out) {
  		/* MAC logging for input chain only. */
---- linux-2.5.42/net/bridge/br_netfilter.c	Sat Oct 19 12:51:50 2002
-+++ linux-2.5.42-brnf/net/bridge/br_netfilter.c	Sat Oct 19 12:25:10 2002
+--- linux-2.5.42/net/bridge/br_netfilter.c	Sun Oct 20 21:27:40 2002
++++ linux-2.5.42-brnf/net/bridge/br_netfilter.c	Sun Oct 20 21:37:15 2002
 @@ -133,7 +133,7 @@
  
  	if (skb->pkt_type == PACKET_OTHERHOST) {
@@ -371,11 +398,13 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  
  	if ((*pskb)->protocol != __constant_htons(ETH_P_IP))
  		return NF_ACCEPT;
-@@ -252,12 +254,13 @@
+@@ -251,13 +253,15 @@
+ #ifdef CONFIG_NETFILTER_DEBUG
  	skb->nf_debug ^= (1 << NF_IP_PRE_ROUTING);
  #endif
++ 	if ((nf_bridge = nf_bridge_alloc(skb)) == NULL)
++		return NF_DROP;
  
-+	nf_bridge = skb->nf_bridge;
  	if (skb->pkt_type == PACKET_OTHERHOST) {
  		skb->pkt_type = PACKET_HOST;
 -		skb->brnfmask |= BRNF_PKT_TYPE;
@@ -387,7 +416,7 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  	skb->dev = bridge_parent(skb->dev);
  	store_orig_dstaddr(skb);
  
-@@ -302,16 +305,18 @@
+@@ -302,16 +306,18 @@
  /* PF_BRIDGE/FORWARD *************************************************/
  static int br_nf_forward_finish(struct sk_buff *skb)
  {
@@ -409,7 +438,7 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  			skb->dev, br_forward_finish, 1);
  
  	return 0;
-@@ -330,6 +335,7 @@
+@@ -330,6 +336,7 @@
     int (*okfn)(struct sk_buff *))
  {
  	struct sk_buff *skb = *pskb;
@@ -417,7 +446,7 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  
  	if (skb->protocol != __constant_htons(ETH_P_IP))
  		return NF_ACCEPT;
-@@ -338,14 +344,15 @@
+@@ -338,14 +345,15 @@
  	skb->nf_debug ^= (1 << NF_BR_FORWARD);
  #endif
  
@@ -436,7 +465,7 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  			bridge_parent(skb->dev), br_nf_forward_finish);
  
  	return NF_STOLEN;
-@@ -375,18 +382,18 @@
+@@ -375,18 +383,18 @@
   * functions, and give them back later, when we have determined the real
   * output device. This is done in here.
   *
@@ -459,7 +488,7 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
   */
  
  static unsigned int br_nf_local_out(unsigned int hook, struct sk_buff **pskb,
-@@ -396,6 +403,7 @@
+@@ -396,6 +404,7 @@
  	int (*okfn)(struct sk_buff *skb);
  	struct net_device *realindev;
  	struct sk_buff *skb = *pskb;
@@ -467,7 +496,7 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  
  	if (skb->protocol != __constant_htons(ETH_P_IP))
  		return NF_ACCEPT;
-@@ -406,19 +414,20 @@
+@@ -406,19 +415,20 @@
  	if (skb->dst == NULL)
  		return NF_ACCEPT;
  
@@ -493,7 +522,7 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  		}
  
  		NF_HOOK(PF_BRIDGE, NF_BR_FORWARD, skb, realindev,
-@@ -429,7 +438,7 @@
+@@ -429,7 +439,7 @@
  		 * generated traffic hasn't.
  		 */
  		if (realindev != NULL) {
@@ -502,7 +531,7 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  			    has_bridge_parent(realindev))
  				realindev = bridge_parent(realindev);
  
-@@ -457,6 +466,7 @@
+@@ -457,6 +467,7 @@
     int (*okfn)(struct sk_buff *))
  {
  	struct sk_buff *skb = *pskb;
@@ -510,7 +539,7 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  
  	/* Be very paranoid.  */
  	if (skb->mac.raw < skb->head || skb->mac.raw + ETH_HLEN > skb->data) {
-@@ -489,13 +499,11 @@
+@@ -489,13 +500,10 @@
  	 */
  	if (skb->pkt_type == PACKET_OTHERHOST) {
  		skb->pkt_type = PACKET_HOST;
@@ -523,7 +552,6 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
 -	 */
 -	skb->brnfmask |= BRNF_COPY_HEADER;
 +	memcpy(nf_bridge->hh, skb->data - 16, 16);
-+	nf_bridge->mask |= BRNF_COPY_HEADER;	
  
  	NF_HOOK(PF_INET, NF_IP_POST_ROUTING, skb, NULL,
  		bridge_parent(skb->dev), br_dev_queue_push_xmit);
@@ -533,8 +561,8 @@ bridge-nf-0.0.10-dev-pre2.001-against-2.5.42 - 19 October
  		struct sk_buff *skb = *pskb;
 +		struct nf_bridge_info *nf_bridge;
 +
-+		if (!skb->nf_bridge)
-+			nf_bridge_alloc(skb);
++		if (!skb->nf_bridge && !nf_bridge_alloc(skb))
++			return NF_DROP;
 +
 +		nf_bridge = skb->nf_bridge;
  
