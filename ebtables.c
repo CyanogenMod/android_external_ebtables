@@ -51,6 +51,7 @@ void __print_bug(char *file, int line, char *format, ...)
 #ifndef PROC_SYS_MODPROBE
 #define PROC_SYS_MODPROBE "/proc/sys/kernel/modprobe"
 #endif
+#define ATOMIC_ENV_VARIABLE "EBTABLES_ATOMIC_FILE"
 
 char *hooknames[NF_BR_NUMHOOKS] =
 {
@@ -100,10 +101,10 @@ static struct option ebt_original_options[] =
 	{ "new-chain"     , required_argument, 0, 'N' },
 	{ "rename-chain"  , required_argument, 0, 'E' },
 	{ "delete-chain"  , required_argument, 0, 'X' },
-	{ "atomic-init"   , required_argument, 0, 7   },
-	{ "atomic-commit" , required_argument, 0, 8   },
-	{ "atomic"        , required_argument, 0, 9   },
-	{ "atomic-save"   , required_argument, 0, 10  },
+	{ "atomic-init"   , no_argument      , 0, 7   },
+	{ "atomic-commit" , no_argument      , 0, 8   },
+	{ "atomic-file"   , required_argument, 0, 9   },
+	{ "atomic-save"   , no_argument      , 0, 10  },
 	{ "init-table"    , no_argument      , 0, 11  },
 	{ 0 }
 };
@@ -780,7 +781,8 @@ static void print_help()
 "ebtables -[ADI] chain rule-specification [options]\n"
 "ebtables -P chain target\n"
 "ebtables -[LFZ] [chain]\n"
-"ebtables -[b] [y,n]\n"
+"ebtables -[NX] [chain]\n"
+"ebtables -E old-chain-name new-chain-name\n\n"
 "Commands:\n"
 "--append -A chain             : append to chain\n"
 "--delete -D chain             : delete matching rule from chain\n"
@@ -794,10 +796,10 @@ static void print_help()
 "--new-chain -N chain          : create a user defined chain\n"
 "--rename-chain -E old new     : rename a chain\n"
 "--delete-chain -X chain       : delete a user defined chain\n"
-"--atomic-commit file          : update the kernel w/ the table contained in file\n"
-"--atomic-init file            : put the initial kernel table into file\n"
-"--atomic-save file            : put the current kernel table into file\n"
-"--atomic file                 : write changes to file instead of kernel\n"
+"--atomic-commit               : update the kernel w/t table contained in <FILE>\n"
+"--atomic-init                 : put the initial kernel table into <FILE>\n"
+"--atomic-save                 : put the current kernel table into <FILE>\n"
+"--atomic file                 : set <FILE> to file\n\n"
 "Options:\n"
 "--proto  -p [!] proto         : protocol hexadecimal, by name or LENGTH\n"
 "--src    -s [!] address[/mask]: source mac address\n"
@@ -807,8 +809,10 @@ static void print_help()
 "--logical-in  [!] name        : logical bridge input interface name\n"
 "--logical-out [!] name        : logical bridge output interface name\n"
 "--modprobe -M program         : try to insert modules using this program\n"
-"--version -V                  : print package version\n"
-"\n");
+"--version -V                  : print package version\n\n"
+"Environment variable:\n"
+ATOMIC_ENV_VARIABLE "          : if set <FILE> (see above) will equal its value"
+"\n\n");
 
 	m_l = new_entry->m_list;
 	while (m_l) {
@@ -1544,8 +1548,8 @@ static void get_kernel_table(const char *modprobe)
 			"%s table", replace.name);
 	}
 	/*
-	 * when listing a table contained in a file, we don't expect the user
-	 * to know what the table's name is
+	 * when listing a table contained in a file, we don't demand that
+	 * the user knows the table's name
 	 */
 	if ( !(table = find_table(replace.name)) )
 		print_error("Bad table name");
@@ -1564,7 +1568,7 @@ static void get_kernel_table(const char *modprobe)
 #define OPT_ZERO       0x100
 #define OPT_LOGICALIN  0x200
 #define OPT_LOGICALOUT 0x400
-// the main thing
+/* the main thing */
 int main(int argc, char *argv[])
 {
 	char *buffer;
@@ -1586,6 +1590,7 @@ int main(int argc, char *argv[])
 
 	opterr = 0;
 
+	replace.filename = getenv(ATOMIC_ENV_VARIABLE);
 	/*
 	 * initialize the table name, OPT_ flags, selected hook and command
 	 */
@@ -1593,7 +1598,6 @@ int main(int argc, char *argv[])
 	replace.flags = 0;
 	replace.selected_hook = -1;
 	replace.command = 'h';
-	replace.filename = NULL;
 	replace.counterchanges = NULL;
 
 	new_entry = (struct ebt_u_entry *)malloc(sizeof(struct ebt_u_entry));
@@ -2061,11 +2065,8 @@ int main(int argc, char *argv[])
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
 			replace.flags |= OPT_COMMAND;
-			if (replace.filename)
-				print_error("--atomic incompatible with "
-				   "command");
-			replace.filename = (char *)malloc(strlen(optarg) + 1);
-			strcpy(replace.filename, optarg);
+			if (!replace.filename)
+				print_error("No atomic file specified");
 			/*
 			 * get the information from the file
 			 */
@@ -2084,8 +2085,8 @@ int main(int argc, char *argv[])
 			replace.num_counters = 0;
 			/*
 			 * make sure the table will be written to the kernel
+			 * possible memory leak here
 			 */
-			free(replace.filename);
 			replace.filename = NULL;
 			ebtables_insmod("ebtables", modprobe);
 			break;
@@ -2095,11 +2096,18 @@ int main(int argc, char *argv[])
 			replace.command = c;
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
+			if (c != 11 && !replace.filename)
+				print_error("No atomic file specified");
 			replace.flags |= OPT_COMMAND;
-			if (replace.filename)
-				print_error("--atomic incompatible with "
-				   "command");
-			get_kernel_table(modprobe);
+			{
+				char *tmp = replace.filename;
+
+				tmp = replace.filename;
+				/* get the kernel table */
+				replace.filename = NULL;
+				get_kernel_table(modprobe);
+				replace.filename = tmp;
+			}
 			if (replace.nentries) {
 				replace.counterchanges = (unsigned short *)
 				   malloc(sizeof(unsigned short) * (replace.nentries + 1));
@@ -2107,12 +2115,12 @@ int main(int argc, char *argv[])
 					replace.counterchanges[i] = CNT_NORM;
 				replace.counterchanges[i] = CNT_END;
 			}
-			if (c == 11)
-				break;
+			break;
 		case 9 : /* atomic */
-			if (c == 9 && (replace.flags & OPT_COMMAND))
+			if (replace.flags & OPT_COMMAND)
 				print_error("--atomic has to come before"
 				" the command");
+			/* another possible memory leak here */
 			replace.filename = (char *)malloc(strlen(optarg) + 1);
 			strcpy(replace.filename, optarg);
 			break;
