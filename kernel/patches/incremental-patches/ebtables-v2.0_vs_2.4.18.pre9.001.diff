@@ -1,31 +1,4 @@
---- linux/net/bridge/br_private.h	Thu Jun 27 19:15:44 2002
-+++ ebt2.0pre9.001/net/bridge/br_private.h	Thu Jun 27 19:11:50 2002
-@@ -4,7 +4,7 @@
-  *	Authors:
-  *	Lennert Buytenhek		<buytenh@gnu.org>
-  *
-  *
-  *	This program is free software; you can redistribute it and/or
-  *	modify it under the terms of the GNU General Public License
---- linux/include/linux/if_bridge.h	Thu Jun 27 19:15:44 2002
-+++ ebt2.0pre9.001/include/linux/if_bridge.h	Thu Jun 27 19:11:50 2002
-@@ -4,7 +4,7 @@
-  *	Authors:
-  *	Lennert Buytenhek		<buytenh@gnu.org>
-  *
-  *
-  *	This program is free software; you can redistribute it and/or
-  *	modify it under the terms of the GNU General Public License
---- linux/net/bridge/br_input.c	Thu Jun 27 19:15:44 2002
-+++ ebt2.0pre9.001/net/bridge/br_input.c	Thu Jun 27 19:11:50 2002
-@@ -5,7 +5,7 @@
-  *	Authors:
-  *	Lennert Buytenhek		<buytenh@gnu.org>
-  *
-  *
-  *	This program is free software; you can redistribute it and/or
-  *	modify it under the terms of the GNU General Public License
---- linux/net/bridge/netfilter/ebtable_filter.c	Thu Jun 27 19:15:44 2002
+--- linux/net/bridge/netfilter/ebtable_filter.c	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/net/bridge/netfilter/ebtable_filter.c	Thu Jun 27 19:11:50 2002
 @@ -17,17 +17,16 @@
  
@@ -51,7 +24,7 @@
  };
  
  static int check(const struct ebt_table_info *info, unsigned int valid_hooks)
---- linux/net/bridge/netfilter/ebtable_nat.c	Thu Jun 27 19:15:44 2002
+--- linux/net/bridge/netfilter/ebtable_nat.c	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/net/bridge/netfilter/ebtable_nat.c	Thu Jun 27 19:11:50 2002
 @@ -17,17 +17,16 @@
  
@@ -75,7 +48,7 @@
  };
  
  static int check(const struct ebt_table_info *info, unsigned int valid_hooks)
---- linux/net/bridge/netfilter/ebtable_broute.c	Thu Jun 27 19:15:44 2002
+--- linux/net/bridge/netfilter/ebtable_broute.c	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/net/bridge/netfilter/ebtable_broute.c	Thu Jun 27 19:11:50 2002
 @@ -21,13 +21,12 @@
  // EBT_ACCEPT means the frame will be bridged
@@ -93,7 +66,7 @@
  };
  
  static int check(const struct ebt_table_info *info, unsigned int valid_hooks)
---- linux/net/bridge/netfilter/ebt_redirect.c	Thu Jun 27 19:15:44 2002
+--- linux/net/bridge/netfilter/ebt_redirect.c	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/net/bridge/netfilter/ebt_redirect.c	Thu Jun 27 19:11:50 2002
 @@ -16,7 +16,7 @@
  #include <net/sock.h>
@@ -126,7 +99,7 @@
  		return -EINVAL;
  	return 0;
  }
---- linux/net/bridge/netfilter/ebt_arp.c	Thu Jun 27 19:15:44 2002
+--- linux/net/bridge/netfilter/ebt_arp.c	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/net/bridge/netfilter/ebt_arp.c	Thu Jun 27 19:11:50 2002
 @@ -68,7 +68,7 @@
  	return 0;
@@ -137,7 +110,7 @@
     const struct ebt_entry *e, void *data, unsigned int datalen)
  {
  	struct ebt_arp_info *infostuff = (struct ebt_arp_info *) data;
---- linux/net/bridge/netfilter/ebt_ip.c	Thu Jun 27 19:15:44 2002
+--- linux/net/bridge/netfilter/ebt_ip.c	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/net/bridge/netfilter/ebt_ip.c	Thu Jun 27 19:11:50 2002
 @@ -39,7 +39,7 @@
  	return 0;
@@ -148,7 +121,7 @@
     const struct ebt_entry *e, void *data, unsigned int datalen)
  {
  	struct ebt_ip_info *infostuff = (struct ebt_ip_info *) data;
---- linux/net/bridge/netfilter/ebt_vlan.c	Thu Jun 27 19:15:44 2002
+--- linux/net/bridge/netfilter/ebt_vlan.c	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/net/bridge/netfilter/ebt_vlan.c	Thu Jun 27 19:11:50 2002
 @@ -5,7 +5,7 @@
   *      Bart De Schuymer <bart.de.schuymer@pandora.be>
@@ -292,7 +265,7 @@
 +MODULE_DESCRIPTION ("802.1Q VLAN matching module for ebtables, v"
 +		    MODULE_VERSION);
  MODULE_LICENSE ("GPL");
---- linux/net/bridge/netfilter/ebt_log.c	Thu Jun 27 19:15:44 2002
+--- linux/net/bridge/netfilter/ebt_log.c	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/net/bridge/netfilter/ebt_log.c	Thu Jun 27 19:11:50 2002
 @@ -17,7 +17,7 @@
  
@@ -303,7 +276,7 @@
     const struct ebt_entry *e, void *data, unsigned int datalen)
  {
  	struct ebt_log_info *loginfo = (struct ebt_log_info *)data;
---- linux/net/bridge/netfilter/ebt_snat.c	Thu Jun 27 19:15:44 2002
+--- linux/net/bridge/netfilter/ebt_snat.c	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/net/bridge/netfilter/ebt_snat.c	Thu Jun 27 19:11:50 2002
 @@ -15,7 +15,7 @@
  #include <linux/module.h>
@@ -335,7 +308,7 @@
  		return -EINVAL;
  	return 0;
  }
---- linux/net/bridge/netfilter/ebt_dnat.c	Thu Jun 27 19:15:44 2002
+--- linux/net/bridge/netfilter/ebt_dnat.c	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/net/bridge/netfilter/ebt_dnat.c	Thu Jun 27 19:11:50 2002
 @@ -15,7 +15,7 @@
  #include <linux/module.h>
@@ -370,7 +343,7 @@
  		return -EINVAL;
  	return 0;
  }
---- linux/net/bridge/netfilter/ebtables.c	Thu Jun 27 19:15:44 2002
+--- linux/net/bridge/netfilter/ebtables.c	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/net/bridge/netfilter/ebtables.c	Thu Jun 27 19:11:50 2002
 @@ -90,27 +90,35 @@
  	if (!device)
@@ -969,8 +942,8 @@
  	memcpy(tmp.hook_entry, info->hook_entry,
  	   NF_BR_NUMHOOKS * sizeof(struct ebt_entries *));
  	for (i = 0; i < NF_BR_NUMHOOKS; i++)
---- linux/include/linux/netfilter_bridge/ebtables.h	Thu Jun 27 19:15:44 2002
-+++ ebt2.0pre9.001/include/linux/netfilter_bridge/ebtables.h	Thu Jun 27 19:11:50 2002
+--- linux/include/linux/netfilter_bridge/ebtables.h	Fri Jun 28 18:00:15 2002
++++ ebt2.0pre9.001/include/linux/netfilter_bridge/ebtables.h	Thu Jun 27 20:18:07 2002
 @@ -17,6 +17,7 @@
  #include <linux/if_ether.h> // ETH_ALEN
  
@@ -1105,7 +1078,7 @@
  	char *entries;
  };
  
---- linux/include/linux/netfilter_bridge/ebt_vlan.h	Thu Jun 27 19:15:44 2002
+--- linux/include/linux/netfilter_bridge/ebt_vlan.h	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/include/linux/netfilter_bridge/ebt_vlan.h	Thu Jun 27 19:11:50 2002
 @@ -3,14 +3,16 @@
  
@@ -1127,7 +1100,7 @@
  	__u8 invflags;		/* Inverse bitmask  bit 1=1 - inversed ID arg, 
  				   bit 2=1 - inversed Pirority arg */
  };
---- linux/include/linux/netfilter_bridge/ebt_nat.h	Thu Jun 27 19:15:44 2002
+--- linux/include/linux/netfilter_bridge/ebt_nat.h	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/include/linux/netfilter_bridge/ebt_nat.h	Thu Jun 27 19:11:50 2002
 @@ -4,8 +4,8 @@
  struct ebt_nat_info
@@ -1140,7 +1113,7 @@
  };
  #define EBT_SNAT_TARGET "snat"
  #define EBT_DNAT_TARGET "dnat"
---- linux/include/linux/netfilter_bridge/ebt_redirect.h	Thu Jun 27 19:15:44 2002
+--- linux/include/linux/netfilter_bridge/ebt_redirect.h	Fri Jun 28 18:00:15 2002
 +++ ebt2.0pre9.001/include/linux/netfilter_bridge/ebt_redirect.h	Thu Jun 27 19:11:50 2002
 @@ -3,8 +3,8 @@
  
