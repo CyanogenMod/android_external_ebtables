@@ -40,7 +40,7 @@ static struct ebt_table broute_table =
   RW_LOCK_UNLOCKED, check, NULL
 };
 
-static unsigned int ebt_broute(struct sk_buff **pskb)
+static int ebt_broute(struct sk_buff **pskb)
 {
 	int ret;
 
@@ -59,7 +59,7 @@ static int __init init(void)
 	if (ret < 0)
 		return ret;
 	br_write_lock_bh(BR_NETPROTO_LOCK);
-	// in br_input.c, br_handle_frame() wants to call broute_decision()
+	// see br_input.c
 	br_should_route_hook = ebt_broute;
 	br_write_unlock_bh(BR_NETPROTO_LOCK);
 	return ret;
