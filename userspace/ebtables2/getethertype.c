@@ -24,13 +24,12 @@
 */
 
 /********************************************************************
-* Description: /etc/ethertypes database access functions
+* Description: Ethertype name service switch and the ethertypes 
+* database access functions
 * Author: Nick Fedchik <fnm@ukrsat.com>
 * Checker: Bart De Schuymer <bdschuym@pandora.be>
 * Origin: uClibc-0.9.16/libc/inet/getproto.c
 * Created at: Mon Nov 11 12:20:11 EET 2002
-* Computer: firebox.ukrsat.com 
-* System: Linux 2.4.18-alt6master-up on i686
 ********************************************************************/
 
 
