@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_forward.c,v 1.3 2002/09/10 17:38:52 bdschuym Exp $
+ *	$Id: br_forward.c,v 1.4 2002/09/17 21:44:16 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License

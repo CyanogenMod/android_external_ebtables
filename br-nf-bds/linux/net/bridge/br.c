@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br.c,v 1.2 2002/08/24 08:44:40 bdschuym Exp $
+ *	$Id: br.c,v 1.3 2002/09/17 21:42:06 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -28,13 +28,7 @@
 #include "../atm/lec.h"
 #endif
 
-#if defined(CONFIG_BRIDGE_EBT_BROUTE) || \
-    defined(CONFIG_BRIDGE_EBT_BROUTE_MODULE)
-unsigned int (*broute_decision) (unsigned int hook, struct sk_buff **pskb,
-                        const struct net_device *in,
-                        const struct net_device *out,
-                        int (*okfn)(struct sk_buff *)) = NULL;
-#endif
+int (*br_should_route_hook) (struct sk_buff **pskb) = NULL;
 
 void br_dec_use_count()
 {
@@ -50,11 +44,8 @@ static int __init br_init(void)
 {
 	printk(KERN_INFO "NET4: Ethernet Bridge 008 for NET4.0\n");
 
-#ifdef CONFIG_BRIDGE_NF
 	if (br_netfilter_init())
 		return 1;
-#endif
-
 	br_handle_frame_hook = br_handle_frame;
 	br_ioctl_hook = br_ioctl_deviceless_stub;
 #if defined(CONFIG_ATM_LANE) || defined(CONFIG_ATM_LANE_MODULE)
@@ -78,9 +69,7 @@ static void __br_clear_ioctl_hook(void)
 
 static void __exit br_deinit(void)
 {
-#ifdef CONFIG_BRIDGE_NF
 	br_netfilter_fini();
-#endif
 	unregister_netdevice_notifier(&br_device_notifier);
 	br_call_ioctl_atomic(__br_clear_ioctl_hook);
 	net_call_rx_atomic(__br_clear_frame_hook);
@@ -90,12 +79,7 @@ static void __exit br_deinit(void)
 #endif
 }
 
-#if defined(CONFIG_BRIDGE_EBT_BROUTE) || \
-    defined(CONFIG_BRIDGE_EBT_BROUTE_MODULE)
-EXPORT_SYMBOL(broute_decision);
-#else
-EXPORT_NO_SYMBOLS;
-#endif
+EXPORT_SYMBOL(br_should_route_hook);
 
 module_init(br_init)
 module_exit(br_deinit)

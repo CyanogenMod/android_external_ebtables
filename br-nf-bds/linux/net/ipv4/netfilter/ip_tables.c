@@ -122,19 +122,14 @@ static LIST_HEAD(ipt_tables);
 static inline int
 ip_packet_match(const struct iphdr *ip,
 		const char *indev,
-#ifdef CONFIG_BRIDGE_NF
 		const char *physindev,
-#endif
 		const char *outdev,
-#ifdef CONFIG_BRIDGE_NF
 		const char *physoutdev,
-#endif
 		const struct ipt_ip *ipinfo,
 		int isfrag)
 {
 	size_t i;
-	unsigned long ret;
-	unsigned long ret2 = 1;
+	unsigned long ret, ret2;
 
 #define FWINV(bool,invflg) ((bool) ^ !!(ipinfo->invflags & invflg))
 
@@ -164,13 +159,11 @@ ip_packet_match(const struct iphdr *ip,
 			& ((const unsigned long *)ipinfo->iniface_mask)[i];
 	}
 
-#ifdef CONFIG_BRIDGE_NF
 	for (i = 0, ret2 = 0; i < IFNAMSIZ/sizeof(unsigned long); i++) {
 		ret2 |= (((const unsigned long *)physindev)[i]
 			^ ((const unsigned long *)ipinfo->iniface)[i])
 			& ((const unsigned long *)ipinfo->iniface_mask)[i];
 	}
-#endif
 
 	if (FWINV(ret != 0 && ret2 != 0, IPT_INV_VIA_IN)) {
 		dprintf("VIA in mismatch (%s vs %s).%s\n",
@@ -185,13 +178,11 @@ ip_packet_match(const struct iphdr *ip,
 			& ((const unsigned long *)ipinfo->outiface_mask)[i];
 	}
 
-#ifdef CONFIG_BRIDGE_NF
 	for (i = 0, ret2 = 0; i < IFNAMSIZ/sizeof(unsigned long); i++) {
 		ret2 |= (((const unsigned long *)physoutdev)[i]
 			^ ((const unsigned long *)ipinfo->outiface)[i])
 			& ((const unsigned long *)ipinfo->outiface_mask)[i];
 	}
-#endif
 
 	if (FWINV(ret != 0 && ret2 != 0, IPT_INV_VIA_OUT)) {
 		dprintf("VIA out mismatch (%s vs %s).%s\n",
@@ -292,9 +283,7 @@ ipt_do_table(struct sk_buff **pskb,
 	/* Initializing verdict to NF_DROP keeps gcc happy. */
 	unsigned int verdict = NF_DROP;
 	const char *indev, *outdev;
-#ifdef CONFIG_BRIDGE_NF
 	const char *physindev, *physoutdev;
-#endif
 	void *table_base;
 	struct ipt_entry *e, *back;
 
@@ -304,10 +293,8 @@ ipt_do_table(struct sk_buff **pskb,
 	datalen = (*pskb)->len - ip->ihl * 4;
 	indev = in ? in->name : nulldevname;
 	outdev = out ? out->name : nulldevname;
-#ifdef CONFIG_BRIDGE_NF
 	physindev = (*pskb)->physindev ? (*pskb)->physindev->name : nulldevname;
 	physoutdev = (*pskb)->physoutdev ? (*pskb)->physoutdev->name : nulldevname;
-#endif
 
 	/* We handle fragments by dealing with the first fragment as
 	 * if it was a normal packet.  All other fragments are treated
@@ -344,14 +331,7 @@ ipt_do_table(struct sk_buff **pskb,
 		IP_NF_ASSERT(e);
 		IP_NF_ASSERT(back);
 		(*pskb)->nfcache |= e->nfcache;
-		if (ip_packet_match(ip, indev,
-#ifdef CONFIG_BRIDGE_NF
-		    physindev,
-#endif
-		    outdev,
-#ifdef CONFIG_BRIDGE_NF
-		    physoutdev,
-#endif
+		if (ip_packet_match(ip, indev, physindev, outdev, physoutdev,
 		    &e->ip, offset)) {
 			struct ipt_entry_target *t;
 

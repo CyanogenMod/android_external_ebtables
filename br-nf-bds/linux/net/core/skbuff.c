@@ -4,7 +4,7 @@
  *	Authors:	Alan Cox <iiitac@pyr.swan.ac.uk>
  *			Florian La Roche <rzsfl@rz.uni-sb.de>
  *
- *	Version:	$Id: skbuff.c,v 1.3 2002/08/24 16:24:13 bdschuym Exp $
+ *	Version:	$Id: skbuff.c,v 1.4 2002/09/17 21:49:57 bdschuym Exp $
  *
  *	Fixes:	
  *		Alan Cox	:	Fixed the worst of the load balancer bugs.
@@ -231,10 +231,8 @@ static inline void skb_headerinit(void *p, kmem_cache_t *cache,
 	skb->sk = NULL;
 	skb->stamp.tv_sec=0;	/* No idea about time */
 	skb->dev = NULL;
-#ifdef CONFIG_BRIDGE_NF
 	skb->physindev = NULL;
 	skb->physoutdev = NULL;
-#endif
 	skb->dst = NULL;
 	memset(skb->cb, 0, sizeof(skb->cb));
 	skb->pkt_type = PACKET_HOST;	/* Default type */
@@ -366,10 +364,8 @@ struct sk_buff *skb_clone(struct sk_buff *skb, int gfp_mask)
 	n->sk = NULL;
 	C(stamp);
 	C(dev);
-#ifdef CONFIG_BRIDGE_NF
 	C(physindev);
 	C(physoutdev);
-#endif
 	C(h);
 	C(nh);
 	C(mac);
@@ -425,10 +421,8 @@ static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 	new->list=NULL;
 	new->sk=NULL;
 	new->dev=old->dev;
-#ifdef CONFIG_BRIDGE_NF
 	new->physindev=old->physindev;
 	new->physoutdev=old->physoutdev;
-#endif
 	new->priority=old->priority;
 	new->protocol=old->protocol;
 	new->dst=dst_clone(old->dst);
