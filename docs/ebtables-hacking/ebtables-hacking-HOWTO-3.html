@@ -31,13 +31,13 @@ described now:
 <p>The name of the match, for example <CODE>ip</CODE>. Try to keep yourself from using capitals.</p>
 </li>
 <li><CODE>unsigned int size</CODE>
-<p>The size of the match data</p>
+<p>The size of the match data, without the extra padding needed for alignment (this is added by the generic code).</p>
 </li>
 <li><CODE>void (*help)(void)</CODE>
 <p>This function should print out the help information for the match, when the user asks for it
 with the <CODE>-h &#60match&#62</CODE> command. The function can expect a '\n' to have been
 printed right before it is executed and should end with at least one '\n'. The output should
-explain the usage of the module, with its look similar to that of the standard help.
+explain the usage of the module and should look similar to the standard help.
 </p>
 </li>
 <li><CODE>void (*init)(struct ebt_entry_match *m)</CODE>
@@ -57,7 +57,7 @@ are the same two parameters given to the <CODE>main</CODE> function. <CODE>entry
 complete new rule that is being constructed. <CODE>flags</CODE> points to an unsigned int private to the
 module that can have any value the module wants. In practice it is used to contain flags for which options
 are already processed. <CODE>match</CODE> points to the data of the match, as you can see it's a double pointer,
-meaning you are allowed to change the address of the match's data.
+meaning you are allowed to change the address of the match's data (this is done f.e. in ebt_among.c).
 </p>
 </li>
 <li><CODE>void (*final_check)(const struct ebt_u_entry *entry,<BR>
@@ -69,20 +69,20 @@ you should check that the user specified <CODE>-p XyZ</CODE>. The <CODE>name</CO
 of the table the rule will be put in, <CODE>hookmask</CODE> contains the mask that describes from which base
 chains the rule can be accessed. Because this function can be called twice during the execution of the
 program, the value <CODE>time</CODE> equals 0 for the first execution and 1 for the second. In some situations
-it is necessary to have this knowledge.
+it is necessary to have this knowledge (see <a HREF="#ss3.1.4">section 3.1.4</a> for more information).
 </p>
 </li>
 <li><CODE>void (*print)(const struct ebt_u_entry *entry,<BR>
 	   const struct ebt_entry_match *match)</CODE>
 <p>
 This function is executed when the user wants to list the rules and if a rule contains this match. The output should
-be in a format the user could have used to make the rule.
+be in a format the user could have used to make the rule, so that the option '--Lx' stays useful.
 </p>
 </li>
 <li><CODE>int (*compare)(const struct ebt_entry_match *m1,<BR>
 	   const struct ebt_entry_match *m2)</CODE>
 <p>
-This function is executed when 2 rules have to be compared with eachother and both contain this match. A return value
+This function is executed when 2 rules have to be compared with each other and both contain this match. A return value
 of 1 means the matches in both rules are the same, otherwise the return value must be 0.
 </p>
 </li>
@@ -108,7 +108,7 @@ to the previous section (mentally replace match by watcher where necessary).
 <h3><a NAME="ss3.1.3">3.1.3</a> <a HREF="ebtables-hacking-HOWTO.html#toc3.1.3">Targets</a>
 </h3>
 <p>
-A target module is a piece of code that does a certain action when a all matches of a rule are passed and after the watchers in
+A target module is a piece of code that does a certain action when all matches of a rule are passed and after the watchers in
 the rule (if any) are executed.<br><br>
 The userspace target is contained in a <CODE>struct ebt_u_target</CODE> that has the same relevant fields as the match, so we refer
 to the first section (mentally replace match by target where necessary).
@@ -153,7 +153,7 @@ use <CODE>FILL_TARGET("RETURN", pos);</CODE>
 <li>
 <CODE>TARGET_NAME(value)</CODE>
 <p>
-This macro produces the target string coreesponding to the given target <CODE>value</CODE>. Use this to convert a stored numeric value to a string that can be printed for
+This macro produces the target string corresponding to the given target <CODE>value</CODE>. Use this to convert a stored numeric value to a string that can be printed for
 the user to read.
 </p>
 </li>
@@ -178,10 +178,11 @@ If you want to use <CODE>BASE_CHAIN</CODE> you must use it earlier in the functi
 <p>
 Some extra explanation about the <CODE>time</CODE> argument of the <CODE>final_check()</CODE> function is perhaps needed. When a rule is added, this rule can have as
 target a user defined chain. It can be, for example, that introducing this new rule makes a certain target accessible from a base chain that is not allowed for that target.
-Before this rule was added, this was not so, but after the rule is added this is so. Therefore, after an add or insert, all the <CODE>final_check()</CODE> functions of all
-the modules used in all chains are called, the value of <CODE>time</CODE> will be set to 1. We could ofcourse be lazy and let this checking up to the kernel, but it's the
+Before this rule was added, this target was not accessible from the base chain, but after the rule was added it is.
+Therefore, after an add or insert, all the <CODE>final_check()</CODE> functions of all
+the modules used in all chains are called, the value of <CODE>time</CODE> will be set to 1. We could of course be lazy and let this checking up to the kernel, but it's the
 policy of ebtables that any rejected table from the kernel is caused by an ebtables userspace bug. Userspace should make sure no invalid data can go to the kernel. This does
-not mean that the kernel no longer has to check for validity, ofcourse.
+not mean that the kernel no longer has to check for validity, of course.
 </p>
 <p>
 <em>A complete rule:</em>
@@ -249,16 +250,15 @@ Is needed in the initialization function of a watcher module, to register its da
 Is needed in the initialization function of a target module, to register its data.
 </p>
 </li>
-<li><CODE>int name_to_number(char *name, uint16_t *proto)</CODE>
+<li><CODE>struct ethertypeent *getethertypebyname(const char *name)</CODE>
 <p>
-Translate a name of an Ethernet protocol to the corresponding protocol number, which is put inside the variable pointed to by <CODE>proto</CODE>. The
-translation is done using /etc/ethertypes. The return value is as follows: 0 = success, 1 = success but the name equals "LENGTH", -1 = no translation possible.
+Translate a name of an Ethernet protocol to the corresponding protocol number. The
+translation is done using /etc/ethertypes.
 </p>
 </li>
-<li><CODE>int number_to_name(unsigned short proto, char *name)</CODE>
+<li><CODE>struct ethertypeent *getethertypebynumber(int type)</CODE>
 <p>
-Translate a protocol number to a protocol name, using /etc/ethertypes. Returns 0 on success and puts the protocol name at the address pointed to
-by <CODE>name</CODE>. This demands the <CODE>name</CODE> buffer to be of size at least 21.
+Translate a protocol number to a protocol name, using /etc/ethertypes.
 </p>
 </li>
 <li><CODE>void check_option(unsigned int *flags, unsigned int mask)</CODE>
@@ -297,10 +297,6 @@ data tells the module to do, with a frame.
 <p>
 The kernel match module is contained in a <CODE>struct ebt_match</CODE> of which its relevant fields will be discussed now:
 <ol>
-<li><CODE>struct list_head list</CODE>
-<p>
-Set this to <CODE>{NULL, NULL}</CODE>.
-</p></li>
 <li><CODE>char name[EBT_FUNCTION_MAXNAMELEN]</CODE>
 <p>
 The name of the match, should be the same as the name of the corresponding userspace match.
@@ -335,7 +331,7 @@ Always set to <CODE>THIS_MODULE</CODE>.
 <p>
 The watchers are contained in a <CODE>struct ebt_watcher</CODE>, its members are basically the same as
 for the <CODE>struct ebt_match</CODE>, except that the <CODE>watcher()</CODE> function
-(the analogue of the <CODE>match()</CODE> function) has no return value.
+(which is analogous to the <CODE>match()</CODE> function) has no return value.
 </p>
 <h3><a NAME="ss3.2.3">3.2.3</a> <a HREF="ebtables-hacking-HOWTO.html#toc3.2.3">Targets</a>
 </h3>
@@ -349,10 +345,10 @@ The <CODE>target()</CODE> function should make sure the decision cannot be <CODE
 <h3><a NAME="ss3.2.4">3.2.4</a> <a HREF="ebtables-hacking-HOWTO.html#toc3.2.4">Miscellaneous</a>
 </h3>
 <p>
-<em>Macro's:</em>
+<em>Macros:</em>
 </p>
 <p>
-Some macro's useful to ebtables kernel modules:
+Some macros useful to ebtables kernel modules:
 <ol>
 <li><CODE>FWINV(bool,invflg)</CODE>
 <p>

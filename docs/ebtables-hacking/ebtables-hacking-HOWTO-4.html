@@ -215,15 +215,15 @@ Compares the data of two "instances" of the match module, returning 1 if the dat
 <PRE>
 static struct ebt_u_match ip_match =
 {
-	EBT_IP_MATCH,
-	sizeof(struct ebt_ip_info),
-	print_help,
-	init,
-	parse,
-	final_check,
-	print,
-	compare,
-	opts
+	.name		= EBT_IP_MATCH,
+	.size		= sizeof(struct ebt_ip_info),
+	.help		= print_help,
+	.init		= init,
+	.parse		= parse,
+	.final_check	= final_check,
+	.print		= print,
+	.compare	= compare,
+	.extra_ops	= opts,
 };
 </PRE>
 </td></tr>
@@ -276,8 +276,7 @@ static void final_check_d(const struct ebt_u_entry *entry,
 </table>
 </p>
 <p>
-The target returned by the dnat kernel module (see the man page) is contained in the <CODE>target</CODE> field of the module's specific struct
-(<CODE>struct ebt_nat_info</CODE>). First we check that this target isn't RETURN on one of the standard (base) chains. Then we make
+First we check that this target isn't RETURN on one of the standard (base) chains. Then we make
 <CODE>hookmask</CODE> ready for direct use by using the <CODE>CLEAR_BASE_CHAIN_BIT</CODE> macro. Next is checked if the rule containing this
 "module instance" is accessible through illegal chains or tables.
 Finally, the argument <CODE>time</CODE> is checked. If it equals zero, the function checks to be sure a destination IP address was specified.
@@ -317,20 +316,26 @@ static int ebt_filter_ip(const struct sk_buff *skb, const struct net_device *in,
    unsigned int datalen)
 {
 	struct ebt_ip_info *info = (struct ebt_ip_info *)data;
+	union {struct iphdr iph; struct tcpudphdr ports;} u;
 
+	if (skb_copy_bits(skb, 0, &u.iph, sizeof(u.iph)))
+		return EBT_NOMATCH;
 	if (info->bitmask & EBT_IP_SOURCE &&
-	   FWINV((((*skb).nh.iph)->saddr & info->smsk) !=
+	   FWINV((u.iph.saddr & info->smsk) !=
 	   info->saddr, EBT_IP_SOURCE))
 		return EBT_NOMATCH;
-	return EBT_MATCH;
 }
 </PRE>
 </td></tr>
 </table>
 </p>
 <p>
-This is the filtering function of the ip match module, it is executed for every frame that comes into contact with an ebtables rule that uses the ip match. All it does
-is tell the ebtables main code if the frame matches or not.
+This is the filtering function of the ip match module, it is executed for every
+frame that comes into contact with an ebtables rule that uses the ip match. All it does
+is tell the ebtables main code if the frame matches or not.<br>
+As the data isn't necessarily linearized in memory, meaning that the data isn't
+guaranteed to be in consecutive memory places, we need to use skb_copy_bits()
+to copy the IP header to the stack. We can then match the data on the stack.
 </p>
 <p>
 <table BGCOLOR="#E0E0E0" WIDTH="100%">
@@ -363,8 +368,10 @@ This function is executed for every rule that uses the ip match, when the kernel
 <PRE>
 static struct ebt_match filter_ip =
 {
-	{NULL, NULL}, EBT_IP_MATCH, ebt_filter_ip, ebt_ip_check, NULL,
-	THIS_MODULE
+	.name		= EBT_IP_MATCH,
+	.match		= ebt_filter_ip,
+	.check		= ebt_ip_check,
+	.me		= THIS_MODULE,
 };
 </PRE>
 </td></tr>
@@ -406,7 +413,7 @@ MODULE_LICENSE("GPL");
 </table>
 </p>
 <p>
-Ofcourse your module is released under the GPL.
+Of course your module is released under the GPL.
 </p>
 <p>
 <em><h3>The ebtables kernel filter table</h3></em>
@@ -434,9 +441,18 @@ The valid netfilter hooks for the ebtables filter table are the bridge <CODE>LOC
 <PRE>
 static struct ebt_entries initial_chains[] =
 {
-  {0, "INPUT", 0, EBT_ACCEPT, 0},
-  {0, "FORWARD", 0, EBT_ACCEPT, 0},
-  {0, "OUTPUT", 0, EBT_ACCEPT, 0}
+	{
+		.name	= "INPUT",
+		.policy	= EBT_ACCEPT,
+	},
+	{
+		.name	= "FORWARD",
+		.policy	= EBT_ACCEPT,
+	},
+	{
+		.name	= "OUTPUT",
+		.policy	= EBT_ACCEPT,
+	},
 };
 
 </PRE>
@@ -452,9 +468,15 @@ The filter table consists of three chains, initially containing zero rules and h
 <PRE>
 static struct ebt_replace initial_table =
 {
-  "filter", FILTER_VALID_HOOKS, 0, 3 * sizeof(struct ebt_entries),
-  { [NF_BR_LOCAL_IN]&initial_chains[0], [NF_BR_FORWARD]&initial_chains[1],
-    [NF_BR_LOCAL_OUT]&initial_chains[2] }, 0, NULL, (char *)initial_chains
+	.name		= "filter",
+	.valid_hooks	= FILTER_VALID_HOOKS,
+	.entries_size	= 3 * sizeof(struct ebt_entries),
+	.hook_entry	= {
+		[NF_BR_LOCAL_IN]	= &initial_chains[0],
+		[NF_BR_FORWARD]		= &initial_chains[1],
+		[NF_BR_LOCAL_OUT]	= &initial_chains[2],
+	},
+	.entries	= (char *)initial_chains,
 };
 
 </PRE>
@@ -480,7 +502,7 @@ static int check(const struct ebt_table_info *info, unsigned int valid_hooks)
 </table>
 </p>
 <p>
-This function is executed when new table data is given to the kernel. We just check
+This function is executed when new table data is given to the kernel. We just check that
 the valid hooks according to userspace are the same as those according to the kernel module.
 </p>
 <p>
@@ -489,8 +511,12 @@ the valid hooks according to userspace are the same as those according to the ke
 <PRE>
 static struct ebt_table frame_filter =
 { 
-  {NULL, NULL}, "filter", &initial_table, FILTER_VALID_HOOKS, 
-  RW_LOCK_UNLOCKED, check, NULL
+	.name		= "filter",
+	.table		= &initial_table,
+	.valid_hooks	= FILTER_VALID_HOOKS, 
+	.lock		= RW_LOCK_UNLOCKED,
+	.check		= check,
+	.me		= THIS_MODULE,
 };
 
 </PRE>
@@ -516,19 +542,34 @@ ebt_hook (unsigned int hook, struct sk_buff **pskb, const struct net_device *in,
 </table>
 </p>
 <p>
-This function is executed for every frame that passes a netfilter hook on which this function is registered.
+This function is executed for every frame that passes through a netfilter hook on which this function is registered.
 </p>
 <p>
 <table BGCOLOR="#E0E0E0" WIDTH="100%">
 <tr><td>
 <PRE>
 static struct nf_hook_ops ebt_ops_filter[] = {
-	{ { NULL, NULL }, ebt_hook, PF_BRIDGE, NF_BR_LOCAL_IN,
-	   NF_BR_PRI_FILTER_BRIDGED},
-	{ { NULL, NULL }, ebt_hook, PF_BRIDGE, NF_BR_FORWARD,
-	   NF_BR_PRI_FILTER_BRIDGED},
-	{ { NULL, NULL }, ebt_hook, PF_BRIDGE, NF_BR_LOCAL_OUT,
-	   NF_BR_PRI_FILTER_OTHER}
+	{
+		.hook		= ebt_hook,
+		.owner		= THIS_MODULE,
+		.pf		= PF_BRIDGE,
+		.hooknum	= NF_BR_LOCAL_IN,
+		.priority	= NF_BR_PRI_FILTER_BRIDGED,
+	},
+	{
+		.hook		= ebt_hook,
+		.owner		= THIS_MODULE,
+		.pf		= PF_BRIDGE,
+		.hooknum	= NF_BR_FORWARD,
+		.priority	= NF_BR_PRI_FILTER_BRIDGED,
+	},
+	{
+		.hook		= ebt_hook,
+		.owner		= THIS_MODULE,
+		.pf		= PF_BRIDGE,
+		.hooknum	= NF_BR_LOCAL_OUT,
+		.priority	= NF_BR_PRI_FILTER_OTHER,
+	},
 };
 
 </PRE>
@@ -551,7 +592,7 @@ static int __init init(void)
 	ret = ebt_register_table(&frame_filter);
 	if (ret &lt; 0)
 		return ret;
-	for (i = 0; i &lt; sizeof(ebt_ops_filter) / sizeof(ebt_ops_filter[0]); i++)
+	for (i = 0; i &lt; ARRAY_SIZE(ebt_ops_filter); i++)
 		if ((ret = nf_register_hook(&ebt_ops_filter[i])) &lt; 0)
 			goto cleanup;
 	return ret;
@@ -567,7 +608,7 @@ cleanup:
 </table>
 </p>
 <p>
-register the table to the main ebtables code; register <CODE>ebt_hook()</CODE> on the appropriate netfilter hooks.
+Register the table to the main ebtables code; register <CODE>ebt_hook()</CODE> on the appropriate netfilter hooks.
 </p>
 <p>
 <table BGCOLOR="#E0E0E0" WIDTH="100%">
@@ -577,7 +618,7 @@ static void __exit fini(void)
 {
 	int i;
 
-	for (i = 0; i &lt; sizeof(ebt_ops_filter) / sizeof(ebt_ops_filter[0]); i++)
+	for (i = 0; i &lt; ARRAY_SIZE(ebt_ops_filter); i++)
 		nf_unregister_hook(&ebt_ops_filter[i]);
 	ebt_unregister_table(&frame_filter);
 }
