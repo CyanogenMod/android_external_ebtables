@@ -41,7 +41,7 @@
 
 #define GET_BITMASK(_MASK_) vlaninfo->bitmask & _MASK_
 #define SET_BITMASK(_MASK_) vlaninfo->bitmask |= _MASK_
-#define INV_FLAG(_inv_flag_) (vlaninfo->invflags & _inv_flag_) ? "!" : ""
+#define INV_FLAG(_inv_flag_) (vlaninfo->invflags & _inv_flag_) ? "! " : ""
 
 #define VLAN_ID    0
 #define VLAN_PRIO  1
@@ -60,9 +60,9 @@ static struct option opts[] = {
 static void print_help ()
 {
 	printf ("802.1Q VLAN extension options:\n"
-		"--vlan-id [!]id        : VLAN-tagged frame identifier, 0,1-4094 (integer)\n"
-		"--vlan-prio [!]prio    : Priority-tagged frame user_priority, 0-7 (integer)\n"
-		"--vlan-encap [!]proto  : Encapsulated protocol (hexadecimal)\n");
+		"--vlan-id [!] id        : VLAN-tagged frame identifier, 0,1-4094 (integer)\n"
+		"--vlan-prio [!] prio    : Priority-tagged frame user_priority, 0-7 (integer)\n"
+		"--vlan-encap [!] proto  : Encapsulated protocol (hexadecimal)\n");
 }
 
 /*
@@ -124,7 +124,7 @@ parse (int c,
 		 * Check arg value presence
 		 */
 		if (optind > argc)
-			print_error ("Missing VLAN ID argument value\n");
+			print_error ("Missing VLAN ID argument value");
 		/*
 		 * Convert argv to long int,
 		 * set *end to end of argv string, 
@@ -136,7 +136,7 @@ parse (int c,
 		 */
 		if (i > 4094 || *end != '\0')
 			print_error
-			    ("Specified VLAN ID is out of range (0-4094)\n");
+			    ("Specified VLAN ID is out of range (0-4094)");
 		/*
 		 * Set up parameter value
 		 */
@@ -153,7 +153,7 @@ parse (int c,
 			vlaninfo->invflags |= EBT_VLAN_PRIO;
 		if (optind > argc)
 			print_error
-			    ("Missing user_priority argument value\n");
+			    ("Missing user_priority argument value");
 		/*
 		 * Convert argv to long int,
 		 * set *end to end of argv string, 
@@ -165,7 +165,7 @@ parse (int c,
 		 */
 		if (i >= 8 || *end != '\0')
 			print_error
-			    ("Specified user_priority is out of range (0-7)\n");
+			    ("Specified user_priority is out of range (0-7)");
 		/*
 		 * Set up parameter value 
 		 */
@@ -182,7 +182,7 @@ parse (int c,
 			vlaninfo->invflags |= EBT_VLAN_ENCAP;
 		if (optind > argc)
 			print_error
-			    ("Missing encapsulated frame type argument value\n");
+			    ("Missing encapsulated frame type argument value");
 		/*
 		 * Parameter can be decimal, hexadecimal, or string.
 		 * Check arg val range (still raw area)
@@ -190,12 +190,12 @@ parse (int c,
 		(unsigned short) encap = strtol (argv[optind - 1], &end, 16);
 		if (*end == '\0' && (encap < ETH_ZLEN || encap > 0xFFFF))
 			print_error
-			    ("Specified encapsulated frame type is out of range\n");
+			    ("Specified encapsulated frame type is out of range");
 		if (*end != '\0')
 			if (name_to_number (argv[optind - 1], &encap) == -1)
 				print_error
 				    ("Problem with the specified encapsulated"
-				     "protocol\n");
+				     "protocol");
 		/*
 		 * Set up parameter value (network notation)
 		 */
@@ -227,7 +227,7 @@ final_check (const struct ebt_u_entry *entry,
 	 */
 	if (entry->bitmask & EBT_NOPROTO || entry->ethproto != ETH_P_8021Q)
 		print_error
-		    ("For use 802.1Q extension the protocol must be specified as 802_1Q\n");
+		    ("For use 802.1Q extension the protocol must be specified as 802_1Q");
 	/*
 	 * Check if specified vlan-id=0 (priority-tagged frame condition) 
 	 * when vlan-prio was specified.
@@ -235,7 +235,7 @@ final_check (const struct ebt_u_entry *entry,
 	if (GET_BITMASK (EBT_VLAN_PRIO)) {
 		if (vlaninfo->id && GET_BITMASK (EBT_VLAN_ID))
 			print_error
-			    ("For use user_priority the specified vlan-id must be 0\n");
+			    ("For use user_priority the specified vlan-id must be 0");
 	}
 }
 
