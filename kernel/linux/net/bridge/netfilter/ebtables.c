@@ -4,7 +4,7 @@
  *  Author:
  *  Bart De Schuymer		<bart.de.schuymer@pandora.be>
  *
- *  ebtables.c,v 2.0, April, 2002
+ *  ebtables.c,v 2.0, July, 2002
  *
  *  This code is stongly inspired on the iptables code which is
  *  Copyright (C) 1999 Paul `Rusty' Russell & Michael J. Neuling
@@ -89,7 +89,51 @@ static inline int ebt_dev_check(char *entry, const struct net_device *device)
 		return 0;
 	if (!device)
 		return 1;
-	return strncmp(entry, device->name, IFNAMSIZ);
+	return !!strncmp(entry, device->name, IFNAMSIZ);
+}
+
+#define FWINV(bool,invflg) ((bool) ^ !!(p->invflags & invflg))
+// process standard matches
+static inline int ebt_basic_match(struct ebt_entry *p, struct ethhdr *h,
+   const struct net_device *in, const struct net_device *out)
+{
+	int verdict, i;
+
+	if (p->bitmask & EBT_802_3) {
+		if (FWINV(ntohs(h->h_proto) >= 1536, EBT_IPROTO))
+			return 1;
+	} else if (!(p->bitmask & EBT_NOPROTO) &&
+	   FWINV(p->ethproto != h->h_proto, EBT_IPROTO))
+		return 1;
+
+	if (FWINV(ebt_dev_check(p->in, in), EBT_IIN))
+		return 1;
+	if (FWINV(ebt_dev_check(p->out, out), EBT_IOUT))
+		return 1;
+	if ((!in || !in->br_port) ? 0 : FWINV(ebt_dev_check(
+	   p->logical_in, &in->br_port->br->dev), EBT_ILOGICALIN))
+		return 1;
+	if ((!out || !out->br_port) ? 0 : FWINV(ebt_dev_check(
+	   (p->logical_out), &out->br_port->br->dev), EBT_ILOGICALOUT))
+		return 1;
+	
+	if (p->bitmask & EBT_SOURCEMAC) {
+		verdict = 0;
+		for (i = 0; i < 6; i++)
+			verdict |= (h->h_source[i] ^ p->sourcemac[i]) &
+			   p->sourcemsk[i];
+		if (FWINV(verdict != 0, EBT_ISOURCE) )
+			return 1;
+	}
+	if (p->bitmask & EBT_DESTMAC) {
+		verdict = 0;
+		for (i = 0; i < 6; i++)
+			verdict |= (h->h_dest[i] ^ p->destmac[i]) &
+			   p->destmsk[i];
+		if (FWINV(verdict != 0, EBT_IDEST) )
+			return 1;
+	}
+	return 0;
 }
 
 // Do some firewalling
@@ -97,7 +141,7 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
    const struct net_device *in, const struct net_device *out,
    struct ebt_table *table)
 {
-	int i, j, nentries;
+	int i, nentries;
 	struct ebt_entry *point;
 	struct ebt_counter *counter_base;
 	struct ebt_entry_target *t;
@@ -118,114 +162,80 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 	#define cb_base table->private->counters + \
 	   cpu_number_map(smp_processor_id()) * table->private->nentries
 	counter_base = cb_base + private->hook_entry[hook]->counter_offset;
-	#define FWINV(bool,invflg) ((bool) ^ !!(point->invflags & invflg))
 	// base for chain jumps
 	base = (char *)chaininfo;
 	i = 0;
- 	while (i < nentries) {
-		if ( ( point->bitmask & EBT_NOPROTO ||
-		   FWINV(point->ethproto == ((**pskb).mac.ethernet)->h_proto,
-		      EBT_IPROTO)
-		   || FWINV(ntohs(((**pskb).mac.ethernet)->h_proto) < 1536 &&
-		      (point->bitmask & EBT_802_3), EBT_IPROTO) )
-		   && FWINV(!ebt_dev_check((char *)(point->in), in), EBT_IIN)
-		   && FWINV(!ebt_dev_check((char *)(point->out), out), EBT_IOUT)
-		   && ((!in || !in->br_port) ? 1 : FWINV(!ebt_dev_check((char *)
-		      (point->logical_in), &in->br_port->br->dev), EBT_ILOGICALIN))
-		   && ((!out || !out->br_port) ? 1 :
-		       FWINV(!ebt_dev_check((char *)
-		      (point->logical_out), &out->br_port->br->dev), EBT_ILOGICALOUT))
+	while (i < nentries) {
+		if (ebt_basic_match(point, (**pskb).mac.ethernet, in, out))
+			goto letscontinue;
 
-		) {
-			if (point->bitmask & EBT_SOURCEMAC) {
-				verdict = 0;
-				for (j = 0; j < 6; j++)
-					verdict |= (((**pskb).mac.ethernet)->
-					   h_source[j] ^ point->sourcemac[j]) &
-					   point->sourcemsk[j];
-				if (FWINV(!!verdict, EBT_ISOURCE) )
-					goto letscontinue;
-			}
+		if (EBT_MATCH_ITERATE(point, ebt_do_match, *pskb, in,
+		   out, counter_base + i) != 0)
+			goto letscontinue;
 
-			if (point->bitmask & EBT_DESTMAC) {
-				verdict = 0;
-				for (j = 0; j < 6; j++)
-					verdict |= (((**pskb).mac.ethernet)->
-					   h_dest[j] ^ point->destmac[j]) &
-					   point->destmsk[j];
-				if (FWINV(!!verdict, EBT_IDEST) )
-					goto letscontinue;
-			}
+		// increase counter
+		(*(counter_base + i)).pcnt++;
 
-			if (EBT_MATCH_ITERATE(point, ebt_do_match, *pskb, in,
-			   out, counter_base + i) != 0)
-				goto letscontinue;
+		// these should only watch: not modify, nor tell us
+		// what to do with the packet
+		EBT_WATCHER_ITERATE(point, ebt_do_watcher, *pskb, in,
+		   out, counter_base + i);
 
-			// increase counter
-			(*(counter_base + i)).pcnt++;
-
-			// these should only watch: not modify, nor tell us
-			// what to do with the packet
-			EBT_WATCHER_ITERATE(point, ebt_do_watcher, *pskb, in,
-			   out, counter_base + i);
-
-			t = (struct ebt_entry_target *)
-			   (((char *)point) + point->target_offset);
-			// standard target
-			if (!t->u.target->target)
-				verdict =
-				   ((struct ebt_standard_target *)t)->verdict;
-			else
-				verdict = t->u.target->target(pskb, hook,
-				   in, out, t->data, t->target_size);
-			if (verdict == EBT_ACCEPT) {
-				read_unlock_bh(&table->lock);
-				return NF_ACCEPT;
-			}
-			if (verdict == EBT_DROP) {
-				read_unlock_bh(&table->lock);
-				return NF_DROP;
-			}
-			if (verdict == EBT_RETURN) {
+		t = (struct ebt_entry_target *)
+		   (((char *)point) + point->target_offset);
+		// standard target
+		if (!t->u.target->target)
+			verdict = ((struct ebt_standard_target *)t)->verdict;
+		else
+			verdict = t->u.target->target(pskb, hook,
+			   in, out, t->data, t->target_size);
+		if (verdict == EBT_ACCEPT) {
+			read_unlock_bh(&table->lock);
+			return NF_ACCEPT;
+		}
+		if (verdict == EBT_DROP) {
+			read_unlock_bh(&table->lock);
+			return NF_DROP;
+		}
+		if (verdict == EBT_RETURN) {
 letsreturn:
-				if (sp == 0)
-					// act like this is EBT_CONTINUE
-					goto letscontinue;
-				sp--;
-				// put all the local variables right
-				i = cs[sp].n;
-				chaininfo = cs[sp].chaininfo;
-				nentries = chaininfo->nentries;
-				point = cs[sp].e;
-				counter_base = cb_base +
-				   chaininfo->counter_offset;
-				continue;
-			}
-			if (verdict == EBT_CONTINUE)
+			if (sp == 0)
+				// act like this is EBT_CONTINUE
 				goto letscontinue;
-			if (verdict < 0) {
-				BUGPRINT("bogus standard verdict\n");
-				read_unlock_bh(&table->lock);
-				return NF_DROP;
-			}
-			// jump to a udc
-			cs[sp].n = i + 1;
-			cs[sp].chaininfo = chaininfo;
-			cs[sp].e = (struct ebt_entry *)
-			   (((char *)point) + point->next_offset);
-			i = 0;
-			chaininfo = (struct ebt_entries *) (base + verdict);
-			if (chaininfo->distinguisher) {
-				BUGPRINT("jump to non-chain\n");
-				read_unlock_bh(&table->lock);
-				return NF_DROP;
-			}
+			sp--;
+			// put all the local variables right
+			i = cs[sp].n;
+			chaininfo = cs[sp].chaininfo;
 			nentries = chaininfo->nentries;
-			point = (struct ebt_entry *)chaininfo->data;
-			counter_base = cb_base + chaininfo->counter_offset;
-			sp++;
+			point = cs[sp].e;
+			counter_base = cb_base +
+			   chaininfo->counter_offset;
 			continue;
 		}
+		if (verdict == EBT_CONTINUE)
+			goto letscontinue;
+		if (verdict < 0) {
+			BUGPRINT("bogus standard verdict\n");
+			read_unlock_bh(&table->lock);
+			return NF_DROP;
+		}
+		// jump to a udc
+		cs[sp].n = i + 1;
+		cs[sp].chaininfo = chaininfo;
+		cs[sp].e = (struct ebt_entry *)
+		   (((char *)point) + point->next_offset);
+		i = 0;
+		chaininfo = (struct ebt_entries *) (base + verdict);
+		if (chaininfo->distinguisher) {
+			BUGPRINT("jump to non-chain\n");
+			read_unlock_bh(&table->lock);
+			return NF_DROP;
+		}
+		nentries = chaininfo->nentries;
+		point = (struct ebt_entry *)chaininfo->data;
+		counter_base = cb_base + chaininfo->counter_offset;
+		sp++;
+		continue;
 letscontinue:
 		point = (struct ebt_entry *)
 		   (((char *)point) + point->next_offset);
