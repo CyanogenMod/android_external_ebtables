@@ -615,12 +615,14 @@ echo '1' &gt; /proc/sys/net/ipv4/ip_forward
     <P CLASS="section">
       10. Using the <EM>iptables</EM> physdev match module for kernel 2.5
     </P>
+    <P>
       The 2.5 standard kernel contains an <EM>iptables</EM> match module
       called <EM>physdev</EM> which has to be used to match the bridge's
-      physical in and out ports. Its usage is simple:
-      <PRE>iptables -m physdev --physdev-in &lt;bridge-port&gt;</PRE>
-      and
+      physical in and out ports. Its usage is simple:</P>
+      <PRE>iptables -m physdev --physdev-in &lt;bridge-port&gt;</PRE><P>
+      and</P>
       <PRE>iptables -m physdev --physdev-out &lt;bridge-port&gt;</PRE>
+    </P>
     <HR>
 <PRE>
 Released under the GNU Free Documentation License.
