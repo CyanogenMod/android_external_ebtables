@@ -18,16 +18,16 @@ static struct ebt_entries initial_chains[] =
 {
 	{
 		.name	= "INPUT",
-		.policy	= EBT_ACCEPT
+		.policy	= EBT_ACCEPT,
 	},
 	{
 		.name	= "FORWARD",
-		.policy	= EBT_ACCEPT
+		.policy	= EBT_ACCEPT,
 	},
 	{
 		.name	= "OUTPUT",
-		.policy	= EBT_ACCEPT
-	}
+		.policy	= EBT_ACCEPT,
+	},
 };
 
 static struct ebt_replace initial_table =
@@ -40,7 +40,7 @@ static struct ebt_replace initial_table =
 		[NF_BR_FORWARD]		= &initial_chains[1],
 		[NF_BR_LOCAL_OUT]	= &initial_chains[2],
 	},
-	.entries	= (char *)initial_chains
+	.entries	= (char *)initial_chains,
 };
 
 static int check(const struct ebt_table_info *info, unsigned int valid_hooks)
@@ -56,7 +56,8 @@ static struct ebt_table frame_filter =
 	.table		= &initial_table,
 	.valid_hooks	= FILTER_VALID_HOOKS, 
 	.lock		= RW_LOCK_UNLOCKED,
-	.check		= check
+	.check		= check,
+	.me		= THIS_MODULE,
 };
 
 static unsigned int
@@ -77,14 +78,14 @@ static struct nf_hook_ops ebt_ops_filter[] = {
 		.hook		= ebt_hook,
 		.pf		= PF_BRIDGE,
 		.hooknum	= NF_BR_FORWARD,
-		.priority	= NF_BR_PRI_FILTER_BRIDGED
+		.priority	= NF_BR_PRI_FILTER_BRIDGED,
 	},
 	{
 		.hook		= ebt_hook,
 		.pf		= PF_BRIDGE,
 		.hooknum	= NF_BR_LOCAL_OUT,
-		.priority	= NF_BR_PRI_FILTER_OTHER
-	}
+		.priority	= NF_BR_PRI_FILTER_OTHER,
+	},
 };
 
 static int __init init(void)

@@ -14,14 +14,13 @@
 #include <linux/netfilter_bridge/ebtables.h>
 #include <linux/module.h>
 #include <linux/if_bridge.h>
-#include <linux/brlock.h>
 
 /* EBT_ACCEPT means the frame will be bridged
  * EBT_DROP means the frame will be routed
  */
 static struct ebt_entries initial_chain = {
-	.name	= "BROUTING",
-	.policy	= EBT_ACCEPT,
+	.name		= "BROUTING",
+	.policy		= EBT_ACCEPT,
 };
 
 static struct ebt_replace initial_table =
@@ -30,9 +29,9 @@ static struct ebt_replace initial_table =
 	.valid_hooks	= 1 << NF_BR_BROUTING,
 	.entries_size	= sizeof(struct ebt_entries),
 	.hook_entry	= {
-		[NF_BR_BROUTING]	= &initial_chain
+		[NF_BR_BROUTING]	= &initial_chain,
 	},
-	.entries	= (char *)&initial_chain
+	.entries	= (char *)&initial_chain,
 };
 
 static int check(const struct ebt_table_info *info, unsigned int valid_hooks)
@@ -49,6 +48,7 @@ static struct ebt_table broute_table =
 	.valid_hooks	= 1 << NF_BR_BROUTING,
 	.lock		= RW_LOCK_UNLOCKED,
 	.check		= check,
+	.me		= THIS_MODULE,
 };
 
 static int ebt_broute(struct sk_buff **pskb)
@@ -69,18 +69,15 @@ static int __init init(void)
 	ret = ebt_register_table(&broute_table);
 	if (ret < 0)
 		return ret;
-	br_write_lock_bh(BR_NETPROTO_LOCK);
 	/* see br_input.c */
 	br_should_route_hook = ebt_broute;
-	br_write_unlock_bh(BR_NETPROTO_LOCK);
 	return ret;
 }
 
 static void __exit fini(void)
 {
-	br_write_lock_bh(BR_NETPROTO_LOCK);
 	br_should_route_hook = NULL;
-	br_write_unlock_bh(BR_NETPROTO_LOCK);
+	synchronize_net();
 	ebt_unregister_table(&broute_table);
 }
 

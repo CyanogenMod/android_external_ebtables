@@ -17,15 +17,15 @@ static struct ebt_entries initial_chains[] =
 {
 	{
 		.name	= "PREROUTING",
-		.policy	= EBT_ACCEPT
+		.policy	= EBT_ACCEPT,
 	},
 	{
 		.name	= "OUTPUT",
-		.policy	= EBT_ACCEPT
+		.policy	= EBT_ACCEPT,
 	},
 	{
 		.name	= "POSTROUTING",
-		.policy	= EBT_ACCEPT
+		.policy	= EBT_ACCEPT,
 	}
 };
 
@@ -37,9 +37,9 @@ static struct ebt_replace initial_table =
 	.hook_entry	= {
 		[NF_BR_PRE_ROUTING]	= &initial_chains[0],
 		[NF_BR_LOCAL_OUT]	= &initial_chains[1],
-		[NF_BR_POST_ROUTING]	= &initial_chains[2]
+		[NF_BR_POST_ROUTING]	= &initial_chains[2],
 	},
-	.entries	= (char *)initial_chains
+	.entries	= (char *)initial_chains,
 };
 
 static int check(const struct ebt_table_info *info, unsigned int valid_hooks)
@@ -55,7 +55,8 @@ static struct ebt_table frame_nat =
 	.table		= &initial_table,
 	.valid_hooks	= NAT_VALID_HOOKS,
 	.lock		= RW_LOCK_UNLOCKED,
-	.check		= check
+	.check		= check,
+	.me		= THIS_MODULE,
 };
 
 static unsigned int
@@ -77,20 +78,20 @@ static struct nf_hook_ops ebt_ops_nat[] = {
 		.hook		= ebt_nat_dst,
 		.pf		= PF_BRIDGE,
 		.hooknum	= NF_BR_LOCAL_OUT,
-		.priority	= NF_BR_PRI_NAT_DST_OTHER
+		.priority	= NF_BR_PRI_NAT_DST_OTHER,
 	},
 	{
 		.hook		= ebt_nat_src,
 		.pf		= PF_BRIDGE,
 		.hooknum	= NF_BR_POST_ROUTING,
-		.priority	= NF_BR_PRI_NAT_SRC
+		.priority	= NF_BR_PRI_NAT_SRC,
 	},
 	{
 		.hook		= ebt_nat_dst,
 		.pf		= PF_BRIDGE,
 		.hooknum	= NF_BR_PRE_ROUTING,
-		.priority	= NF_BR_PRI_NAT_DST_BRIDGED
-	}
+		.priority	= NF_BR_PRI_NAT_DST_BRIDGED,
+	},
 };
 
 static int __init init(void)
