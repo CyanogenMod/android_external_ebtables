@@ -1,5 +1,5 @@
 /*
- * ebtables.c, v2.0 April 2002
+ * ebtables.c, v2.0 July 2002
  *
  * Author: Bart De Schuymer
  *
@@ -32,13 +32,12 @@
 #include <linux/br_db.h> // the database
 #include <netinet/in.h>
 #include <netinet/ether.h>
-#include <asm/types.h>
 #include "include/ebtables_u.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
 
-// here are the number-name correspondences kept for the ethernet
+// here are the number-name correspondences kept for the Ethernet
 // frame type field
 #define PROTOCOLFILE "/etc/ethertypes"
 
@@ -226,8 +225,7 @@ static void add_match(struct ebt_u_match *m)
 	struct ebt_u_match_list **m_list, *new;
 
 	m->used = 1;
-	for (m_list = &new_entry->m_list;
-	*m_list; m_list = &(*m_list)->next);
+	for (m_list = &new_entry->m_list; *m_list; m_list = &(*m_list)->next);
 	new = (struct ebt_u_match_list *)
 	   malloc(sizeof(struct ebt_u_match_list));
 	if (!new)
@@ -243,8 +241,7 @@ static void add_watcher(struct ebt_u_watcher *w)
 	struct ebt_u_watcher_list *new;
 
 	w->used = 1;
-	for (w_list = &new_entry->w_list;
-	   *w_list; w_list = &(*w_list)->next);
+	for (w_list = &new_entry->w_list; *w_list; w_list = &(*w_list)->next);
 	new = (struct ebt_u_watcher_list *)
 	   malloc(sizeof(struct ebt_u_watcher_list));
 	if (!new)
@@ -338,6 +335,7 @@ void register_target(struct ebt_u_target *t)
 	ebt_options = merge_options
 	   (ebt_options, t->extra_ops, &(t->option_offset));
 	t->init(t->t);
+
 	for (i = &targets; *i; i = &((*i)->next));
 	t->next = NULL;
 	*i = t;
@@ -377,7 +375,6 @@ static char *get_modprobe(void)
 	return NULL;
 }
 
-// I hate stealing, really... Lets call it a tribute.
 int ebtables_insmod(const char *modname, const char *modprobe)
 {
 	char *buf = NULL;
@@ -722,7 +719,8 @@ static void check_for_loops()
 			for (k = 0; k < sp; k++)
 				if (stack[k].chain_nr == verdict + NF_BR_NUMHOOKS)
 					print_error("Loop from chain %s to chain %s",
-					   nr_to_chain(chain_nr)->name, nr_to_chain(stack[k].chain_nr)->name);
+					   nr_to_chain(chain_nr)->name,
+					   nr_to_chain(stack[k].chain_nr)->name);
 			// jump to the chain, make sure we know how to get back
 			stack[sp].chain_nr = chain_nr;
 			stack[sp].n = j;
@@ -1039,73 +1037,74 @@ static int check_rule_exists(int rule_nr)
 	for (i = 0; i < entries->nentries; i++, u_e = u_e->next) {
 		if (!u_e)
 			print_bug("Hmm, trouble");
-		if ( u_e->ethproto == new_entry->ethproto
-		   && !strcmp(u_e->in, new_entry->in)
-		   && !strcmp(u_e->out, new_entry->out)) {
-		   	if (strcmp(u_e->logical_in, new_entry->logical_in) ||
-			   strcmp(u_e->logical_out, new_entry->logical_out))
-				continue;
-			if (new_entry->bitmask & EBT_SOURCEMAC &&
-			   memcmp(u_e->sourcemac, new_entry->sourcemac, ETH_ALEN))
-				continue;
-			if (new_entry->bitmask & EBT_DESTMAC &&
-			   memcmp(u_e->destmac, new_entry->destmac, ETH_ALEN))
-				continue;
-			if (new_entry->bitmask != u_e->bitmask ||
-			   new_entry->invflags != u_e->invflags)
-				continue;
-			// compare all matches
-			m_l = new_entry->m_list;
-			j = 0;
-			while (m_l) {
-				m = (struct ebt_u_match *)(m_l->m);
-				m_l2 = u_e->m_list;
-				while (m_l2 &&
-				   strcmp(m_l2->m->u.name, m->m->u.name))
-					m_l2 = m_l2->next;
-				if (!m_l2 || !m->compare(m->m, m_l2->m))
-					goto letscontinue;
-				j++;
-				m_l = m_l->next;
-			}
-			// now be sure they have the same nr of matches
-			k = 0;
-			m_l = u_e->m_list;
-			while (m_l) {
-				k++;
-				m_l = m_l->next;
-			}
-			if (j != k)
-				continue;
-
-			// compare all watchers
-			w_l = new_entry->w_list;
-			j = 0;
-			while (w_l) {
-				w = (struct ebt_u_watcher *)(w_l->w);
-				w_l2 = u_e->w_list;
-				while (w_l2 &&
-				   strcmp(w_l2->w->u.name, w->w->u.name))
-					w_l2 = w_l2->next;
-				if (!w_l2 || !w->compare(w->w, w_l2->w))
-					goto letscontinue;
-				j++;
-				w_l = w_l->next;
-			}
-			k = 0;
-			w_l = u_e->w_list;
-			while (w_l) {
-				k++;
-				w_l = w_l->next;
-			}
-			if (j != k)
-				continue;
-			if (strcmp(t->t->u.name, u_e->t->u.name))
-				continue;
-			if (!t->compare(t->t, u_e->t))
-				continue;
-			return i;
+		if (u_e->ethproto != new_entry->ethproto)
+			continue;
+		if (strcmp(u_e->in, new_entry->in))
+			continue;
+		if (strcmp(u_e->out, new_entry->out))
+			continue;
+		if (strcmp(u_e->logical_in, new_entry->logical_in))
+			continue;
+		if (strcmp(u_e->logical_out, new_entry->logical_out))
+			continue;
+		if (new_entry->bitmask & EBT_SOURCEMAC &&
+		   memcmp(u_e->sourcemac, new_entry->sourcemac, ETH_ALEN))
+			continue;
+		if (new_entry->bitmask & EBT_DESTMAC &&
+		   memcmp(u_e->destmac, new_entry->destmac, ETH_ALEN))
+			continue;
+		if (new_entry->bitmask != u_e->bitmask ||
+		   new_entry->invflags != u_e->invflags)
+			continue;
+		// compare all matches
+		m_l = new_entry->m_list;
+		j = 0;
+		while (m_l) {
+			m = (struct ebt_u_match *)(m_l->m);
+			m_l2 = u_e->m_list;
+			while (m_l2 && strcmp(m_l2->m->u.name, m->m->u.name))
+				m_l2 = m_l2->next;
+			if (!m_l2 || !m->compare(m->m, m_l2->m))
+				goto letscontinue;
+			j++;
+			m_l = m_l->next;
 		}
+		// now be sure they have the same nr of matches
+		k = 0;
+		m_l = u_e->m_list;
+		while (m_l) {
+			k++;
+			m_l = m_l->next;
+		}
+		if (j != k)
+			continue;
+
+		// compare all watchers
+		w_l = new_entry->w_list;
+		j = 0;
+		while (w_l) {
+			w = (struct ebt_u_watcher *)(w_l->w);
+			w_l2 = u_e->w_list;
+			while (w_l2 && strcmp(w_l2->w->u.name, w->w->u.name))
+				w_l2 = w_l2->next;
+			if (!w_l2 || !w->compare(w->w, w_l2->w))
+				goto letscontinue;
+			j++;
+			w_l = w_l->next;
+		}
+		k = 0;
+		w_l = u_e->w_list;
+		while (w_l) {
+			k++;
+			w_l = w_l->next;
+		}
+		if (j != k)
+			continue;
+		if (strcmp(t->t->u.name, u_e->t->u.name))
+			continue;
+		if (!t->compare(t->t, u_e->t))
+			continue;
+		return i;
 letscontinue:
 	}
 	return -1;
@@ -1115,7 +1114,7 @@ letscontinue:
 static void add_rule(int rule_nr)
 {
 	int i, j;
-	struct ebt_u_entry *u_e, *u_e2;
+	struct ebt_u_entry **u_e;
 	unsigned short *cnt;
 	struct ebt_u_match_list *m_l;
 	struct ebt_u_watcher_list *w_l;
@@ -1160,18 +1159,12 @@ static void add_rule(int rule_nr)
 	*cnt = CNT_END;
 
 	// go to the right position in the chain
-	u_e2 = NULL;
-	u_e = entries->entries;
-	for (i = 0; i < rule_nr; i++) {
-		u_e2 = u_e;
-		u_e = u_e->next;
-	}
+	u_e = &entries->entries;
+	for (i = 0; i < rule_nr; i++)
+		u_e = &(*u_e)->next;
 	// insert the rule
-	if (u_e2)
-		u_e2->next = new_entry;
-	else
-		entries->entries = new_entry;
-	new_entry->next = u_e;
+	new_entry->next = *u_e;
+	*u_e = new_entry;
 
 	// put the ebt_[match, watcher, target] pointers in place
 	m_l = new_entry->m_list;
@@ -1206,7 +1199,7 @@ static void delete_rule(int rule_nr)
 {
 	int i, j, lentmp = 0;
 	unsigned short *cnt;
-	struct ebt_u_entry *u_e, *u_e2;
+	struct ebt_u_entry **u_e, *u_e2;
 	struct ebt_u_entries *entries = to_chain(), *entries2;
 
 	if ( (i = check_rule_exists(rule_nr)) == -1 )
@@ -1215,6 +1208,7 @@ static void delete_rule(int rule_nr)
 	// we're deleting a rule
 	replace.num_counters = replace.nentries;
 	replace.nentries--;
+	entries->nentries--;
 
 	if (replace.nentries) {
 		for (j = 0; j < replace.selected_hook; j++) {
@@ -1246,23 +1240,16 @@ static void delete_rule(int rule_nr)
 		replace.num_counters = 0;
 
 	// go to the right position in the chain
-	u_e2 = NULL;
-	u_e = entries->entries;
-	for (j = 0; j < i; j++) {
-		u_e2 = u_e;
-		u_e = u_e->next;
-	}
-
-	// remove from the chain
-	if (u_e2)
-		u_e2->next = u_e->next;
-	else
-		entries->entries = u_e->next;
-
-	entries->nentries--;
+	u_e = &entries->entries;
+	for (j = 0; j < i; j++)
+		u_e = &(*u_e)->next;
+	// remove the rule
+	u_e2 = *u_e;
+	*u_e = (*u_e)->next;
 	// free everything
-	free_u_entry(u_e);
-	free(u_e);
+	free_u_entry(u_e2);
+	free(u_e2);
+
 	// update the counter_offset of chains behind this one
 	i = replace.selected_hook;
 	while (1) {
@@ -1399,16 +1386,15 @@ int name_to_number(char *name, __u16 *proto)
 	if ( !(ifp = fopen(PROTOCOLFILE, "r")) )
 		return -1;
 	while (1) {
-		if (get_a_line(buffer, value, ifp)) return -1;
+		if (get_a_line(buffer, value, ifp))
+			return -1;
 		if (strcasecmp(buffer, name))
 			continue;
-		i = (unsigned short) strtol(value, &bfr, 16);
-		if (*bfr != '\0') {
-			fclose(ifp);
-			return -1;
-		}
-		*proto = i;
 		fclose(ifp);
+		i = (unsigned short) strtol(value, &bfr, 16);
+		if (*bfr != '\0')
+			return -1;
+		*proto = i;
 		return 0;
 	}
 	return -1;
@@ -1527,6 +1513,19 @@ void check_option(unsigned int *flags, unsigned int mask)
 	*flags |= mask;
 }
 
+static void get_kernel_table(const char *modprobe)
+{
+	if ( !(table = find_table(replace.name)) )
+		print_error("Bad table name");
+	// get the kernel's information
+	if (get_table(&replace)) {
+		ebtables_insmod("ebtables", modprobe);
+		if (get_table(&replace))
+			print_error("The kernel doesn't support the ebtables "
+			"%s table", replace.name);
+	}
+}
+
 #define OPT_COMMAND    0x01
 #define OPT_TABLE      0x02
 #define OPT_IN         0x04
@@ -1546,7 +1545,7 @@ int main(int argc, char *argv[])
 	// this special one for the -Z option (we can have -Z <this> -L <that>)
 	int zerochain = -1;
 	int policy = 0;
-	int rule_nr = -1;// used for -D chain number
+	int rule_nr = -1;// used for -[D,I] chain number
 	struct ebt_u_target *t;
 	struct ebt_u_match *m;
 	struct ebt_u_watcher *w;
@@ -1589,16 +1588,8 @@ int main(int argc, char *argv[])
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
 			replace.flags |= OPT_COMMAND;
-			if ( !(table = find_table(replace.name)) )
-				print_error("Bad table name");
-			// get the kernel's information
-			if (get_table(&replace)) {
-				ebtables_insmod("ebtables", modprobe);
-				if (get_table(&replace))
-					print_error("can't initialize ebtables "
-					"table %s", replace.name);
-			}
-			if (optarg[0] == '-')
+			get_kernel_table(modprobe);
+			if (optarg[0] == '-' || !strcmp(optarg, "!"))
 				print_error("No chain name specified");
 			if (c == 'N') {
 				struct ebt_u_chain_list *cl, **cl2;
@@ -1638,7 +1629,8 @@ int main(int argc, char *argv[])
 			if ((replace.selected_hook = get_hooknr(optarg)) == -1)
 				print_error("Chain %s doesn't exist", optarg);
 			if (c == 'E') {
-				if (optind >= argc || argv[optind][0] == '-')
+				if (optind >= argc || argv[optind][0] == '-' ||
+				   !strcmp(argv[optind], "!"))
 					print_error("No new chain name specified");
 				if (strlen(argv[optind]) >= EBT_CHAIN_MAXNAMELEN)
 					print_error("Chain name len can't exceed %d",
@@ -1646,6 +1638,9 @@ int main(int argc, char *argv[])
 				if (get_hooknr(argv[optind]) != -1)
 					print_error("Chain %s already exists",
 					   argv[optind]);
+				if (find_target(argv[optind]))
+					print_error("Target with name %s exists"
+					   , argv[optind]);
 				entries = to_chain();
 				strcpy(entries->name, argv[optind]);
 				optind++;
@@ -1660,25 +1655,21 @@ int main(int argc, char *argv[])
 				check_for_references(replace.selected_hook - NF_BR_NUMHOOKS);
 				flush_chains();
 				entries = to_chain();
-				if (replace.udc->udc == entries) {
-					cl = replace.udc;
-					replace.udc = replace.udc->next;
-					free(cl->udc);
-					free(cl);
-					break;
-				}
 				cl2 = &(replace.udc);
-				while ((*cl2)->next->udc != entries)
+				while ((*cl2)->udc != entries)
 					cl2 = &((*cl2)->next);
-				cl = (*cl2)->next;
-				(*cl2)->next = (*cl2)->next->next;
+				cl = (*cl2);
+				(*cl2) = (*cl2)->next;
 				free(cl->udc);
 				free(cl);
 				break;
 			}
 
-			if (c == 'D' && optind < argc &&
-			   argv[optind][0] != '-') {
+			if ( (c == 'D' && optind < argc  &&
+			   argv[optind][0] != '-')  || c == 'I') {
+				if (optind >= argc || argv[optind][0] == '-')
+					print_error("No rulenr for -I"
+					            " specified");
 				rule_nr = strtol(argv[optind], &buffer, 10);
 				if (*buffer != '\0' || rule_nr < 0)
 					print_error("Problem with the "
@@ -1699,16 +1690,6 @@ int main(int argc, char *argv[])
 					}
 				if (policy == 0)
 					print_error("Wrong policy");
-				optind++;
-			}
-			if (c == 'I') {
-				if (optind >= argc)
-					print_error("No rulenr for -I"
-					            " specified");
-				rule_nr = strtol(argv[optind], &buffer, 10);
-				if (*buffer != '\0' || rule_nr < 0)
-					print_error("Problem with the specified"
-					            " rule number");
 				optind++;
 			}
 			break;
@@ -1732,23 +1713,14 @@ int main(int argc, char *argv[])
 					            " not allowed");
 				replace.flags |= OPT_COMMAND;
 			}
-			if ( !(table = find_table(replace.name)) )
-				print_error("Bad table name");
-			// get the kernel's information
-			if (get_table(&replace)) {
-				ebtables_insmod("ebtables", modprobe);
-				if (get_table(&replace))
-					print_error("can't initialize ebtables "
-					"table %s", replace.name);
-			}
+			get_kernel_table(modprobe);
 			i = -1;
 			if (optarg) {
 				if ( (i = get_hooknr(optarg)) == -1 )
 					print_error("Bad chain");
 			} else
 				if (optind < argc && argv[optind][0] != '-') {
-					if ((i = get_hooknr(argv[optind]))
-					   == -1)
+					if ((i = get_hooknr(argv[optind])) == -1)
 						print_error("Bad chain");
 					optind++;
 				}
@@ -1995,7 +1967,7 @@ int main(int argc, char *argv[])
 			if (new_entry->ethproto < 1536 &&
 			   !(new_entry->bitmask & EBT_802_3))
 				print_error("Sorry, protocols have values above"
-				            " or equal to 1536 (0x0600)");
+				            " or equal to 0x0600");
 			break;
 
 		case 'b': // allow database?
@@ -2045,6 +2017,9 @@ int main(int argc, char *argv[])
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
 			replace.flags |= OPT_COMMAND;
+			if (replace.filename)
+				print_error("--atomic incompatible with "
+				   "command");
 			replace.filename = (char *)malloc(strlen(optarg) + 1);
 			strcpy(replace.filename, optarg);
 			// get the information from the file
@@ -2056,6 +2031,10 @@ int main(int argc, char *argv[])
 					replace.counterchanges[i] = CNT_NORM;
 					replace.counterchanges[i] = CNT_END;
                         }
+			// we don't want the kernel giving us its counters, they would
+			// overwrite the counters extracted from the file
+			replace.num_counters = 0;
+			// make sure the table will be written to the kernel
 			free(replace.filename);
 			replace.filename = NULL;
 			break;
@@ -2066,14 +2045,10 @@ int main(int argc, char *argv[])
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
 			replace.flags |= OPT_COMMAND;
-			if ( !(table = find_table(replace.name)) )
-				print_error("Bad table name");
-			if (get_table(&replace)) {
-				ebtables_insmod("ebtables", modprobe);
-				if (get_table(&replace))
-					print_error("can't initialize ebtables "
-					"table %s", replace.name);
-			}
+			if (replace.filename)
+				print_error("--atomic incompatible with "
+				   "command");
+			get_kernel_table(modprobe);
 			if (replace.nentries) {
 				replace.counterchanges = (unsigned short *)
 				   malloc(sizeof(unsigned short) * (replace.nentries + 1));
@@ -2084,6 +2059,9 @@ int main(int argc, char *argv[])
 			if (c == 11)
 				break;
 		case 9 : // atomic
+			if (c == 9 && (replace.flags & OPT_COMMAND))
+				print_error("--atomic has to come before"
+				" the command");
 			replace.filename = (char *)malloc(strlen(optarg) + 1);
 			strcpy(replace.filename, optarg);
 			break;
@@ -2120,7 +2098,7 @@ int main(int argc, char *argv[])
 check_extension:
 			if (replace.command != 'A' && replace.command != 'I' &&
 			   replace.command != 'D')
-				print_error("extensions only for -A, -I and -D");
+				print_error("Extensions only for -A, -I and -D");
 		}
 	}
 
@@ -2135,12 +2113,6 @@ check_extension:
 	if ( (replace.flags & OPT_COMMAND) && replace.command != 'L' &&
 	   replace.flags & OPT_ZERO )
 		print_error("Command -Z only allowed together with command -L");
-
-	if (replace.command == 'A' || replace.command == 'I' ||
-	   replace.command == 'D') {
-		if (replace.selected_hook == -1)
-			print_error("Not enough information");
-	}
 
 	// do this after parsing everything, so we can print specific info
 	if (replace.command == 'h' && !(replace.flags & OPT_ZERO))
