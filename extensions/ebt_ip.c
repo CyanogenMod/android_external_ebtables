@@ -219,8 +219,7 @@ static void final_check(const struct ebt_u_entry *entry,
    const struct ebt_entry_match *match, const char *name,
    unsigned int hookmask, unsigned int time)
 {
-	if (entry->bitmask & EBT_NOPROTO || entry->bitmask & EBT_802_3 ||
-	   entry->ethproto != ETH_P_IP || entry->invflags & EBT_IPROTO)
+	if (entry->ethproto != ETH_P_IP || entry->invflags & EBT_IPROTO)
 		print_error("For IP filtering the protocol must be "
 		            "specified as IPv4");
 }
