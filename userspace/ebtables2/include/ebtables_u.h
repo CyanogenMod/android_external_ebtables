@@ -24,7 +24,6 @@
 #ifndef EBTABLES_U_H
 #define EBTABLES_U_H
 #include <linux/netfilter_bridge/ebtables.h>
-#include <linux/br_db.h>
 
 struct ebt_u_entries
 {
@@ -198,20 +197,16 @@ struct ebt_u_watcher *find_watcher(const char *name);
 struct ebt_u_table *find_table(char *name);
 void deliver_counters(struct ebt_u_replace *repl);
 void deliver_table(struct ebt_u_replace *repl);
-void get_dbinfo(struct brdb_dbinfo *nr);
-void get_db(int len, struct brdb_dbentry *db);
-void deliver_allowdb(__u16 *decision);
 int name_to_number(char *name, __u16 *proto);
 int number_to_name(unsigned short proto, char *name);
 void check_option(unsigned int *flags, unsigned int mask);
 int check_inverse(const char option[]);
+void __print_bug(char *file, int line, char *format, ...);
 #define print_bug(format, args...) \
-   {printf("BUG: "format".\n", ##args); exit(-1);}
+   __print_bug(__FILE__, __LINE__, format, ##args)
 #define print_error(format, args...) {printf(format".\n", ##args); exit(-1);}
 #define print_memory() {printf("Ebtables: " __FILE__ " " __FUNCTION__ \
    " %d :Out of memory.\n", __LINE__); exit(-1);}
-
-
 
 // used for keeping the rule counters right during rule adds or deletes
 #define CNT_NORM 0
