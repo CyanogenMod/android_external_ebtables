@@ -1067,7 +1067,7 @@ void ebt_delete_chain(struct ebt_u_replace *replace)
 		decrease_chain_jumps(replace);
 		ebt_flush_chains(replace);
 		remove_udc(replace);
-	} while (chain_nr != -1);
+	} while (chain_nr == -1);
 	replace->selected_chain = chain_nr;
 }
 

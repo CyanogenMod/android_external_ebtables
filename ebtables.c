@@ -601,7 +601,7 @@ int main(int argc, char *argv[])
 				if ((replace.selected_chain =
 				     ebt_get_chainnr(&replace, opt)) == -1)
 					ebt_print_error("Chain %s doesn't "
-							"exist", optarg);
+							"exist", opt);
 				ebt_delete_chain(&replace);
 				break;
 			}
