@@ -428,6 +428,37 @@ int ebtables_insmod(const char *modname, const char *modprobe)
 	return 0;
 }
 
+static void list_extensions()
+{
+	struct ebt_u_table *tbl = tables;
+        struct ebt_u_target *t = targets;
+        struct ebt_u_match *m = matches;
+        struct ebt_u_watcher *w = watchers;
+
+	printf(PROGNAME" v"PROGVERSION" ("PROGDATE")\n");
+	printf("Supported userspace extensions:\n\nSupported tables:\n");
+        while(tbl) {
+		printf("%s\n", tbl->name);
+                tbl = tbl->next;
+	}
+	printf("\nSupported targets:\n");
+        while(t) {
+		printf("%s\n", t->name);
+                t = t->next;
+	}
+	printf("\nSupported matches:\n");
+        while(m) {
+		printf("%s\n", m->name);
+                m = m->next;
+	}
+	printf("\nSupported watchers:\n");
+        while(w) {
+		printf("%s\n", w->name);
+                w = w->next;
+	}
+	exit(0);
+}
+
 /*
  * we use replace.flags, so we can't use the following values:
  * 0x01 == OPT_COMMAND, 0x02 == OPT_TABLE, 0x100 == OPT_ZERO
@@ -1821,6 +1852,10 @@ int main(int argc, char *argv[])
 				struct ebt_u_match *m;
 				struct ebt_u_watcher *w;
 
+				if (!strcasecmp("list_extensions",
+				   argv[optind]))
+					list_extensions();
+					
 				if ((m = find_match(argv[optind])))
 					add_match(m);
 				else if ((w = find_watcher(argv[optind])))
