@@ -20,6 +20,10 @@ RELEASE_DIR:=/tmp
 COPT_FLAGS:=-O2
 CFLAGS:=$(COPT_FLAGS) -Wall -Wunused -I$(KERNEL_DIR)/include/ -Iinclude/ -DARPTABLES_VERSION=\"$(ARPTABLES_VERSION)\" #-g -DDEBUG #-pg # -DARPTC_DEBUG
 
+ifeq ($(KERNEL_2_4),y)
+CFLAGS+=-DKERNEL_2_4
+endif
+
 EXTRAS+=iptables iptables.o
 EXTRA_INSTALLS+=$(DESTDIR)$(BINDIR)/iptables $(DESTDIR)$(MANDIR)/man8/iptables.8
 
@@ -70,6 +74,8 @@ release:
 		$(KERNEL_DIR)/include/linux/netfilter_arp.h include/linux/
 	install -m 0644 -o root -g root \
 		$(KERNEL_DIR)/include/linux/netfilter_arp/*.h \
-	include/linux/netfilter_arp/
+		include/linux/netfilter_arp/
+	install -m 0644 -o root -g root \
+		include/netfilter_arp.h include/linux/netfilter_arp.h
 	make clean
 	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz
