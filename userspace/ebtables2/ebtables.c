@@ -799,7 +799,7 @@ static void print_help()
 "--atomic-commit               : update the kernel w/t table contained in <FILE>\n"
 "--atomic-init                 : put the initial kernel table into <FILE>\n"
 "--atomic-save                 : put the current kernel table into <FILE>\n"
-"--atomic file                 : set <FILE> to file\n\n"
+"--atomic-file file            : set <FILE> to file\n\n"
 "Options:\n"
 "--proto  -p [!] proto         : protocol hexadecimal, by name or LENGTH\n"
 "--src    -s [!] address[/mask]: source mac address\n"
