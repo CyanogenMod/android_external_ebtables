@@ -12,15 +12,7 @@ include extensions/Makefile
 
 OBJECTS:=getethertype.o ebtables.o communication.o $(EXT_OBJS)
 
-# Use the option NONSTANDARD=y when you don't want to use the kernel includes
-# that are included in this package. You should set KERNEL_INCLUDES to
-# the right directory (eg /usr/src/linux/include).
-# You should only need this when compiling the CVS or when adding new code.
-ifeq ($(NONSTANDARD), y)
-KERNEL_INCLUDES?=/usr/include/
-else
-KERNEL_INCLUDES:=include/
-endif
+KERNEL_INCLUDES?=include/
 
 ifeq ($(ETHERTYPESPATH),)
 ETHERTYPESPATH:=/etc/
