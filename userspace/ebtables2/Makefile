@@ -4,7 +4,7 @@ PROGNAME:=ebtables
 PROGVERSION:=2.0.7
 PROGDATE:=January\ 2004
 
-LIBDIR?=/usr/lib/
+LIBDIR?=$(DESTDIR)/usr/lib/
 MANDIR?=$(DESTDIR)/usr/local/man
 CFLAGS:=-Wall -Wunused
 CC:=gcc
@@ -68,10 +68,12 @@ $(ETHERTYPESFILE): ethertypes
 
 .PHONY: exec
 exec: ebtables
+	mkdir -p $(BINPATH)
 	install -m 0755 -o root -g root $< $(BINFILE)
 
 .PHONY: install
 install: $(MANDIR)/man8/ebtables.8 $(ETHERTYPESFILE) exec
+	mkdir -p $(LIBDIR)
 	install -m 0755 extensions/*.so $(LIBDIR)
 	install -m 0755 *.so $(LIBDIR)
 
