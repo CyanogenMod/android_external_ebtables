@@ -14,10 +14,6 @@
 #include <linux/if_arp.h>
 #include <linux/module.h>
 
-/*
-#define DEBUG
-*/
-
 static int ebt_mac_wormhash_contains(const struct ebt_mac_wormhash *wh,
 				     const char *mac, uint32_t ip)
 {
@@ -30,6 +26,7 @@ static int ebt_mac_wormhash_contains(const struct ebt_mac_wormhash *wh,
 	int start, limit, i;
 	uint32_t cmp[2] = { 0, 0 };
 	int key = (const unsigned char) mac[5];
+
 	memcpy(((char *) cmp) + 2, mac, 6);
 	start = wh->table[key];
 	limit = wh->table[key + 1];
@@ -46,7 +43,9 @@ static int ebt_mac_wormhash_contains(const struct ebt_mac_wormhash *wh,
 		for (i = start; i < limit; i++) {
 			p = &wh->pool[i];
 			if (cmp[1] == p->cmp[1] && cmp[0] == p->cmp[0]) {
-				return 1;
+				if (p->ip == 0) {
+					return 1;
+				}
 			}
 		}
 	}
@@ -57,7 +56,8 @@ static int ebt_mac_wormhash_check_integrity(const struct ebt_mac_wormhash
 					    *wh)
 {
 	int i;
-	for (i=0; i<256; i++) {
+
+	for (i = 0; i < 256; i++) {
 		if (wh->table[i] > wh->table[i + 1])
 			return -0x100 - i;
 		if (wh->table[i] < 0)
@@ -70,59 +70,49 @@ static int ebt_mac_wormhash_check_integrity(const struct ebt_mac_wormhash
 	return 0;
 }
 
-static int get_ip_dst(const struct sk_buff *skb, uint32_t * addr)
+static void get_ip_dst(const struct sk_buff *skb, uint32_t * addr)
 {
-	if (skb->mac.ethernet->h_proto == __constant_htons(ETH_P_IP)) {
+	if (skb->mac.ethernet->h_proto == __constant_htons(ETH_P_IP))
 		*addr = skb->nh.iph->daddr;
-		return 1;
-	}
-	if (skb->mac.ethernet->h_proto == __constant_htons(ETH_P_ARP)) {
-
+	else if (skb->mac.ethernet->h_proto == __constant_htons(ETH_P_ARP)) {
 		uint32_t arp_len = sizeof(struct arphdr) +
 		    (2 * (((*skb).nh.arph)->ar_hln)) +
 		    (2 * (((*skb).nh.arph)->ar_pln));
 
 		/* Make sure the packet is long enough. */
 		if ((((*skb).nh.raw) + arp_len) > (*skb).tail)
-			return 0;
+			return;
 		/* IPv4 addresses are always 4 bytes. */
 		if (((*skb).nh.arph)->ar_pln != sizeof(uint32_t))
-			return 0;
+			return;
 
 		memcpy(addr, ((*skb).nh.raw) + sizeof(struct arphdr) +
 		       (2 * (((*skb).nh.arph)->ar_hln)) +
 		       (((*skb).nh.arph)->ar_pln), sizeof(uint32_t));
 
-		return 2;
 	}
-	return 0;
 }
 
-static int get_ip_src(const struct sk_buff *skb, uint32_t * addr)
+static void get_ip_src(const struct sk_buff *skb, uint32_t * addr)
 {
-	if (skb->mac.ethernet->h_proto == __constant_htons(ETH_P_IP)) {
+	if (skb->mac.ethernet->h_proto == __constant_htons(ETH_P_IP))
 		*addr = skb->nh.iph->saddr;
-		return 1;
-	}
-	if (skb->mac.ethernet->h_proto == __constant_htons(ETH_P_ARP)) {
-
+	else if (skb->mac.ethernet->h_proto == __constant_htons(ETH_P_ARP)) {
 		uint32_t arp_len = sizeof(struct arphdr) +
 		    (2 * (((*skb).nh.arph)->ar_hln)) +
 		    (2 * (((*skb).nh.arph)->ar_pln));
 
 		/* Make sure the packet is long enough. */
 		if ((((*skb).nh.raw) + arp_len) > (*skb).tail)
-			return 0;
+			return;
 		/* IPv4 addresses are always 4 bytes. */
 		if (((*skb).nh.arph)->ar_pln != sizeof(uint32_t))
-			return 0;
+			return;
 
 		memcpy(addr, ((*skb).nh.raw) + sizeof(struct arphdr) +
 		       ((((*skb).nh.arph)->ar_hln)), sizeof(uint32_t));
 
-		return 2;
 	}
-	return 0;
 }
 
 static int ebt_filter_among(const struct sk_buff *skb,
@@ -143,14 +133,12 @@ static int ebt_filter_among(const struct sk_buff *skb,
 		get_ip_src(skb, &sip);
 		if (!(info->bitmask & EBT_AMONG_SRC_NEG)) {
 			/* we match only if it contains */
-			if (!ebt_mac_wormhash_contains(wh_src, smac, sip)) {
+			if (!ebt_mac_wormhash_contains(wh_src, smac, sip))
 				return EBT_NOMATCH;
-			}
 		} else {
 			/* we match only if it DOES NOT contain */
-			if (ebt_mac_wormhash_contains(wh_src, smac, sip)) {
+			if (ebt_mac_wormhash_contains(wh_src, smac, sip))
 				return EBT_NOMATCH;
-			}
 		}
 	}
 
@@ -159,14 +147,12 @@ static int ebt_filter_among(const struct sk_buff *skb,
 		get_ip_dst(skb, &dip);
 		if (!(info->bitmask & EBT_AMONG_DST_NEG)) {
 			/* we match only if it contains */
-			if (!ebt_mac_wormhash_contains(wh_dst, dmac, dip)) {
+			if (!ebt_mac_wormhash_contains(wh_dst, dmac, dip))
 				return EBT_NOMATCH;
-			}
 		} else {
 			/* we match only if it DOES NOT contain */
-			if (ebt_mac_wormhash_contains(wh_dst, dmac, dip)) {
+			if (ebt_mac_wormhash_contains(wh_dst, dmac, dip))
 				return EBT_NOMATCH;
-			}
 		}
 	}
 
@@ -181,12 +167,13 @@ static int ebt_among_check(const char *tablename, unsigned int hookmask,
 	int expected_length = sizeof(struct ebt_among_info);
 	const struct ebt_mac_wormhash *wh_dst, *wh_src;
 	int err;
+
 	wh_dst = ebt_among_wh_dst(info);
 	wh_src = ebt_among_wh_src(info);
 	expected_length += ebt_mac_wormhash_size(wh_dst);
 	expected_length += ebt_mac_wormhash_size(wh_src);
 
-	if (datalen < EBT_ALIGN(expected_length)) {
+	if (datalen != EBT_ALIGN(expected_length)) {
 		printk(KERN_WARNING
 		       "ebtables: among: wrong size: %d"
 		       "against expected %d, rounded to %d\n",
