@@ -1464,6 +1464,8 @@ static void get_kernel_table(const char *modprobe)
 	}
 }
 
+#define print_if_l_error print_error("Interface name length must be less " \
+   "than %d", IFNAMSIZ)
 #define OPT_COMMAND    0x01
 #define OPT_TABLE      0x02
 #define OPT_IN         0x04
@@ -1748,7 +1750,7 @@ int main(int argc, char *argv[])
 					print_error("No in-interface "
 					            "specified");
 				if (strlen(argv[optind - 1]) >= IFNAMSIZ)
-					print_error("Illegal interface length");
+					print_if_l_error;
 				strcpy(new_entry->in, argv[optind - 1]);
 				break;
 			}
@@ -1766,7 +1768,7 @@ int main(int argc, char *argv[])
 					print_error("No logical in-interface "
 					            "specified");
 				if (strlen(argv[optind - 1]) >= IFNAMSIZ)
-					print_error("Illegal interface length");
+					print_if_l_error;
 				strcpy(new_entry->logical_in, argv[optind - 1]);
 				break;
 			}
@@ -1784,8 +1786,7 @@ int main(int argc, char *argv[])
 					            "specified");
 
 				if (strlen(argv[optind - 1]) >= IFNAMSIZ)
-					print_error("Illegal interface "
-					            "length");
+					print_if_l_error;
 				strcpy(new_entry->out, argv[optind - 1]);
 				break;
 			}
@@ -1803,8 +1804,7 @@ int main(int argc, char *argv[])
 					            "specified");
 
 				if (strlen(argv[optind - 1]) >= IFNAMSIZ)
-					print_error("Illegal interface "
-					            "length");
+					print_if_l_error;
 				strcpy(new_entry->logical_out,
 				   argv[optind - 1]);
 				break;
