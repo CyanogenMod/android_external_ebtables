@@ -53,6 +53,6 @@ install: $(MANDIR)/man8/ebtables.8 $(KERNEL_INCLUDES) \
 	ebtables /etc/ethertypes
 
 clean:
-	-rm -f ebtables
+	rm -f ebtables
 	rm -f *.o *.c~
 	rm -f extensions/*.o extensions/*.c~
