@@ -17,7 +17,7 @@ static int ebt_filter_802_3(const struct sk_buff *skb, const struct net_device *
 {
 	struct ebt_802_3_info *info = (struct ebt_802_3_info *)data;
 	struct ebt_802_3_hdr *hdr = (struct ebt_802_3_hdr *)skb->mac.ethernet;
-	uint16_t type = hdr->llc.ui.ctrl & 0x3 ? hdr->llc.ui.type : hdr->llc.ni.type;
+	uint16_t type = hdr->llc.ui.ctrl & IS_UI ? hdr->llc.ui.type : hdr->llc.ni.type;
 	
 
 	if (info->bitmask & EBT_802_3_SAP) {
@@ -28,7 +28,7 @@ static int ebt_filter_802_3(const struct sk_buff *skb, const struct net_device *
 	}
 	 
 	if (info->bitmask & EBT_802_3_TYPE) {
-		if (!(hdr->llc.ui.dsap == 0xaa && hdr->llc.ui.ssap == 0xaa))
+		if (!(hdr->llc.ui.dsap == CHECK_TYPE && hdr->llc.ui.ssap == CHECK_TYPE))
 			return EBT_NOMATCH;
 		if (FWINV(info->type != type, EBT_802_3_TYPE)) 
 			return EBT_NOMATCH;
