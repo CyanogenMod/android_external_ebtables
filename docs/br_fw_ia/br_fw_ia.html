@@ -63,17 +63,19 @@
       This document describes how <EM>iptables</EM> and
       <EM>ebtables</EM> filtering tables interact on a Linux-based bridge.<BR>
       Getting a bridging firewall consists of patching the kernel source
-      code with two patches. The first patch is called "br-nf" and makes
+      code with two patches.
+      The first patch adds <EM>ebtables</EM> support in the kernel.
+      The second patch is called "br-nf-bds" and makes
       bridged IP frames/packets go through the <EM>iptables</EM> chains.
-      The second patch adds <EM>ebtables</EM> support in the kernel.
       <EM>Ebtables</EM> filters on the Ethernet layer, while <EM>iptables</EM>
       only filters IP packets.<BR>
-      It is possible to use <EM>ebtables</EM> without compiling the br-nf
-      code into the kernel; and vice versa. The only reason why the <EM>ebtables</EM> patch
-      has to be applied after the br-nf patch is because some files are
-      changed by both patches.<BR>
+      It is possible to use <EM>ebtables</EM> without compiling the br-nf-bds
+      code into the kernel; and vice versa. The only reason why the br-nf-bds
+      patch has to be applied after the <EM>ebtables</EM> patch is because
+      some files are changed by both patches.<BR>
       The explanations below will use the TCP/IP Network Model.
-      It should be noted that the br-nf patch sometimes violates the TCP/IP Network
+      It should be noted that the br-nf-bds patch sometimes violates the
+      TCP/IP Network
       Model. As will be seen later, it is possible, f.e., to do IP DNAT inside the Link Layer.<BR>
       We want to note that we are perfectly well aware that the word frame is used for the Link Layer,
       while the word packet is used for the Network Layer. However, when we are talking about IP packets
@@ -292,19 +294,19 @@
     </P>
     <P>
       Figures 3a and 3b give a clear view where the
-      <EM>iptables</EM> chains are attached onto the IP hooks. When the br-nf
-      patch is compiled into the kernel, the iptables chains are
+      <EM>iptables</EM> chains are attached onto the IP hooks. When the
+      br-nf-bds patch is compiled into the kernel, the iptables chains are
       also attached onto the hooks of the bridging code. However,
       this does not mean that they are no longer attached onto their
       standard IP code hooks. For IP packets that get into
-      contact with the bridging code, the br-nf patch will
+      contact with the bridging code, the br-nf-bds patch will
       decide in which place in the network code the <EM>iptables</EM>
       chains are traversed. Obviously, it is guaranteed that no chain is
       traversed twice by the same packet. All packets that do not come into
       contact with the bridge code traverse the <EM>iptables</EM> chains
       in the standard way as seen in Figure 3b.<BR>
       The following sections try, among other things,
-      to explain what the br-nf patch does and why it does it.
+      to explain what the br-nf-bds patch does and why it does it.
     </P>
     <P>
       It's possible to see a single IP packet/frame traverse the
@@ -314,7 +316,7 @@
       The Ethernet frame(s) containing that IP packet will have
       the bridge's destination MAC address, while the destination
       IP address is not of the bridge. Including the
-      <EM>iptables</EM> chains and assuming the br-nf code is
+      <EM>iptables</EM> chains and assuming the br-nf-bds code is
       compiled into the kernel, this is how the IP packet runs
       through the bridge/router (actually there is more going on,
       see <A HREF="#section6">section 6</A>):
@@ -401,7 +403,7 @@
       knowing when a box on the eth0 side changes its source IP
       address to that of a box on the eth1 side, except by
       looking at the MAC source address (and then still...). With
-      the br-nf patch you can use eth0 and eth1 in your
+      the br-nf-bds patch you can use eth0 and eth1 in your
       <EM>iptables</EM> rules and therefore catch these attempts.
     </P>
     <P CLASS="case">
@@ -421,17 +423,17 @@
       <IMG SRC="bridge6a.png">
     </P>
     <P>
-      <I><B>Figure 6a.</B> Chain traversal when routing and br-nf
+      <I><B>Figure 6a.</B> Chain traversal when routing and br-nf-bds
       is compiled into the kernel</I><BR>
     </P>
     <DIV CLASS="note">
       All chains are now traversed while in the bridge code.<BR>
-      This is the work of the br-nf patch. Obviously this does not
+      This is the work of the br-nf-bds patch. Obviously this does not
       mean that the routed IP packets never enter the IP code. They
       just don't pass any <EM>iptables</EM> chains while in the IP code.
     </DIV>
     <P>
-      If one does not compile the br-nf code into the kernel, the
+      If one does not compile the br-nf-bds code into the kernel, the
       chains will be traversed as shown below. However, then one
       can only use br0, not eth0/eth1 to filter.
     </P>
@@ -439,7 +441,7 @@
       <IMG SRC="bridge6b.png">
     </P>
     <P>
-      <I><B>Figure 6b.</B> Chain traversal when routing and br-nf
+      <I><B>Figure 6b.</B> Chain traversal when routing and br-nf-bds
       code is not compiled into the kernel</I><BR>
     </P>
     <P>
@@ -466,7 +468,7 @@
     </P>
     <P>
       From <A HREF="#section6">section 6.1</A> we know that this
-      actually looks like this (due to the br-nf code):
+      actually looks like this (due to the br-nf-bds code):
     </P>
     <P>
       <IMG SRC="bridge6d.png">
@@ -490,7 +492,7 @@
       chains
     </P>
     <P>
-      With the br-nf patch there are 2 ways a frame/packet can
+      With the br-nf-bds patch there are 2 ways a frame/packet can
       pass through the 3 given <EM>iptables</EM> chains. The
       first way is when the frame is bridged, so the
       <EM>iptables</EM> chains are called by the bridge code. The
@@ -586,7 +588,7 @@ echo '1' &gt; /proc/sys/net/ipv4/ip_forward
       9. Using the MAC module extension for <EM>iptables</EM>
     </P>
     <P>
-      The side effect explained here occurs when the br-nf code
+      The side effect explained here occurs when the br-nf-bds code
       is compiled in the kernel, the IP packet is routed and the
       out device for that packet is a logical bridge device. The
       side effect is encountered when filtering on the MAC source
@@ -628,7 +630,7 @@ Copyright (c) 2002 Bart De Schuymer &lt;bart.de.schuymer@pandora.be&gt;,
     "http://www.gnu.org/licenses/fdl.txt">"GNU Free Documentation License"</A>.</SMALL> <BR>
      <BR>
     <P>
-      Last updated August 07, 2002.
+      Last updated August 31, 2002.
     </P>
   </BODY>
 </HTML>
