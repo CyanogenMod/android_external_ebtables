@@ -35,7 +35,8 @@ int main(int argc, char *argv[])
 		return -1;
 	} else if (argc == 1) {
 		fprintf(stderr, "At least one argument is needed.\n");
-		return -1;
+		print_help();
+		exit(0);
 	}
 
 	for (i = 0; i < argc; i++)
