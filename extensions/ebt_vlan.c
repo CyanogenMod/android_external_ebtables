@@ -253,7 +253,6 @@ print(const struct ebt_u_entry *entry, const struct ebt_entry_match *match)
 	if (GET_BITMASK(EBT_VLAN_ENCAP)) {
 		printf("--%s %s",
 		       opts[VLAN_ENCAP].name, INV_FLAG(EBT_VLAN_ENCAP));
-		bzero(ethertype_name, 21);
 		ethent = getethertypebynumber(ntohs(vlaninfo->encap));
 		if (ethent != NULL) {
 			printf("%s ", ethent->e_name);
