@@ -34,10 +34,21 @@
 #include <netinet/ether.h>
 #include <asm/types.h>
 #include "include/ebtables_u.h"
+#include <dlfcn.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include <limits.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/wait.h>
 
 // here are the number-name correspondences kept for the ethernet
 // frame type field
 #define PROTOCOLFILE "/etc/ethertypes"
+
+#ifndef PROC_SYS_MODPROBE
+#define PROC_SYS_MODPROBE "/proc/sys/kernel/modprobe"
+#endif
 
 #define DATABASEHOOKNR NF_BR_NUMHOOKS
 #define DATABASEHOOKNAME "DB"
@@ -79,6 +90,7 @@ static struct option ebt_original_options[] = {
 	{ "destination"   , required_argument, 0, 'd' },
 	{ "dst"           , required_argument, 0, 'd' },
 	{ "table"         , required_argument, 0, 't' },
+	{ "modprobe"      , required_argument, 0, 'M' },
 	{ 0 }
 };
 
@@ -325,6 +337,69 @@ void register_table(struct ebt_u_table *t)
 	t->next = tables;
 	tables = t;
 }
+
+// blatently stolen (again) from iptables.c userspace program
+// find out where the modprobe utility is located
+static char *get_modprobe(void)
+{
+	int procfile;
+	char *ret;
+
+	procfile = open(PROC_SYS_MODPROBE, O_RDONLY);
+	if (procfile < 0)
+		return NULL;
+
+	ret = malloc(1024);
+	if (ret) {
+		switch (read(procfile, ret, 1024)) {
+		case -1: goto fail;
+		case 1024: goto fail; /* Partial read.  Wierd */
+		}
+		if (ret[strlen(ret)-1]=='\n')
+			ret[strlen(ret)-1]=0;
+		close(procfile);
+		return ret;
+	}
+ fail:
+	free(ret);
+	close(procfile);
+	return NULL;
+}
+
+// I hate stealing, really... Lets call it a tribute.
+int ebtables_insmod(const char *modname, const char *modprobe)
+{
+	char *buf = NULL;
+	char *argv[3];
+
+	/* If they don't explicitly set it, read out of kernel */
+	if (!modprobe) {
+		buf = get_modprobe();
+		if (!buf)
+			return -1;
+		modprobe = buf;
+	}
+
+	switch (fork()) {
+	case 0:
+		argv[0] = (char *)modprobe;
+		argv[1] = (char *)modname;
+		argv[2] = NULL;
+		execv(argv[0], argv);
+
+		/* not usually reached */
+		exit(0);
+	case -1:
+		return -1;
+
+	default: /* parent */
+		wait(NULL);
+	}
+
+	free(buf);
+	return 0;
+}
+
 
 // used to parse /etc/etherproto
 int disregard_whitespace(char *buffer, FILE *ifp)
@@ -631,6 +706,7 @@ void print_help()
 "--out-if -o [!] name          : network output interface name\n"
 "--logical-in  [!] name        : logical bridge input interface name\n"
 "--logical-out [!] name        : logical bridge output interface name\n"
+"--modprobe -M                 : try to insert modules using this command\n"
 "--version -V                  : print package version\n"
 "\n" ,
 	prog_name,
@@ -1206,6 +1282,7 @@ int main(int argc, char *argv[])
 	struct ebt_u_watcher *w;
 	struct ebt_u_match_list *m_l;
 	struct ebt_u_watcher_list *w_l;
+	const char *modprobe = NULL;
 
 	// initialize the table name, OPT_ flags, selected hook and command
 	strcpy(replace.name, "filter");
@@ -1221,7 +1298,7 @@ int main(int argc, char *argv[])
 
 	// getopt saves the day
 	while ((c = getopt_long(argc, argv,
-	   "-A:D:I:L::Z::F::P:Vhi:o:j:p:b:s:d:t:", ebt_options, NULL)) != -1) {
+	   "-A:D:I:L::Z::F::P:Vhi:o:j:p:b:s:d:t:M:", ebt_options, NULL)) != -1) {
 		switch (c) {
 
 		case 'A': // add a rule
@@ -1311,6 +1388,10 @@ int main(int argc, char *argv[])
 				print_error("Multiple commands not allowed");
 			printf("%s, %s\n", prog_name, prog_version);
 			exit(0);
+
+		case 'M': // modprobe
+			modprobe = optarg;
+			break;
 
 		case 'h': // help
 			if (replace.flags & OPT_COMMAND)
@@ -1600,7 +1681,12 @@ int main(int argc, char *argv[])
 	new_entry->ethproto = htons(new_entry->ethproto);
 
 	// get the kernel's information
-	get_table(&replace);
+	if (get_table(&replace)) {
+		ebtables_insmod("ebtables", modprobe);
+		if (get_table(&replace))
+			print_error("can't initialize ebtables table %s",
+			replace.name);
+	}
 	// check if selected_hook is a valid_hook
 	if (replace.selected_hook >= 0 &&
 	   !(replace.valid_hooks & (1 << replace.selected_hook)))
