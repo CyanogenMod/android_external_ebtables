@@ -56,10 +56,11 @@ parse(int c, char **argv, int invert, unsigned int *flags,
 /*
 		if (e->arp.arpln_mask == 0)
 			exit_error(PARAMETER_PROBLEM, "no pln defined");
-*/
+
 		if (e->arp.invflags & ARPT_INV_ARPPLN)
 			exit_error(PARAMETER_PROBLEM,
 				   "! pln not allowed for --mangle-ip-s");
+*/
 /*
 		if (e->arp.arpln != 4)
 			exit_error(PARAMETER_PROBLEM, "only pln=4 supported");
@@ -76,10 +77,11 @@ parse(int c, char **argv, int invert, unsigned int *flags,
 /*
 		if (e->arp.arpln_mask == 0)
 			exit_error(PARAMETER_PROBLEM, "no pln defined");
-*/
+
 		if (e->arp.invflags & ARPT_INV_ARPPLN)
 			exit_error(PARAMETER_PROBLEM,
 				   "! pln not allowed for --mangle-ip-d");
+*/
 /*
 		if (e->arp.arpln != 4)
 			exit_error(PARAMETER_PROBLEM, "only pln=4 supported");
@@ -145,7 +147,7 @@ static void print(const struct arpt_arp *ip,
 			sprintf(buf, "%s", addr_to_dotted(&(m->u_s.src_ip)));
 		else
 			sprintf(buf, "%s", addr_to_anyname(&(m->u_s.src_ip)));
-		printf("--magle-ip-s %s ", buf);
+		printf("--mangle-ip-s %s ", buf);
 	}
 	if (m->flags & ARPT_MANGLE_SDEV) {
 		printf("--mangle-mac-s ");
@@ -157,7 +159,7 @@ static void print(const struct arpt_arp *ip,
 			sprintf(buf, "%s", addr_to_dotted(&(m->u_t.tgt_ip)));
 		else
 			sprintf(buf, "%s", addr_to_anyname(&(m->u_t.tgt_ip)));
-		printf("--magle-ip-d %s ", buf);
+		printf("--mangle-ip-d %s ", buf);
 	}
 	if (m->flags & ARPT_MANGLE_TDEV) {
 		printf("--mangle-mac-d ");
