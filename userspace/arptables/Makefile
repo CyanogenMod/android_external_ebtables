@@ -37,7 +37,7 @@ arptables.o: arptables.c
 arptables-standalone.o: arptables-standalone.c
 	$(CC) $(CFLAGS) -DIPT_LIB_DIR=\"$(IPT_LIBDIR)\" -c -o $@ $<
 
-libarptc/libarptc.o: libarptc/libarptc.c
+libarptc/libarptc.o: libarptc/libarptc.c libarptc/libarptc_incl.c
 	$(CC) $(CFLAGS) -DIPT_LIB_DIR=\"$(IPT_LIBDIR)\" -c -o $@ $<
 
 arptables: arptables-standalone.o arptables.o libarptc/libarptc.o $(EXT_OBJS)
