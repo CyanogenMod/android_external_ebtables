@@ -17,9 +17,13 @@ WHAT GETS INSTALLED?
   The Makefile will append /man8/ebtables.8.
 - ethertypes is by default placed in /etc/, if you
   want to change this, include ETHERTYPESPATH=<<path>>.
-- the userspace program ebtables is compiled and the executable is copied
-  by default to /usr/sbin/ebtables. If you want to put the executable
-  somewhere else, include BINPATH=<<path>>.
+- The pipe used for communication by ebtablesd and ebtablesu is by
+  default the file /etc/ebtables-v$(PROGVERSION)/ebtablesd_pipe. To
+  change the directory, include PIPE_DIR=<<dir>>. There is no option
+  to change the name of the pipe.
+- the userspace programs ebtables ebtablesu and ebtablesd are compiled and
+  the executables are copied by default to /usr/sbin/ebtables. If you want
+  to put the executables somewhere else, include BINPATH=<<path>>.
 
 That's all
 

@@ -1,3 +1,10 @@
+20051701
+	Since last entry:
+	* added ulog watcher
+	* made the ebtables code modular (make library functions).
+	* added the ebtablesd/ebtablesu scheme to allow faster
+	  addition of rules (and to test the modular code).
+	* some small fixes
 20031102
 	Since last entry:
 	* <grzes_at_gnu.univ.gda.pl> added arpreply and among modules

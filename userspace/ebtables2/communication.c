@@ -31,15 +31,19 @@ extern char* hooknames[NF_BR_NUMHOOKS];
 
 int sockfd = -1;
 
-static void get_sockfd()
+static int get_sockfd()
 {
+	int ret = 0;
 	if (sockfd == -1) {
 		sockfd = socket(AF_INET, SOCK_RAW, PF_INET);
-		if (sockfd < 0)
+		if (sockfd < 0) {
 			ebt_print_error("Problem getting a socket, "
 					"you probably don't have the right "
 					"permissions");
+			ret = -1;
+		}
 	}
+	return ret;
 }
 
 static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
@@ -62,7 +66,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	new->nentries = u_repl->nentries;
 	new->num_counters = u_repl->num_counters;
 	new->counters = sparc_cast u_repl->counters;
-	/* determine nr of udc */
+	/* Determine nr of udc */
 	i = 0;
 	cl = u_repl->udc;
 	while (cl) {
@@ -71,7 +75,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	}
 	i += NF_BR_NUMHOOKS;
 	chain_offsets = (unsigned int *)malloc(i * sizeof(unsigned int));
-	/* determine size */
+	/* Determine size */
 	i = 0;
 	cl = u_repl->udc;
 	while (1) {
@@ -109,7 +113,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 			   sizeof(struct ebt_entry_target);
 			e = e->next;
 		}
-		/* a little sanity check */
+		/* A little sanity check */
 		if (j != entries->nentries)
 			ebt_print_bug("Wrong nentries: %d != %d, hook = %s", j,
 			   entries->nentries, entries->name);
@@ -123,7 +127,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	if (!p)
 		ebt_print_memory();
 
-	/* put everything in one block */
+	/* Put everything in one block */
 	new->entries = sparc_cast p;
 	i = 0;
 	cl = u_repl->udc;
@@ -147,7 +151,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 		hlp->policy = entries->policy;
 		strcpy(hlp->name, entries->name);
 		hlp->counter_offset = entries->counter_offset;
-		hlp->distinguisher = 0; /* make the kernel see the light */
+		hlp->distinguisher = 0; /* Make the kernel see the light */
 		p += sizeof(struct ebt_entries);
 		e = entries->entries;
 		while (e) {
@@ -192,7 +196,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 			if (!strcmp(e->t->u.name, EBT_STANDARD_TARGET)) {
 				struct ebt_standard_target *st =
 				   (struct ebt_standard_target *)p;
-				/* translate the jump to a udc */
+				/* Translate the jump to a udc */
 				if (st->verdict >= 0)
 					st->verdict = chain_offsets
 					   [st->verdict + NF_BR_NUMHOOKS];
@@ -207,7 +211,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 		i++;
 	}
 
-	/* sanity check */
+	/* Sanity check */
 	if (p - (char *)new->entries != new->entries_size)
 		ebt_print_bug("Entries_size bug");
 	free(chain_offsets);
@@ -220,19 +224,22 @@ static void store_table_in_file(char *filename, struct ebt_replace *repl)
 	int size;
 	FILE *file;
 
-	/* start from an empty file with right priviliges */
+	/* Start from an empty file with right priviliges */
 	command = (char *)malloc(strlen(filename) + 15);
 	if (!command)
 		ebt_print_memory();
 	strcpy(command, "cat /dev/null>");
 	strcpy(command + 14, filename);
-	if (system(command))
+	if (system(command)) {
 		ebt_print_error("Couldn't create file %s", filename);
+		goto free_command;
+	}
 	strcpy(command, "chmod 600 ");
 	strcpy(command + 10, filename);
-	if (system(command))
+	if (system(command)) {
 		ebt_print_error("Couldn't chmod file %s", filename);
-	free(command);
+		goto free_command;
+	}
 
 	size = sizeof(struct ebt_replace) + repl->entries_size +
 	   repl->nentries * sizeof(struct ebt_counter);
@@ -242,18 +249,20 @@ static void store_table_in_file(char *filename, struct ebt_replace *repl)
 	memcpy(data, repl, sizeof(struct ebt_replace));
 	memcpy(data + sizeof(struct ebt_replace), (char *)repl->entries,
 	   repl->entries_size);
-	/* initialize counters to zero, deliver_counters() can update them */
+	/* Initialize counters to zero, deliver_counters() can update them */
 	memset(data + sizeof(struct ebt_replace) + repl->entries_size,
 	   0, repl->nentries * sizeof(struct ebt_counter));
-	if (!(file = fopen(filename, "wb")))
+	if (!(file = fopen(filename, "wb"))) {
 		ebt_print_error("Couldn't open file %s", filename);
-	if (fwrite(data, sizeof(char), size, file) != size) {
-		fclose(file);
+		goto free_data;
+	} else if (fwrite(data, sizeof(char), size, file) != size)
 		ebt_print_error("Couldn't write everything to file %s",
 				filename);
-	}
 	fclose(file);
+free_data:
 	free(data);
+free_command:
+	free(command);
 }
 
 void ebt_deliver_table(struct ebt_u_replace *u_repl)
@@ -261,19 +270,20 @@ void ebt_deliver_table(struct ebt_u_replace *u_repl)
 	socklen_t optlen;
 	struct ebt_replace *repl;
 
-	/* translate the struct ebt_u_replace to a struct ebt_replace */
+	/* Translate the struct ebt_u_replace to a struct ebt_replace */
 	repl = translate_user2kernel(u_repl);
 	if (u_repl->filename != NULL) {
 		store_table_in_file(u_repl->filename, repl);
 		return;
 	}
-	/* give the data to the kernel */
+	/* Give the data to the kernel */
 	optlen = sizeof(struct ebt_replace) + repl->entries_size;
-	get_sockfd();
+	if (get_sockfd())
+		return;
 	if (!setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_ENTRIES, repl, optlen))
 		return;
-	if (u_repl->command == 8) { /* the ebtables module may not
-	                            * yet be loaded with --atomic-commit */
+	if (u_repl->command == 8) { /* The ebtables module may not
+	                             * yet be loaded with --atomic-commit */
 		ebtables_insmod("ebtables");
 		if (!setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_ENTRIES,
 		    repl, optlen))
@@ -285,41 +295,46 @@ void ebt_deliver_table(struct ebt_u_replace *u_repl)
 		    " the extension");
 }
 
-static void store_counters_in_file(char *filename, struct ebt_u_replace *repl)
+static int store_counters_in_file(char *filename, struct ebt_u_replace *repl)
 {
-	int size = repl->nentries * sizeof(struct ebt_counter);
+	int size = repl->nentries * sizeof(struct ebt_counter), ret = 0;
 	unsigned int entries_size;
 	struct ebt_replace hlp;
 	FILE *file;
 
-	if (!(file = fopen(filename, "r+b")))
+	if (!(file = fopen(filename, "r+b"))) {
 		ebt_print_error("Could not open file %s", filename);
-	/* 
-	 * find out entries_size and then set the file pointer to the
-	 * counters
-	 */
+		return -1;
+	}
+	/* Find out entries_size and then set the file pointer to the
+	 * counters */
 	if (fseek(file, (char *)(&hlp.entries_size) - (char *)(&hlp), SEEK_SET)
 	   || fread(&entries_size, sizeof(char), sizeof(unsigned int), file) !=
 	   sizeof(unsigned int) ||
 	   fseek(file, entries_size + sizeof(struct ebt_replace), SEEK_SET)) {
-		fclose(file);
 		ebt_print_error("File %s is corrupt", filename);
+		ret = -1;
+		goto close_file;
 	}
 	if (fwrite(repl->counters, sizeof(char), size, file) != size) {
-		fclose(file);
 		ebt_print_error("Could not write everything to file %s",
 				filename);
+		ret = -1;
 	}
+close_file:
 	fclose(file);
+	return 0;
 }
 
-/* gets executed after ebt_deliver_table */
-void ebt_deliver_counters(struct ebt_u_replace *u_repl)
+/* Gets executed after ebt_deliver_table. Delivers the counters to the kernel
+ * and resets the counterchanges to CNT_NORM */
+void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 {
 	struct ebt_counter *old, *new, *newcounters;
 	socklen_t optlen;
 	struct ebt_replace repl;
-	struct ebt_cntchanges *cc = u_repl->counterchanges;
+	struct ebt_cntchanges *cc = u_repl->counterchanges, *cc2, **cc3;
+	int i;
 
 	if (u_repl->nentries == 0)
 		return;
@@ -333,24 +348,22 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl)
 	new = newcounters;
 	while (cc) {
 		if (cc->type == CNT_NORM) {
-			/*
-			 *'normal' rule, meaning we didn't do anything to it
-			 * So, we just copy
-			 */
+			/* 'Normal' rule, meaning we didn't do anything to it
+			 * So, we just copy */
 			new->pcnt = old->pcnt;
 			new->bcnt = old->bcnt;
-			/* we've used an old counter */
+			/* We've used an old counter */
 			old++;
-			/* we've set a new counter */
+			/* We've set a new counter */
 			new++;
 		} else if (cc->type == CNT_DEL) {
-			/* don't use this old counter */
+			/* Don't use this old counter */
 			old++;
 		} else if (cc->type == CNT_ADD) {
-			/* new counter, let it stay 0 */
+			/* New counter, let it stay 0 */
 			new++;
 		} else {
-			/* zero it (let it stay 0) */
+			/* Zero it (let it stay 0) */
 			old++;
 			new++;
 		}
@@ -366,20 +379,38 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl)
 	}
 	optlen = u_repl->nentries * sizeof(struct ebt_counter) +
 	   sizeof(struct ebt_replace);
-	/* now put the stuff in the kernel's struct ebt_replace */
+	/* Now put the stuff in the kernel's struct ebt_replace */
 	repl.counters = sparc_cast u_repl->counters;
 	repl.num_counters = u_repl->num_counters;
 	memcpy(repl.name, u_repl->name, sizeof(repl.name));
 
-	get_sockfd();
+	if (get_sockfd())
+		return;
 	if (setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_COUNTERS, &repl, optlen))
 		ebt_print_bug("Couldn't update kernel counters");
+
+	if (exec_style != EXEC_STYLE_DAEMON)
+		return;
+	/* Reset the counterchanges to CNT_NORM */
+	cc = u_repl->counterchanges;
+	for (i = 0; i < u_repl->nentries; i++) {
+		cc->type = CNT_NORM;
+		cc3 = &cc->next;
+		cc = cc->next;
+	}
+	*cc3 = NULL;
+	while (cc) {
+		cc2 = cc->next;
+		free(cc);
+		cc = cc2;
+	}
 }
 
 static int
 ebt_translate_match(struct ebt_entry_match *m, struct ebt_u_match_list ***l)
 {
 	struct ebt_u_match_list *new;
+	int ret = 0;
 
 	new = (struct ebt_u_match_list *)
 	   malloc(sizeof(struct ebt_u_match_list));
@@ -393,10 +424,12 @@ ebt_translate_match(struct ebt_entry_match *m, struct ebt_u_match_list ***l)
 	new->next = NULL;
 	**l = new;
 	*l = &new->next;
-	if (ebt_find_match(new->m->u.name) == NULL)
+	if (ebt_find_match(new->m->u.name) == NULL) {
 		ebt_print_error("Kernel match %s unsupported by userspace tool",
 				new->m->u.name);
-	return 0;
+		ret = -1;
+	}
+	return ret;
 }
 
 static int
@@ -404,6 +437,7 @@ ebt_translate_watcher(struct ebt_entry_watcher *w,
    struct ebt_u_watcher_list ***l)
 {
 	struct ebt_u_watcher_list *new;
+	int ret = 0;
 
 	new = (struct ebt_u_watcher_list *)
 	   malloc(sizeof(struct ebt_u_watcher_list));
@@ -417,10 +451,12 @@ ebt_translate_watcher(struct ebt_entry_watcher *w,
 	new->next = NULL;
 	**l = new;
 	*l = &new->next;
-	if (ebt_find_watcher(new->w->u.name) == NULL)
+	if (ebt_find_watcher(new->w->u.name) == NULL) {
 		ebt_print_error("Kernel watcher %s unsupported by userspace "
 				"tool", new->w->u.name);
-	return 0;
+		ret = -1;
+	}
+	return ret;
 }
 
 static int
@@ -428,7 +464,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
    int *totalcnt, struct ebt_u_entry ***u_e, struct ebt_u_replace *u_repl,
    unsigned int valid_hooks, char *base)
 {
-	/* an entry */
+	/* An entry */
 	if (e->bitmask & EBT_ENTRY_OR_ENTRIES) {
 		struct ebt_u_entry *new;
 		struct ebt_u_match_list **m_l;
@@ -440,7 +476,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 			ebt_print_memory();
 		new->bitmask = e->bitmask;
 		/*
-		 * plain userspace code doesn't know about
+		 * Plain userspace code doesn't know about
 		 * EBT_ENTRY_OR_ENTRIES
 		 */
 		new->bitmask &= ~EBT_ENTRY_OR_ENTRIES;
@@ -467,12 +503,14 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 		   malloc(t->target_size + sizeof(struct ebt_entry_target));
 		if (!new->t)
 			ebt_print_memory();
-		if (ebt_find_target(t->u.name) == NULL)
+		if (ebt_find_target(t->u.name) == NULL) {
 			ebt_print_error("Kernel target %s unsupported by "
 					"userspace tool", t->u.name);
+			return -1;
+		}
 		memcpy(new->t, t, t->target_size +
 		   sizeof(struct ebt_entry_target));
-		/* deal with jumps to udc */
+		/* Deal with jumps to udc */
 		if (!strcmp(t->u.name, EBT_STANDARD_TARGET)) {
 			char *tmp = base;
 			int verdict = ((struct ebt_standard_target *)t)->verdict;
@@ -488,7 +526,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 					cl = cl->next;
 				}
 				if (!cl)
-					ebt_print_bug("can't find udc for "
+					ebt_print_bug("Can't find udc for "
 						      "jump");
 				((struct ebt_standard_target *)new->t)->verdict = i;
 			}
@@ -500,7 +538,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 		(*cnt)++;
 		(*totalcnt)++;
 		return 0;
-	} else { /* a new chain */
+	} else { /* A new chain */
 		int i;
 		struct ebt_entries *entries = (struct ebt_entries *)e;
 		struct ebt_u_chain_list *cl;
@@ -513,8 +551,8 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 			if (valid_hooks & (1 << i))
 				break;
 		*hook = i;
-		/* makes use of fact that standard chains come before udc */
-		if (i >= NF_BR_NUMHOOKS) { /* udc */
+		/* Makes use of fact that standard chains come before udc */
+		if (i >= NF_BR_NUMHOOKS) { /* Udc */
 			i -= NF_BR_NUMHOOKS;
 			cl = u_repl->udc;
 			while (i-- > 0)
@@ -526,7 +564,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 	}
 }
 
-/* initialize all chain headers */
+/* Initialize all chain headers */
 static int
 ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
    struct ebt_u_replace *u_repl, unsigned int valid_hooks)
@@ -540,10 +578,10 @@ ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
 		for (i = *hook + 1; i < NF_BR_NUMHOOKS; i++)
 			if (valid_hooks & (1 << i))
 				break;
-		/* makes use of fact that standard chains come before udc */
-		if (i >= NF_BR_NUMHOOKS) { /* udc */
+		/* Makes use of fact that standard chains come before udc */
+		if (i >= NF_BR_NUMHOOKS) { /* Udc */
 			chain_list = &u_repl->udc;
-			/* add in the back */
+			/* Add in the back */
 			while (*chain_list)
 				chain_list = &((*chain_list)->next);
 			*chain_list = (struct ebt_u_chain_list *)
@@ -556,10 +594,8 @@ ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
 			if (!((*chain_list)->udc))
 				ebt_print_memory();
 			new = (*chain_list)->udc;
-			/*
-			 * ebt_translate_entry depends on this for knowing
-			 * to which chain is being jumped
-			 */
+			/* ebt_translate_entry depends on this for knowing
+			 * to which chain is being jumped */
 			(*chain_list)->kernel_start = (char *)e;
 		} else {
 			*hook = i;
@@ -578,19 +614,19 @@ ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
 	return 0;
 }
 
-static void retrieve_from_file(char *filename, struct ebt_replace *repl,
+static int retrieve_from_file(char *filename, struct ebt_replace *repl,
    char command)
 {
 	FILE *file;
 	char *hlp = NULL, *entries;
 	struct ebt_counter *counters;
-	int size;
+	int size, ret = 0;
 
-	if (!(file = fopen(filename, "r+b")))
+	if (!(file = fopen(filename, "r+b"))) {
 		ebt_print_error("Could not open file %s", filename);
-	/*
-	 * make sure table name is right if command isn't -L or --atomic-commit
-	 */
+		return -1;
+	}
+	/* Make sure table name is right if command isn't -L or --atomic-commit */
 	if (command != 'L' && command != 8) {
 		hlp = (char *)malloc(strlen(repl->name) + 1);
 		if (!hlp)
@@ -598,25 +634,30 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 		strcpy(hlp, repl->name);
 	}
 	if (fread(repl, sizeof(char), sizeof(struct ebt_replace), file)
-	   != sizeof(struct ebt_replace))
+	   != sizeof(struct ebt_replace)) {
 		ebt_print_error("File %s is corrupt", filename);
+		ret = -1;
+		goto close_file;
+	}
 	if (command != 'L' && command != 8 && strcmp(hlp, repl->name)) {
-		fclose(file);
 		ebt_print_error("File %s contains wrong table name or is "
 				"corrupt", filename);
-		free(hlp);
+		ret = -1;
+		goto close_file;
 	} else if (!ebt_find_table(repl->name)) {
-		fclose(file);
 		ebt_print_error("File %s contains invalid table name",
 				filename);
+		ret = -1;
+		goto close_file;
 	}
 
 	size = sizeof(struct ebt_replace) +
 	   repl->nentries * sizeof(struct ebt_counter) + repl->entries_size;
 	fseek(file, 0, SEEK_END);
 	if (size != ftell(file)) {
-		fclose(file);
 		ebt_print_error("File %s has wrong size", filename);
+		ret -1;
+		goto close_file;
 	}
 	entries = (char *)malloc(repl->entries_size);
 	if (!entries)
@@ -630,7 +671,7 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 			ebt_print_memory();
 	} else
 		repl->counters = sparc_cast NULL;
-	/* copy entries and counters */
+	/* Copy entries and counters */
 	if (fseek(file, sizeof(struct ebt_replace), SEEK_SET) ||
 	   fread((char *)repl->entries, sizeof(char), repl->entries_size, file)
 	   != repl->entries_size ||
@@ -639,10 +680,15 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 	   || fread((char *)repl->counters, sizeof(char),
 	   repl->nentries * sizeof(struct ebt_counter), file)
 	   != repl->nentries * sizeof(struct ebt_counter)) {
-		fclose(file);
 		ebt_print_error("File %s is corrupt", filename);
+		free(entries);
+		repl->entries = NULL;
+		ret = -1;
 	}
+close_file:
 	fclose(file);
+	free(hlp);
+	return ret;
 }
 
 static int retrieve_from_kernel(struct ebt_replace *repl, char command,
@@ -653,7 +699,8 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command,
 	char *entries;
 
 	optlen = sizeof(struct ebt_replace);
-	get_sockfd();
+	if (get_sockfd())
+		return -1;
 	/* --atomic-init || --init-table */
 	if (init)
 		optname = EBT_SO_GET_INIT_INFO;
@@ -676,7 +723,7 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command,
 	else
 		repl->counters = sparc_cast NULL;
 
-	/* we want to receive the counters */
+	/* We want to receive the counters */
 	repl->num_counters = repl->nentries;
 	optlen += repl->entries_size + repl->num_counters *
 	   sizeof(struct ebt_counter);
@@ -685,7 +732,7 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command,
 	else
 		optname = EBT_SO_GET_ENTRIES;
 	if (getsockopt(sockfd, IPPROTO_IP, optname, repl, &optlen))
-		ebt_print_bug("hmm, what is wrong??? bug#1");
+		ebt_print_bug("Hmm, what is wrong??? bug#1");
 
 	return 0;
 }
@@ -701,17 +748,16 @@ int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 	strcpy(repl.name, u_repl->name);
 	if (u_repl->filename != NULL) {
 		if (init)
-			ebt_print_bug("getting initial table data from a "
+			ebt_print_bug("Getting initial table data from a "
 				  "file is impossible");
-		retrieve_from_file(u_repl->filename, &repl, u_repl->command);
-		/*
-		 * -L with a wrong table name should be dealt with silently
-		 */
+		if (retrieve_from_file(u_repl->filename, &repl, u_repl->command))
+			return -1;
+		/* -L with a wrong table name should be dealt with silently */
 		strcpy(u_repl->name, repl.name);
-	} else if (retrieve_from_kernel(&repl, u_repl->command, init) == -1)
+	} else if (retrieve_from_kernel(&repl, u_repl->command, init))
 		return -1;
 
-	/* translate the struct ebt_replace to a struct ebt_u_replace */
+	/* Translate the struct ebt_replace to a struct ebt_u_replace */
 	u_repl->valid_hooks = repl.valid_hooks;
 	u_repl->nentries = repl.nentries;
 	u_repl->num_counters = repl.num_counters;
@@ -729,14 +775,13 @@ int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 		prev_cc = &(new_cc->next);
 	}
 	hook = -1;
+	/* FIXME: Clean up when an error is encountered */
 	EBT_ENTRY_ITERATE(repl.entries, repl.entries_size, ebt_translate_chains,
 	   &hook, u_repl, u_repl->valid_hooks);
-	i = 0; /* holds the expected nr. of entries for the chain */
-	j = 0; /* holds the up to now counted entries for the chain */
-	/*
-	 * holds the total nr. of entries,
-	 * should equal u_repl->nentries afterwards
-	 */
+	i = 0; /* Holds the expected nr. of entries for the chain */
+	j = 0; /* Holds the up to now counted entries for the chain */
+	/* Holds the total nr. of entries,
+	 * should equal u_repl->nentries afterwards */
 	k = 0;
 	hook = -1;
 	EBT_ENTRY_ITERATE((char *)repl.entries, repl.entries_size,

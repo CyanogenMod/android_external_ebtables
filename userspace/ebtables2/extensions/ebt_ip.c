@@ -209,7 +209,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			ipinfo->invflags |= EBT_IP_PROTO;
 		if (optind > argc)
 			ebt_print_error("Missing IP protocol argument");
-		(unsigned char) i = strtoul(argv[optind - 1], &end, 10);
+		i = strtoul(argv[optind - 1], &end, 10);
 		if (*end != '\0') {
 			struct protoent *pe;
 
