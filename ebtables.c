@@ -62,7 +62,8 @@ char *hooknames[NF_BR_NUMHOOKS] =
 };
 
 // default command line options
-static struct option ebt_original_options[] = {
+static struct option ebt_original_options[] =
+{
 	{ "append"        , required_argument, 0, 'A' },
 	{ "insert"        , required_argument, 0, 'I' },
 	{ "delete"        , required_argument, 0, 'D' },
@@ -94,13 +95,19 @@ static struct option ebt_original_options[] = {
 	{ "new-chain"     , required_argument, 0, 'N' },
 	{ "rename-chain"  , required_argument, 0, 'E' },
 	{ "delete-chain"  , required_argument, 0, 'X' },
+	{ "atomic-init"   , required_argument, 0, 7   },
+	// communication.c uses fact that atomic-commit equals 8
+	{ "atomic-commit" , required_argument, 0, 8   },
+	{ "atomic"        , required_argument, 0, 9   },
+	{ "atomic-save"   , required_argument, 0, 10  },
 	{ 0 }
 };
 
 static struct option *ebt_options = ebt_original_options;
 
 // yup, all the possible target names
-char* standard_targets[NUM_STANDARD_TARGETS] = {
+char* standard_targets[NUM_STANDARD_TARGETS] =
+{
 	"ACCEPT",
 	"DROP",
 	"CONTINUE",
@@ -172,7 +179,7 @@ struct ebt_u_table *find_table(char *name)
 // Same holds for the struct ebt_match and struct ebt_watcher pointers
 struct ebt_u_entry *new_entry;
 
-void initialize_entry(struct ebt_u_entry *e)
+static void initialize_entry(struct ebt_u_entry *e)
 {
 	e->bitmask = EBT_NOPROTO;
 	e->invflags = 0;
@@ -191,7 +198,7 @@ void initialize_entry(struct ebt_u_entry *e)
 }
 
 // this doesn't free e, becoz the calling function might need e->next
-void free_u_entry(struct ebt_u_entry *e)
+static void free_u_entry(struct ebt_u_entry *e)
 {
 	struct ebt_u_match_list *m_l, *m_l2;
 	struct ebt_u_watcher_list *w_l, *w_l2;
@@ -406,7 +413,7 @@ int ebtables_insmod(const char *modname, const char *modprobe)
 
 
 // used to parse /etc/ethertypes
-int disregard_whitespace(char *buffer, FILE *ifp)
+static int disregard_whitespace(char *buffer, FILE *ifp)
 {
 	int hlp;
 
@@ -419,7 +426,7 @@ int disregard_whitespace(char *buffer, FILE *ifp)
 }
 
 // used to parse /etc/ethertypes
-int disregard_tabspace(char *buffer, FILE *ifp)
+static int disregard_tabspace(char *buffer, FILE *ifp)
 {
 	int hlp;
 
@@ -432,7 +439,7 @@ int disregard_tabspace(char *buffer, FILE *ifp)
 }
 
 // helper function: processes a line of data from the file /etc/ethertypes
-int get_a_line(char *buffer, char *value, FILE *ifp)
+static int get_a_line(char *buffer, char *value, FILE *ifp)
 {
 	int i, hlp;
 	char anotherhlp;
@@ -729,7 +736,7 @@ struct ebt_u_stack
 	struct ebt_u_entries *entries;
 };
 
-void check_for_loops()
+static void check_for_loops()
 {
 	int chain_nr , i, j , k, sp = 0, verdict;
 	struct ebt_u_entries *entries, *entries2;
@@ -832,7 +839,7 @@ int get_hooknr(char* arg)
 }
 
 // yup, print out help
-void print_help()
+static void print_help()
 {
 	struct ebt_u_match_list *m_l;
 	struct ebt_u_watcher_list *w_l;
@@ -857,6 +864,10 @@ void print_help()
 "--new-chain -N chain          : Create a user defined chain\n"
 "--rename-chain -E old new     : Rename a chain\n"
 "--delete-chain -X chain       : Delete a user defined chain\n"
+"--atomic-commit file          : update the kernel w/ the table contained in file\n"
+"--atomic-init file            : put the initial kernel table into file\n"
+"--atomic-save file            : put the current kernel table into file\n"
+"--atomic file                 : write changes to file instead of kernel\n"
 "Options:\n"
 "--proto  -p [!] proto         : protocol hexadecimal, by name or LENGTH\n"
 "--src    -s [!] address[/mask]: source mac address\n"
@@ -1327,7 +1338,7 @@ static void delete_rule(int rule_nr)
 }
 
 // execute command Z
-void zero_counters(int zerochain)
+static void zero_counters(int zerochain)
 {
 
 	if (zerochain == -1) {
@@ -1498,7 +1509,7 @@ int getmac_and_mask(char *from, char *to, char *mask)
 }
 
 // executes the final_check() function for all extensions used by the rule
-void do_final_checks(struct ebt_u_entry *e, struct ebt_u_entries *entries)
+static void do_final_checks(struct ebt_u_entry *e, struct ebt_u_entries *entries)
 {
 	struct ebt_u_match_list *m_l;
 	struct ebt_u_watcher_list *w_l;
@@ -1526,7 +1537,7 @@ void do_final_checks(struct ebt_u_entry *e, struct ebt_u_entries *entries)
 }
 
 // used for the -X command
-void check_for_references(int chain_nr)
+static void check_for_references(int chain_nr)
 {
 	int i = -1, j;
 	struct ebt_u_entries *entries;
@@ -1606,6 +1617,7 @@ int main(int argc, char *argv[])
 	replace.flags = 0;
 	replace.selected_hook = -1;
 	replace.command = 'h';
+	replace.filename = NULL;
 
 	new_entry = (struct ebt_u_entry *)malloc(sizeof(struct ebt_u_entry));
 	if (!new_entry)
@@ -1614,7 +1626,8 @@ int main(int argc, char *argv[])
 	initialize_entry(new_entry);
 
 	// The scenario induced by this loop makes that:
-	// '-t'  and '-M' (if specified) have to come before '-A' and the like
+	// '-t'  ,'-M' and --atomic (if specified) have to come
+	// before '-A' and the like
 
 	// getopt saves the day
 	while ((c = getopt_long(argc, argv,
@@ -2083,6 +2096,37 @@ int main(int argc, char *argv[])
 				print_error("--Lx not compatible with --Ln");
 			replace.flags |= LIST_X;
 			break;
+		case 8 : // atomic-commit
+			replace.command = c;
+			if (replace.flags & OPT_COMMAND)
+				print_error("Multiple commands not allowed");
+			replace.flags |= OPT_COMMAND;
+			replace.filename = (char *)malloc(strlen(optarg) + 1);
+			strcpy(replace.filename, optarg);
+			// get the information from the file
+			get_table(&replace);
+			replace.num_counters = 0;
+			free(replace.filename);
+			replace.filename = NULL;
+			break;
+		case 7 : // atomic-init
+		case 10: // atomic-save
+			replace.command = c;
+			if (replace.flags & OPT_COMMAND)
+				print_error("Multiple commands not allowed");
+			replace.flags |= OPT_COMMAND;
+			if ( !(table = find_table(replace.name)) )
+				print_error("Bad table name");
+			if (get_table(&replace)) {
+				ebtables_insmod("ebtables", modprobe);
+				if (get_table(&replace))
+					print_error("can't initialize ebtables "
+					"table %s", replace.name);
+			}
+		case 9 : // atomic
+			replace.filename = (char *)malloc(strlen(optarg) + 1);
+			strcpy(replace.filename, optarg);
+			break;
 
 		default:
 			// is it a target option?
@@ -2212,7 +2256,7 @@ check_extension:
 		}
 	} else if (replace.command == 'D')
 		delete_rule(rule_nr);
-	// commands -N, -E, -X fall through
+	// commands -N, -E, -X, --atomic-commit fall through
 
 	if (table->check)
 		table->check(&replace);
