@@ -321,18 +321,22 @@ The ARP IP source address specification.
 The ARP IP destination address specification.
 .SS vlan
 Specify 802.1Q Tag Control Information fields. These will only work if the protocol equals
-.BR 802_1Q .
-For more details see
+.BR 802_1Q.
+Also see extension help by 
 .BR "ebtables -h vlan" .
 .TP
 .BR "--vlan-id " "[!] \fIid\fP"
-The VLAN identifier (decimal number from 0 to 4095).
+The VLAN identifier field, VID (decimal number from 0 to 4094).
 .TP
 .BR "--vlan-prio " "[!] \fIprio\fP"
-The VLAN user priority type, this can be a decimal number from 0 to 7. The default value is 0.
+The user_priority field, this can be a decimal number from 0 to 7. 
+Required VID to be 0 (null VID) or not specified vlan-id parameter (in this case VID deliberately be set to 0).
 .TP
-.BR "--vlan-encap " "[!] \fIprotocol\fP"
-The VLAN encapsulated protocol, this can be a hexadecimal number from 0000 to FFFF. The default value is 0.
+.BR "--vlan-encap " "[!] \fItype\fP"
+The encapsulated ethernet frame type/length, this can be a hexadecimal number from 0x0000 to 0xFFFF.
+Usually it's 0x0800 (IPv4). See also 
+.B /etc/ethertypes 
+file.
 .SH WATCHER EXTENSION(S)
 Watchers are things that only look at frames passing by. These watchers only see the
 frame if the frame passes all the matches of the rule.
