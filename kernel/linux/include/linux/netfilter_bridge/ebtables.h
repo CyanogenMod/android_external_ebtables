@@ -12,9 +12,9 @@
 
 #ifndef __LINUX_BRIDGE_EFF_H
 #define __LINUX_BRIDGE_EFF_H
-#include <linux/if.h> // IFNAMSIZ
+#include <linux/if.h>
 #include <linux/netfilter_bridge.h>
-#include <linux/if_ether.h> // ETH_ALEN
+#include <linux/if_ether.h>
 
 #define EBT_TABLE_MAXNAMELEN 32
 #define EBT_CHAIN_MAXNAMELEN EBT_TABLE_MAXNAMELEN
@@ -46,10 +46,10 @@ struct ebt_counter
 };
 
 struct ebt_entries {
-	// this field is always set to zero (including userspace).
+	// this field is always set to zero
 	// See EBT_ENTRY_OR_ENTRIES.
 	// Must be same size as ebt_entry.bitmask
-	__u32 distinguisher;
+	unsigned int distinguisher;
 	// the chain name
 	char name[EBT_CHAIN_MAXNAMELEN];
 	// counter offset for this chain
@@ -133,27 +133,27 @@ struct ebt_standard_target
 // one entry
 struct ebt_entry {
 	// this needs to be the first field
-	__u32 bitmask;
-	__u32 invflags;
+	unsigned int bitmask;
+	unsigned int invflags;
 	__u16 ethproto;
 	// the physical in-dev
-	__u8 in[IFNAMSIZ];
+	char in[IFNAMSIZ];
 	// the logical in-dev
-	__u8 logical_in[IFNAMSIZ];
+	char logical_in[IFNAMSIZ];
 	// the physical out-dev
-	__u8 out[IFNAMSIZ];
+	char out[IFNAMSIZ];
 	// the logical out-dev
-	__u8 logical_out[IFNAMSIZ];
-	__u8 sourcemac[ETH_ALEN];
-	__u8 sourcemsk[ETH_ALEN];
-	__u8 destmac[ETH_ALEN];
-	__u8 destmsk[ETH_ALEN];
+	char logical_out[IFNAMSIZ];
+	char sourcemac[ETH_ALEN];
+	char sourcemsk[ETH_ALEN];
+	char destmac[ETH_ALEN];
+	char destmsk[ETH_ALEN];
 	// sizeof ebt_entry + matches
-	__u16 watchers_offset;
+	unsigned int watchers_offset;
 	// sizeof ebt_entry + matches + watchers
-	__u16 target_offset;
+	unsigned int target_offset;
 	// sizeof ebt_entry + matches + watchers + target
-	__u16 next_offset;
+	unsigned int next_offset;
 	unsigned char elems[0];
 };
 

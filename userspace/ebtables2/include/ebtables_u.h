@@ -29,7 +29,7 @@
 struct ebt_u_entries
 {
 	int policy;
-	__u32 nentries;
+	unsigned int nentries;
 	// counter offset for this chain
 	unsigned int counter_offset;
 	// used for udc
@@ -94,17 +94,17 @@ struct ebt_u_watcher_list
 
 struct ebt_u_entry
 {
-	__u32 bitmask;
-	__u32 invflags;
+	unsigned int bitmask;
+	unsigned int invflags;
 	__u16 ethproto;
-	__u8 in[IFNAMSIZ];
-	__u8 logical_in[IFNAMSIZ];
-	__u8 out[IFNAMSIZ];
-	__u8 logical_out[IFNAMSIZ];
-	__u8 sourcemac[ETH_ALEN];
-	__u8 sourcemsk[ETH_ALEN];
-	__u8 destmac[ETH_ALEN];
-	__u8 destmsk[ETH_ALEN];
+	char in[IFNAMSIZ];
+	char logical_in[IFNAMSIZ];
+	char out[IFNAMSIZ];
+	char logical_out[IFNAMSIZ];
+	char sourcemac[ETH_ALEN];
+	char sourcemsk[ETH_ALEN];
+	char destmac[ETH_ALEN];
+	char destmsk[ETH_ALEN];
 	struct ebt_u_match_list *m_list;
 	struct ebt_u_watcher_list *w_list;
 	struct ebt_entry_target *t;
