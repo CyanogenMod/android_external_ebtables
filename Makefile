@@ -7,6 +7,7 @@ PROGDATE:="August 2002"
 
 MANDIR?=/usr/local/man
 CFLAGS:=-Wall -Wunused
+CC:=gcc
 include extensions/Makefile
 
 # Some kernel testers prefer to use a symlink for /usr/include/linux
