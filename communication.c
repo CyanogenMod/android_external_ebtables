@@ -263,10 +263,19 @@ void deliver_table(struct ebt_u_replace *u_repl)
 	/* give the data to the kernel */
 	optlen = sizeof(struct ebt_replace) + repl->entries_size;
 	get_sockfd();
-	if (setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_ENTRIES, repl, optlen))
-		print_error("The kernel doesn't support a certain ebtables"
-		  " extension, consider recompiling your kernel or insmod"
-		  " the extension");
+	if (!setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_ENTRIES, repl, optlen))
+		return;
+	if (u_repl->command == 8) { /* the ebtables module may not
+	                            * yet be loaded with --atomic-commit */
+		ebtables_insmod("ebtables");
+		if (!setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_ENTRIES,
+		    repl, optlen))
+			return;
+	}
+
+	print_error("The kernel doesn't support a certain ebtables"
+		    " extension, consider recompiling your kernel or insmod"
+		    " the extension");
 }
 
 static void store_counters_in_file(char *filename, struct ebt_u_replace *repl)

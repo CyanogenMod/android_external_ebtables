@@ -368,6 +368,7 @@ void register_table(struct ebt_u_table *t)
 	tables = t;
 }
 
+const char *modprobe = NULL;
 /*
  * blatently stolen (again) from iptables.c userspace program
  * find out where the modprobe utility is located
@@ -398,7 +399,7 @@ static char *get_modprobe(void)
 	return NULL;
 }
 
-int ebtables_insmod(const char *modname, const char *modprobe)
+int ebtables_insmod(const char *modname)
 {
 	char *buf = NULL;
 	char *argv[3];
@@ -1593,7 +1594,7 @@ void check_option(unsigned int *flags, unsigned int mask)
 	*flags |= mask;
 }
 
-static void get_kernel_table(const char *modprobe)
+static void get_kernel_table()
 {
 	if ( !(table = find_table(replace.name)) )
 		print_error("Bad table name");
@@ -1601,7 +1602,7 @@ static void get_kernel_table(const char *modprobe)
 	 * get the kernel's information
 	 */
 	if (get_table(&replace)) {
-		ebtables_insmod("ebtables", modprobe);
+		ebtables_insmod("ebtables");
 		if (get_table(&replace))
 			print_error("The kernel doesn't support the ebtables "
 			"%s table", replace.name);
@@ -1645,7 +1646,6 @@ int main(int argc, char *argv[])
 	struct ebt_u_match_list *m_l;
 	struct ebt_u_watcher_list *w_l;
 	struct ebt_u_entries *entries;
-	const char *modprobe = NULL;
 
 	opterr = 0;
 
@@ -1691,7 +1691,7 @@ int main(int argc, char *argv[])
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
 			replace.flags |= OPT_COMMAND;
-			get_kernel_table(modprobe);
+			get_kernel_table();
 			if (optarg[0] == '-' || !strcmp(optarg, "!"))
 				print_error("No chain name specified");
 			if (c == 'N') {
@@ -1831,7 +1831,7 @@ int main(int argc, char *argv[])
 					            " not allowed");
 				replace.flags |= OPT_COMMAND;
 			}
-			get_kernel_table(modprobe);
+			get_kernel_table();
 			i = -1;
 			if (optarg) {
 				if ( (i = get_hooknr(optarg)) == -1 )
@@ -2161,7 +2161,6 @@ int main(int argc, char *argv[])
 			 * possible memory leak here
 			 */
 			replace.filename = NULL;
-			ebtables_insmod("ebtables", modprobe);
 			break;
 		case 7 : /* atomic-init */
 		case 10: /* atomic-save */
@@ -2178,7 +2177,7 @@ int main(int argc, char *argv[])
 				tmp = replace.filename;
 				/* get the kernel table */
 				replace.filename = NULL;
-				get_kernel_table(modprobe);
+				get_kernel_table();
 				replace.filename = tmp;
 			}
 			if (replace.nentries) {
