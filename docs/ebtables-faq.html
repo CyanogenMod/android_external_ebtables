@@ -17,8 +17,8 @@
     <DIV class="banner" align="center">
       <H1>Ebtables (Ethernet Bridge Tables) Frequently Asked Questions</H1>
     </DIV>
-    <A name="top"></A> 
-    <P>Last modified: April 15, 2003</P>
+    <A name="top"></A>
+    <P>Last modified: November 09, 2003</P>
     <H2>Questions</H2>
     <OL>
       <LI><A href="#quiz0">Intro</A></LI>
@@ -39,7 +39,7 @@
           Ethernet frame filtering, all kinds of frame NAT (Network Address
           Translation) and frame matching. The ebtables infrastructure is
           a part of the standard Linux 2.5.x (and above) kernels.</DD>
-          <DT>Why do I use it?</DT>
+          <DT>Why would I use it?</DT>
           <DD>To filter frames by MAC-address or frame type at
           Link Layer inside your Linux-based Ethernet bridge, to do
           some basic filtering of certain protocol headers, to
@@ -51,52 +51,21 @@
       <LI>
         <B><A name="quiz1">Installation</A></B> 
         <DL>
-          <DT>What should I know before ebtables installation?</DT>
+          <DT>How do I install the kernel part?</DT>
           <DD>First step is to decide what kernel version to use. If you
           want to use a 2.5.x (or above) kernel, then just use the latest
           and greatest kernel version. You won't have to patch the kernel.
-          Check out the submitted kernel patches, available through the
-          <A href="http://ebtables.sourceforge.net/sourcecode.html">
-          sourcecode</A> section of the ebtables <A href="http://ebtables.sourceforge.net">
-          homepage</A> to see if there are any pending patches.</DD>
+          </DD>
           <DD>If you want to use a 2.4.x kernel, then go to
           <A href="http://sourceforge.net/projects/ebtables/">Ethernet bridge
-          tables</A> and download the <B>br_nf_bds</B>, <B>ebtables_kernel</B>
-          and <B>ebtables</B> packages. Use the latest packages and use the
-          kernel version for which the kernel patches were made. The
-          <B>ebtables_kernel</B> patch has to be applied before the <B>br_nf_bds</B>
-          kernel patch.</DD>
-          <DT>What is the "ebtables_kernel" package and how do I install it?</DT>
-          <DD>
-            The <B>ebtables_kernel</B> package contains a patch against a
-            Linux 2.4.x kernel. It allows filtering on the Link Layer (OSI Layer
-            2). It is well-known that iptables works on the Network Layer (OSI
-            Layer 3) and on higher layers. For a bridging firewall it is
-            important to be able to filter on the Link Layer as well.</DD>
-          <DD>Copy the patch file to the kernel source (usually it is named
-            /usr/src/linux or /usr/src/linux-2.X.YZ) and execute the following
-            (use the correct file names and directories where necessary)
-<PRE>
-# cp ebtables-v2.0.003_vs_2.4.20.diff.gz /usr/src/linux
-# cd /usr/src/linux
-# gunzip ebtables-v2.0.003_vs_2.4.20.diff.gz 
-# patch -p1 &lt; ebtables-v2.0.003_vs_2.4.20.diff
-</PRE>
+          tables</A> and download the latest patch from the <B>2.4-ebtables-brnf</B>
+	  package. Apply the patch as follows (substitute "linux" for the appropriate directory):
           </DD>
-          <DT>What is the "br-nf-bds" package and how do I install it?</DT>
-          <DD>
-            The <B>br-nf-bds</B> package contains a patch against a Linux
-            kernel that is already patched with the <B>ebtables_kernel</B>
-            patch. It adds the ability of iptables usage on bridge packets to make a
-            bridging firewall. Most work on this patch was done by
-            Lennert Buytenhek. The bridge-nf code is automatically compiled
-            into the patched kernel if the bridge and netfilter support is
-            enabled. 
 <PRE>
-# cp bridge-nf-0.0.10-against-2.4.20.diff.gz /usr/src/linux
+# cp ebtables-brnf-3_vs_2.4.22.diff.gz /usr/src/linux
 # cd /usr/src/linux
-# gunzip bridge-nf-0.0.10-against-2.4.20.diff.gz
-# patch -p1 &lt; bridge-nf-0.0.10-against-2.4.20.diff
+# gunzip ebtables-brnf-3_vs_2.4.22.diff.gz
+# patch -p1 &lt; ebtables-brnf-3_vs_2.4.22.diff
 </PRE>
           </DD>
           <DT>What is the "ebtables" package and how do I install it?</DT>
@@ -108,7 +77,7 @@
             similar to the iptables, so it should not be so hard. Of
             course, there is a man page supplied. Just gunzip and untar the
             package and read the INSTALL file.<BR>
-             
+
 <PRE>
 # make
 </PRE>
@@ -123,7 +92,7 @@
 				<HR>
       </LI>
       <LI>
-        <B><A name="quiz2">Usage</A></B> 
+        <B><A name="quiz2">Usage</A></B>
         <DL>
           <DT>Can I filter on ARP packets in the Linux bridge box using
           ebtables?</DT>
@@ -131,8 +100,8 @@
           See the <A href="http://ebtables.sourceforge.net/ebtables-man.html">ebtables manual page</A> for
           details.</DD>
           <DT>Can I use ebtables with iptables? Are there any problems to
-          use it together? How exactly the packet/frame traversing the ebtables/iptables?</DT>
-          <DD>Yes, it's possible to use ebtables with iptables. Detailed
+          use it together? How exactly is the packet/frame traversing order for ebtables/iptables?</DT>
+          <DD>Yes, it's possible to use ebtables together with iptables, there are no incompatibility issues. Detailed
           info about ebtables/iptables interaction is explained at the
           <A href="http://ebtables.sourceforge.net/br_fw_ia/br_fw_ia.html">
           "ebtables/iptables interaction on a Linux-based bridge"</A> page.</DD>
@@ -173,15 +142,15 @@
           There is one difference between the br-nf behaviour in the 2.5.x or higher kernels and
           the 2.4.x patch. To get the br-nf code accepted into the standard 2.5.x kernels, we had to
           remove the code that automatically checked on the bridge port in the iptables port checking
-          code (options -i and -o). Instead there is now an iptables match module that you have to use
-          to filter on the bridge ports. This kernel module is in the standard 2.5.x kernels and the
-          corresponding userspace module is available in the iptables userspace tool. See the iptables
-          man pages and
+          code (options -i and -o). Instead there is now an iptables match module, called 'physdev', that
+          can be used to filter on the bridge ports. This match module has some extra options and
+          is in the standard 2.6 kernels, the corresponding userspace module is available in the
+          iptables userspace tool. See the iptables man pages and
 <PRE>
 # iptables -m physdev -h
 </PRE>
-          The kernel module has to be compiled in the kernel, the option ``physdev match support'' will
-          appear under the ``IP netfilter configuration'' when the bridge is already enabled in the
+          The kernel module has to be compiled in the kernel, the option 'physdev match support' will
+          appear under the 'IP netfilter configuration' when the bridge is already enabled in the
           configuration.
 </DD>
         <DT>I want to use the most recent ebtables code, even if it's not yet in an official release.
@@ -199,20 +168,19 @@
 # make KERNEL_INCLUDES=/usr/src/linux/include/
 # make install
 </PRE>
-        Obviously you'll need to use the right kernel directory. Why is compiling the CVS different?
+        Obviously you'll need to use the right kernel directory.</DD>
+        <DD> Why is compiling the CVS different?
         Because the kernel include files are not maintained in the userspace directory of the CVS.
         When a new ebtables release is made, the kernel include files get copied in the tar file, so
         the standard installation knows where to get its kernel include files.</DD>
-        <DD>To copy the ebtables kernel 2.4.x code to a full 2.4.x kernel tree, use this script:
-<PRE>
-ebtables2/kernel/scripts/CopyRep
-</PRE>
-To copy the ebtables kernel 2.5.x code to a full 2.5.x kernel tree, use this script:
-<PRE>
-ebtables2/kernel/scripts/CopyRep2.5
-</PRE>
-        You'll need to adjust the variables $FROM and $TO in the script, for more information: read the
-        script.</DD>
+        <DD>The ebtables CVS tree has its own kernel tree with ebtables related files (for 2.4 and 2.6).
+        The CVS directory (base_dir)/ebtables2/kernel/linux2.5/include/ can be used for compiling the userspace tool.
+        </DD>
+        <DD>New ebtables modules might not yet be in the standard kernel. The CVS directory
+        (base_dir)/ebtables2/kernel/linux2.5/net/bridge/netfilter/ contains the not yet submitted modules. The modules
+        that are already in the standard kernel are also in this directory and they are normally in sync with the latest
+        kernel release.
+        </DD>
         </DL>
         <BR>
          <A class=navbar href="#top">[Back to the top]</A>
@@ -221,17 +189,26 @@ ebtables2/kernel/scripts/CopyRep2.5
       <LI>
         <B><A name="quiz3">Problems</A></B><BR>
         <DL>
-          <DT>My bridging box seems to drop all IP packets, which is not what I want and I'm sure my ebtables rules don't drop them.</DT>
-          <DD>Your iptables rules are probably dropping them then. On a Linux bridging firewall all bridge IP packets are seen by iptables,
-          so you should take that into account.</DD>
+          <DT>My bridging box seems to drop all IP packets, which is not what I want and I'm sure my
+          ebtables rules don't drop them.</DT>
+          <DD>Your iptables rules are probably dropping them then. By default, on a Linux bridging firewall all
+          bridged IP packets are seen by iptables, so you should take that into account.</DD>
           <DT>This stuff isn't working on my 64-bit machine with a 32-bit userspace (like the Sparc64)</DT>
-          <DD>We know. It's kind of hard to fix this without access to such a machine. The problem is caused by the
-          different word length between kernel and userspace.</DD>
+          <DD>As from ebtables v2.0.5, ebtables-brnf-2_vs_2.4.21.diff.gz and above 2.6.0-test1, it should work on a Sparc64.
+          In case it doesn't, please notify the ebtables-devel mailing list. Making it work on a different 64/32 processor
+          should be easy, but we'll wait for someone to come along who asks for this and who can consequently test the fix.</DD>
+          <DT>I'm getting a message that looks like: ``br_netfilter: Argh!! : bad mac.raw pointer''</DT>
+          <DD>We sometimes get reports about this message occurring. The bridge-nf code reports this message when a
+          specific irregularity is observed, in technical terms: the mac.raw pointer of the sk_buff isn't set properly.
+          The most likely cause of this is the network device driver. Since this only happens for a few persons, the
+          only way to debug this is if those persons are willing to try patches. Up until now this has not been the case.<BR>
+          The easiest solution is to try a different type of network card or a different device driver.
+          </DD>
           <DT>I'm getting this message when doing IP DNAT: ``Performing cross-bridge DNAT requires IP
           forwarding to be enabled''</DT>
           <DD>First make sure IP forwarding is enabled:
 <PRE>
-# echo '1' > /proc/sys/net/ipv4/ip_forward
+# echo 1 > /proc/sys/net/ipv4/ip_forward
 </PRE>
           If that's the case and the message doesn't go away, make sure your routing table has all necessary
           entries. For example, suppose we want to DNAT traffic on a bridge device that doesn't have an IP address to
