@@ -134,7 +134,7 @@ static struct option original_opts[] = {
 	{ "destination-mac", 1, 0, 3},
 	{ "src-mac", 1, 0, 2},
 	{ "dst-mac", 1, 0, 3},
-	{ "h-length", 1, 0,  7 },
+	{ "h-length", 1, 0,  'l' },
 	{ "p-length", 1, 0,  8 },
 	{ "opcode", 1, 0,  4 },
 	{ "h-type", 1, 0,  5 },
@@ -154,7 +154,7 @@ static struct option original_opts[] = {
 	{ 0 }
 };
 
-int RUNTIME_NF_ARP_NUMHOOKS = 3;
+int NF_ARP_NUMHOOKS = 3;
 
 /*#ifndef __OPTIMIZE__
 struct arpt_entry_target *
@@ -1781,24 +1781,19 @@ int do_command(int argc, char *argv[], char **table, arptc_handle_t *handle)
 	/* first figure out if this is a 2.6 or a 2.4 kernel */
 	*handle = arptc_init(*table);
 
-        /* 2.4 kernel: NF_ARP_NUMHOOKS = 2 */
 	if (!*handle) {
-		RUNTIME_NF_ARP_NUMHOOKS = 2;
+		arptables_insmod("arp_tables", modprobe);
 		*handle = arptc_init(*table);
 		if (!*handle) {
-			arptables_insmod("arp_tables", modprobe);
-			RUNTIME_NF_ARP_NUMHOOKS = 3;
+			NF_ARP_NUMHOOKS = 2;
 			*handle = arptc_init(*table);
 			if (!*handle) {
-				RUNTIME_NF_ARP_NUMHOOKS = 2;
-				*handle = arptc_init(*table);
+				exit_error(VERSION_PROBLEM,
+				"can't initialize arptables table `%s': %s",
+				*table, arptc_strerror(errno));
 			}
 		}
         }
-	if (!*handle)
-		exit_error(VERSION_PROBLEM,
-			"can't initialize arptables table `%s': %s",
-			*table, arptc_strerror(errno));
 
 	memset(&fw, 0, sizeof(fw));
 	opts = original_opts;
@@ -1993,7 +1988,7 @@ int do_command(int argc, char *argv[], char **table, arptc_handle_t *handle)
 				            "destination mac");
 			break;
 
-		case 7:/* hardware length */
+		case 'l':/* hardware length */
 			check_inverse(optarg, &invert, &optind, argc);
 			set_option(&options, OPT_H_LENGTH, &fw.arp.invflags,
 				   invert);
