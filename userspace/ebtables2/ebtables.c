@@ -435,7 +435,7 @@ static int get_a_line(char *buffer, char *value, FILE *ifp)
 
 // translate a hexadecimal number to a protocol name, parsing /etc/ethertypes
 // returns 0 on success
-// this the name buffer to be of size 21
+// this demands the name buffer to be of size at least 21
 int number_to_name(unsigned short proto, char *name)
 {
 	FILE *ifp;
@@ -1959,6 +1959,7 @@ int main(int argc, char *argv[])
 			// make sure the table will be written to the kernel
 			free(replace.filename);
 			replace.filename = NULL;
+			ebtables_insmod("ebtables", modprobe);
 			break;
 		case 7 : // atomic-init
 		case 10: // atomic-save
