@@ -112,8 +112,8 @@
     <P>
       There are five hooks defined in the Linux bridging code.
       The sixth hook (BROUTING) is added by the <EM>ebtables</EM> patch.
-      The hooks are places in the network
-      code where software can hook itself in to process the
+      The hooks are specific places in the network
+      code on which software can attach itself to process the
       packets/frames passing that hook.
     </P>
     <BR>
@@ -154,7 +154,7 @@
     </DIV>
     <P>
       Figures 2b and 2c give a clear view where the
-      <EM>ebtables</EM> chains are hooked into the bridge code.
+      <EM>ebtables</EM> chains are attached onto the bridge hooks.
     </P>
     <P>
       When an NIC enslaved to a bridge receives a frame, the frame
@@ -277,10 +277,10 @@
     </P>
     <P>
       Figures 3a and 3b give a clear view where the
-      <EM>iptables</EM> chains are hooked into the IP code. When the br-nf
+      <EM>iptables</EM> chains are attached onto the IP hooks. When the br-nf
       patch is compiled into the kernel, the iptables chains are
-      also hooked in the hooks of the bridging code. However,
-      this does not mean that they are no longer hooked into their
+      also attached onto the hooks of the bridging code. However,
+      this does not mean that they are no longer attached onto their
       standard IP code hooks. For IP packets that get into
       contact with the bridging code, the br-nf patch will
       decide in which place in the network code the <EM>iptables</EM>
