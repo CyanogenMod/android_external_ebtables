@@ -76,10 +76,6 @@ static struct option opts[] = {
 
 struct ethertypeent *ethent;
 
-/*
- * Print out local help by "ebtables -h <match name>" 
- */
-
 static void print_help()
 {
 #define HELP_TITLE "802.1Q VLAN extension"
@@ -97,33 +93,19 @@ static void print_help()
 	       OPT_VLAN_FLAGS & OPT_VLAN_ENCAP ? "[!] " : "");
 }
 
-/*
- * Initialization function 
- */
 static void init(struct ebt_entry_match *match)
 {
 	struct ebt_vlan_info *vlaninfo =
 	    (struct ebt_vlan_info *) match->data;
-	/*
-	 * Set initial values 
-	 */
+
 	vlaninfo->id = 1;	/* Default VID for VLAN-tagged 802.1Q frames */
 	vlaninfo->prio = 0;
 	vlaninfo->encap = 0;
 	vlaninfo->invflags = 0;
 	vlaninfo->bitmask = 0;
+	match->version = VERSIONIZE(1,0);
 }
 
-
-/*
- * Parse passed arguments values (ranges, flags, etc...)
- * int c - parameter number from static struct option opts[]
- * int argc - total amout of arguments (std argc value)
- * int argv - arguments (std argv value)
- * const struct ebt_u_entry *entry - default ebtables entry set
- * unsigned int *flags -
- * struct ebt_entry_match **match - 
- */
 static int
 parse(int c,
       char **argv,
@@ -184,9 +166,6 @@ parse(int c,
 	return 1;
 }
 
-/*
- * Final check - logical conditions
- */
 static void
 final_check(const struct ebt_u_entry *entry,
 	    const struct ebt_entry_match *match,
@@ -222,9 +201,6 @@ final_check(const struct ebt_u_entry *entry,
 	}
 }
 
-/*
- * Print line when listing rules by ebtables -L 
- */
 static void
 print(const struct ebt_u_entry *entry, const struct ebt_entry_match *match)
 {

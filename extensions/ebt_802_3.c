@@ -32,6 +32,7 @@ static void init(struct ebt_entry_match *match)
 
 	info->invflags = 0;
 	info->bitmask = 0;
+	match->version = VERSIONIZE(1,0);
 }
 
 static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,

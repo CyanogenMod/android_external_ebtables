@@ -230,6 +230,7 @@ static void init(struct ebt_entry_match *match)
 
 	ipinfo->invflags = 0;
 	ipinfo->bitmask = 0;
+	match->version = VERSIONIZE(1,0);
 }
 
 #define OPT_SOURCE 0x01

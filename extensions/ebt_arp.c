@@ -69,6 +69,7 @@ static void init(struct ebt_entry_match *match)
 
 	arpinfo->invflags = 0;
 	arpinfo->bitmask = 0;
+	match->version = VERSIONIZE(1,0);
 }
 
 /* defined in ebt_ip.c */
