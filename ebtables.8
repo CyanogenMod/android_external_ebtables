@@ -171,12 +171,17 @@ Append a rule to the end of the selected chain.
 .B "-D, --delete"
 Delete the specified rule from the selected chain. There are two ways to
 use this command. The first is by specifying an interval of rule numbers
-to delete, syntax: start_nr[:end_nr]. The second usage is by specifying
-the complete rule as it would have been specified when it was added.
+to delete, syntax: start_nr[:end_nr]. Using negative numbers is allowed, for more
+details about using negative numbers, see the -I command. The second usage is by
+specifying the complete rule as it would have been specified when it was added.
 .TP
 .B "-I, --insert"
 Insert the specified rule into the selected chain at the specified rule number.
-The number one, 1, means the head of the chain.
+If the current number of rules equals N, then the specified number can be
+between -N and N+1. For a positive number i, it holds that i and i-N-1 specify the
+same place in the chain where the rule should be inserted. The number 0 specifies
+the place past the last rule in the chain and using this number is therefore
+equivalent with using the -A command.
 .TP
 .B "-P, --policy"
 Set the policy for the chain to the given target. The policy can be
