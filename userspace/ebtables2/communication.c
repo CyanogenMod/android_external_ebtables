@@ -334,7 +334,9 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 	socklen_t optlen;
 	struct ebt_replace repl;
 	struct ebt_cntchanges *cc = u_repl->counterchanges, *cc2, **cc3;
-	int i;
+	struct ebt_u_entries *entries;
+	struct ebt_u_entry *next = NULL;
+	int i, chainnr = 0;
 
 	if (u_repl->nentries == 0)
 		return;
@@ -347,11 +349,15 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 	old = u_repl->counters;
 	new = newcounters;
 	while (cc) {
+		if (!next) {
+			while (!(entries = ebt_nr_to_chain(u_repl, chainnr++)));
+			if (!(next = entries->entries))
+				continue;
+		}
 		if (cc->type == CNT_NORM) {
 			/* 'Normal' rule, meaning we didn't do anything to it
 			 * So, we just copy */
-			new->pcnt = old->pcnt;
-			new->bcnt = old->bcnt;
+			*new = *old;
 			/* We've used an old counter */
 			old++;
 			/* We've set a new counter */
@@ -359,13 +365,14 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 		} else if (cc->type == CNT_DEL) {
 			/* Don't use this old counter */
 			old++;
-		} else if (cc->type == CNT_ADD) {
-			/* New counter, let it stay 0 */
-			new++;
 		} else {
-			/* Zero it (let it stay 0) */
-			old++;
-			new++;
+			*new = next->cnt;
+			if (cc->type == CNT_ADD)
+				new++;
+			else {
+				old++;
+				new++;
+			}
 		}
 		cc = cc->next;
 	}
@@ -490,6 +497,9 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 		memcpy(new->sourcemsk, e->sourcemsk, sizeof(new->sourcemsk));
 		memcpy(new->destmac, e->destmac, sizeof(new->destmac));
 		memcpy(new->destmsk, e->destmsk, sizeof(new->destmsk));
+		if (*totalcnt >= u_repl->nentries)
+			ebt_print_bug("*totalcnt >= u_repl->nentries");
+		new->cnt = u_repl->counters[*totalcnt];
 		new->m_list = NULL;
 		new->w_list = NULL;
 		new->next = NULL;
@@ -748,8 +758,7 @@ int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 	strcpy(repl.name, u_repl->name);
 	if (u_repl->filename != NULL) {
 		if (init)
-			ebt_print_bug("Getting initial table data from a "
-				  "file is impossible");
+			ebt_print_bug("Getting initial table data from a file is impossible");
 		if (retrieve_from_file(u_repl->filename, &repl, u_repl->command))
 			return -1;
 		/* -L with a wrong table name should be dealt with silently */
@@ -761,7 +770,7 @@ int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 	u_repl->valid_hooks = repl.valid_hooks;
 	u_repl->nentries = repl.nentries;
 	u_repl->num_counters = repl.num_counters;
-	u_repl->counters = (struct ebt_counter *)repl.counters;
+	u_repl->counters = repl.counters;
 	u_repl->udc = NULL;
 	u_repl->counterchanges = NULL;
 	for (i = 0; i < repl.nentries; i++) {
@@ -780,9 +789,7 @@ int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 	   &hook, u_repl, u_repl->valid_hooks);
 	i = 0; /* Holds the expected nr. of entries for the chain */
 	j = 0; /* Holds the up to now counted entries for the chain */
-	/* Holds the total nr. of entries,
-	 * should equal u_repl->nentries afterwards */
-	k = 0;
+	k = 0; /* Holds the total nr. of entries, should equal u_repl->nentries afterwards */
 	hook = -1;
 	EBT_ENTRY_ITERATE((char *)repl.entries, repl.entries_size,
 	   ebt_translate_entry, &hook, &i, &j, &k, &u_e, u_repl,

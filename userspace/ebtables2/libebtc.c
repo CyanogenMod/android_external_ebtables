@@ -171,6 +171,7 @@ void ebt_initialize_entry(struct ebt_u_entry *e)
 	e->w_list = NULL;
 	e->t = (struct ebt_entry_target *)ebt_find_target(EBT_STANDARD_TARGET);
 	ebt_find_target(EBT_STANDARD_TARGET)->used = 1;
+	e->cnt.pcnt = e->cnt.bcnt = 0;
 
 	if (!e->t)
 		ebt_print_bug("Couldn't load standard target");

@@ -129,6 +129,7 @@ struct ebt_u_entry
 	struct ebt_u_watcher_list *w_list;
 	struct ebt_entry_target *t;
 	struct ebt_u_entry *next;
+	struct ebt_counter cnt;
 	/* the standard target needs this to know the name of a udc when
 	 * printing out rules. */
 	struct ebt_u_replace *replace;
