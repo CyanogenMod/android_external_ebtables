@@ -4,7 +4,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_private.h,v 1.1 2002/06/01 19:23:55 bdschuym Exp $
+ *	$Id: br_private.h,v 1.2 2002/08/24 08:44:41 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -120,7 +120,7 @@ extern void br_dec_use_count(void);
 extern void br_inc_use_count(void);
 
 /* br_device.c */
-extern int  br_dev_xmit(struct sk_buff *skb, struct net_device *dev);
+extern int br_dev_xmit(struct sk_buff *skb, struct net_device *dev);
 extern void br_dev_setup(struct net_device *dev);
 extern int br_dev_xmit(struct sk_buff *skb, struct net_device *dev);
 
@@ -145,10 +145,10 @@ extern void br_fdb_insert(struct net_bridge *br,
 /* br_forward.c */
 extern void br_deliver(struct net_bridge_port *to,
 		struct sk_buff *skb);
-extern int  br_dev_queue_push_xmit(struct sk_buff *skb);
+extern int br_dev_queue_push_xmit(struct sk_buff *skb);
 extern void br_forward(struct net_bridge_port *to,
 		struct sk_buff *skb);
-extern int  br_forward_finish(struct sk_buff *skb);
+extern int br_forward_finish(struct sk_buff *skb);
 extern void br_flood_deliver(struct net_bridge *br,
 		      struct sk_buff *skb,
 		      int clone);
@@ -169,8 +169,8 @@ extern void br_get_port_ifindices(struct net_bridge *br,
 			   int *ifindices);
 
 /* br_input.c */
-extern int  br_handle_frame_finish(struct sk_buff *skb);
-extern void br_handle_frame(struct sk_buff *skb);
+extern int br_handle_frame_finish(struct sk_buff *skb);
+extern int br_handle_frame(struct sk_buff *skb);
 
 /* br_ioctl.c */
 extern void br_call_ioctl_atomic(void (*fn)(void));

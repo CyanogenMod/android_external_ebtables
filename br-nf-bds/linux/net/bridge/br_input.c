@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_input.c,v 1.1 2002/06/01 19:23:53 bdschuym Exp $
+ *	$Id: br_input.c,v 1.2 2002/08/24 08:44:40 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -19,6 +19,10 @@
 #include <linux/if_bridge.h>
 #include <linux/netfilter_bridge.h>
 #include "br_private.h"
+#if defined(CONFIG_BRIDGE_EBT_BROUTE) || \
+    defined(CONFIG_BRIDGE_EBT_BROUTE_MODULE)
+#include <linux/netfilter.h>
+#endif
 
 unsigned char bridge_ula[6] = { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x00 };
 
@@ -112,7 +116,7 @@ err_nolock:
 	return 0;
 }
 
-void br_handle_frame(struct sk_buff *skb)
+int br_handle_frame(struct sk_buff *skb)
 {
 	struct net_bridge *br;
 	unsigned char *dest;
@@ -146,23 +150,32 @@ void br_handle_frame(struct sk_buff *skb)
 		goto handle_special_frame;
 
 	if (p->state == BR_STATE_FORWARDING) {
+#if defined(CONFIG_BRIDGE_EBT_BROUTE) || \
+    defined(CONFIG_BRIDGE_EBT_BROUTE_MODULE)
+		if (broute_decision && broute_decision(NF_BR_BROUTING, &skb,
+		   skb->dev, NULL, NULL) == NF_DROP)
+			return -1;
+#endif
 		NF_HOOK(PF_BRIDGE, NF_BR_PRE_ROUTING, skb, skb->dev, NULL,
 			br_handle_frame_finish);
 		read_unlock(&br->lock);
-		return;
+		return 0;
 	}
 
 err:
 	read_unlock(&br->lock);
 err_nolock:
 	kfree_skb(skb);
-	return;
+	return 0;
 
 handle_special_frame:
 	if (!dest[5]) {
 		br_stp_handle_bpdu(skb);
-		return;
+		read_unlock(&br->lock);
+		return 0;
 	}
 
+	read_unlock(&br->lock);
 	kfree_skb(skb);
+	return 0;
 }

@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_forward.c,v 1.1 2002/06/01 19:23:53 bdschuym Exp $
+ *	$Id: br_forward.c,v 1.2 2002/08/24 08:44:40 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -48,12 +48,8 @@ int br_forward_finish(struct sk_buff *skb)
 
 static void __br_deliver(struct net_bridge_port *to, struct sk_buff *skb)
 {
-	struct net_device *indev;
-
-	indev = skb->dev;
 	skb->dev = to->dev;
-
-	NF_HOOK(PF_BRIDGE, NF_BR_LOCAL_OUT, skb, indev, skb->dev,
+	NF_HOOK(PF_BRIDGE, NF_BR_LOCAL_OUT, skb, NULL, skb->dev,
 			br_forward_finish);
 }
 

@@ -6,7 +6,7 @@
  *	Lennert Buytenhek               <buytenh@gnu.org>
  *	Bart De Schuymer		<bart.de.schuymer@pandora.be>
  *
- *	$Id: br_netfilter.c,v 1.1 2002/06/01 19:23:54 bdschuym Exp $
+ *	$Id: br_netfilter.c,v 1.2 2002/08/24 08:44:40 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License

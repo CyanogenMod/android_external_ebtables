@@ -4,7 +4,7 @@
  *	Authors:	Alan Cox <iiitac@pyr.swan.ac.uk>
  *			Florian La Roche <rzsfl@rz.uni-sb.de>
  *
- *	Version:	$Id: skbuff.c,v 1.1 2002/06/02 20:51:42 bdschuym Exp $
+ *	Version:	$Id: skbuff.c,v 1.2 2002/08/24 08:45:29 bdschuym Exp $
  *
  *	Fixes:	
  *		Alan Cox	:	Fixed the worst of the load balancer bugs.
@@ -754,7 +754,7 @@ int ___pskb_trim(struct sk_buff *skb, unsigned int len, int realloc)
 			if (skb_cloned(skb)) {
 				if (!realloc)
 					BUG();
-				if (!pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
+				if (pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
 					return -ENOMEM;
 			}
 			if (len <= offset) {
