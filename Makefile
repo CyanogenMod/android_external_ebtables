@@ -1,12 +1,16 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGVERSION:=2.0.4
-PROGDATE:=April\ 2003
+PROGVERSION:=2.0.5
+PROGDATE:=July\ 2003
 
 MANDIR?=/usr/local/man
 CFLAGS:=-Wall -Wunused
 CC:=gcc
+
+ifeq ($(shell uname -m),sparc64)
+CFLAGS+=-DEBT_MIN_ALIGN=8 -DKERNEL_64_USERSPACE_32
+endif
 
 include extensions/Makefile
 
@@ -75,5 +79,7 @@ release:
 	install -m 0644 -o root -g root \
 		$(KERNEL_INCLUDES)/linux/netfilter_bridge/*.h \
 		include/linux/netfilter_bridge/
+	install -m 0644 -o root -g root \
+		include/ebtables.h include/linux/netfilter_bridge/
 	make clean
 	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz
