@@ -36,10 +36,10 @@ MODULE_LICENSE ("GPL");
 
 
 #define DEBUG_MSG(...) if (debug) printk (KERN_DEBUG __FILE__ ":" __FUNCTION__ ": "  __VA_ARGS__)
-#define INV_FLAG(_inv_flag_) (infostuff->invflags & _inv_flag_) ? "!" : ""
-#define GET_BITMASK(_BIT_MASK_) infostuff->bitmask & _BIT_MASK_
-#define SET_BITMASK(_BIT_MASK_) infostuff->bitmask |= _BIT_MASK_
-#define EXIT_ON_MISMATCH(_MATCH_,_MASK_) if (!((infostuff->_MATCH_ == _MATCH_)^!!(infostuff->invflags & _MASK_))) return 1;
+#define INV_FLAG(_inv_flag_) (info->invflags & _inv_flag_) ? "!" : ""
+#define GET_BITMASK(_BIT_MASK_) info->bitmask & _BIT_MASK_
+#define SET_BITMASK(_BIT_MASK_) info->bitmask |= _BIT_MASK_
+#define EXIT_ON_MISMATCH(_MATCH_,_MASK_) if (!((info->_MATCH_ == _MATCH_)^!!(info->invflags & _MASK_))) return 1;
 
 /*
  * Function description: ebt_filter_vlan() is main engine for 
@@ -63,9 +63,9 @@ ebt_filter_vlan (const struct sk_buff *skb,
 		 const struct net_device *in,
 		 const struct net_device *out,
 		 const void *data,
-		 unsigned int datalen, const struct ebt_counter *c)
+		 unsigned int datalen)
 {
-	struct ebt_vlan_info *infostuff = (struct ebt_vlan_info *) data;	/* userspace data */
+	struct ebt_vlan_info *info = (struct ebt_vlan_info *) data;	/* userspace data */
 	struct vlan_ethhdr *frame = (struct vlan_ethhdr *) skb->mac.raw;	/* Passed tagged frame */
 
 	unsigned short TCI;	/* Whole TCI, given from parsed frame */
@@ -109,7 +109,7 @@ ebt_filter_vlan (const struct sk_buff *skb,
 			EXIT_ON_MISMATCH (id, EBT_VLAN_ID);
 			DEBUG_MSG
 			    ("matched rule id=%s%d for frame id=%d\n",
-			     INV_FLAG (EBT_VLAN_ID), infostuff->id, id);
+			     INV_FLAG (EBT_VLAN_ID), info->id, id);
 		}
 	} else {
 		/*
@@ -119,7 +119,7 @@ ebt_filter_vlan (const struct sk_buff *skb,
 			EXIT_ON_MISMATCH (prio, EBT_VLAN_PRIO);
 			DEBUG_MSG
 			    ("matched rule prio=%s%d for frame prio=%d\n",
-			     INV_FLAG (EBT_VLAN_PRIO), infostuff->prio,
+			     INV_FLAG (EBT_VLAN_PRIO), info->prio,
 			     prio);
 		}
 	}
@@ -130,7 +130,7 @@ ebt_filter_vlan (const struct sk_buff *skb,
 		EXIT_ON_MISMATCH (encap, EBT_VLAN_ENCAP);
 		DEBUG_MSG ("matched encap=%s%2.4X for frame encap=%2.4X\n",
 			   INV_FLAG (EBT_VLAN_ENCAP),
-			   ntohs (infostuff->encap), ntohs (encap));
+			   ntohs (info->encap), ntohs (encap));
 	}
 	/*
 	 * All possible extension parameters was parsed.
@@ -159,7 +159,7 @@ ebt_check_vlan (const char *tablename,
 		const struct ebt_entry *e, void *data,
 		unsigned int datalen)
 {
-	struct ebt_vlan_info *infostuff = (struct ebt_vlan_info *) data;
+	struct ebt_vlan_info *info = (struct ebt_vlan_info *) data;
 
 	/*
 	 * Parameters buffer overflow check 
@@ -175,7 +175,7 @@ ebt_check_vlan (const char *tablename,
 	 * Is it 802.1Q frame checked?
 	 */
 	if (e->ethproto != __constant_htons (ETH_P_8021Q)) {
-		DEBUG_MSG ("passed frame %2.4X is not 802.1Q (8100)\n",
+		DEBUG_MSG ("passed entry proto %2.4X is not 802.1Q (8100)\n",
 			   (unsigned short) ntohs (e->ethproto));
 		return -EINVAL;
 	}
@@ -184,18 +184,18 @@ ebt_check_vlan (const char *tablename,
 	 * Check for bitmask range 
 	 * True if even one bit is out of mask
 	 */
-	if (infostuff->bitmask & ~EBT_VLAN_MASK) {
+	if (info->bitmask & ~EBT_VLAN_MASK) {
 		DEBUG_MSG ("bitmask %2X is out of mask (%2X)\n",
-			   infostuff->bitmask, EBT_VLAN_MASK);
+			   info->bitmask, EBT_VLAN_MASK);
 		return -EINVAL;
 	}
 
 	/*
 	 * Check for inversion flags range 
 	 */
-	if (infostuff->invflags & ~EBT_VLAN_MASK) {
+	if (info->invflags & ~EBT_VLAN_MASK) {
 		DEBUG_MSG ("inversion flags %2X is out of mask (%2X)\n",
-			   infostuff->invflags, EBT_VLAN_MASK);
+			   info->invflags, EBT_VLAN_MASK);
 		return -EINVAL;
 	}
 
@@ -223,11 +223,11 @@ ebt_check_vlan (const char *tablename,
 	 * For Linux, N = 4094.
 	 */
 	if (GET_BITMASK (EBT_VLAN_ID)) {	/* when vlan-id param was spec-ed */
-		if (!!infostuff->id) {	/* if id!=0 => check vid range */
-			if (infostuff->id > 4094) {	/* check if id > than (0x0FFE) */
+		if (!!info->id) {	/* if id!=0 => check vid range */
+			if (info->id > 4094) {	/* check if id > than (0x0FFE) */
 				DEBUG_MSG
 				    ("vlan id %d is out of range (1-4094)\n",
-				     infostuff->id);
+				     info->id);
 				return -EINVAL;
 			}
 			/*
@@ -240,10 +240,10 @@ ebt_check_vlan (const char *tablename,
 			 * if id=0 (null VLAN ID)  => Check for user_priority range 
 			 */
 			if (GET_BITMASK (EBT_VLAN_PRIO)) {
-				if ((unsigned char) infostuff->prio > 7) {
+				if ((unsigned char) info->prio > 7) {
 					DEBUG_MSG
 					    ("prio %d is out of range (0-7)\n",
-					     infostuff->prio);
+					     info->prio);
 					return -EINVAL;
 				}
 			}
@@ -254,7 +254,7 @@ ebt_check_vlan (const char *tablename,
 		}
 	} else {		/* VLAN Id not set */
 		if (GET_BITMASK (EBT_VLAN_PRIO)) {	/* But user_priority is set - abnormal! */
-			infostuff->id = 0;	/* Set null VID (case for Priority-tagged frames) */
+			info->id = 0;	/* Set null VID (case for Priority-tagged frames) */
 			SET_BITMASK (EBT_VLAN_ID);	/* and set id flag */
 		}
 	}
@@ -266,10 +266,10 @@ ebt_check_vlan (const char *tablename,
 	 * if_ether.h:  ETH_ZLEN        60   -  Min. octets in frame sans FCS
 	 */
 	if (GET_BITMASK (EBT_VLAN_ENCAP)) {
-		if ((unsigned short) ntohs (infostuff->encap) < ETH_ZLEN) {
+		if ((unsigned short) ntohs (info->encap) < ETH_ZLEN) {
 			DEBUG_MSG
 			    ("encap packet length %d is less than minimal %d\n",
-			     ntohs (infostuff->encap), ETH_ZLEN);
+			     ntohs (info->encap), ETH_ZLEN);
 			return -EINVAL;
 		}
 	}

@@ -10,38 +10,34 @@
 
 #include <linux/netfilter_bridge/ebtables.h>
 #include <linux/netfilter_bridge/ebt_nat.h>
-#include <linux/netfilter_bridge.h>
-#include <linux/skbuff.h>
 #include <linux/module.h>
-#include <net/sock.h>
 
 static int ebt_target_snat(struct sk_buff **pskb, unsigned int hooknr,
    const struct net_device *in, const struct net_device *out,
    const void *data, unsigned int datalen)
 {
-	struct ebt_nat_info *infostuff = (struct ebt_nat_info *) data;
+	struct ebt_nat_info *info = (struct ebt_nat_info *) data;
 
-	memcpy(((**pskb).mac.ethernet)->h_source, infostuff->mac,
+	memcpy(((**pskb).mac.ethernet)->h_source, info->mac,
 	   ETH_ALEN * sizeof(unsigned char));
-	return infostuff->target;
+	return info->target;
 }
 
 static int ebt_target_snat_check(const char *tablename, unsigned int hookmask,
    const struct ebt_entry *e, void *data, unsigned int datalen)
 {
-	struct ebt_nat_info *infostuff = (struct ebt_nat_info *) data;
+	struct ebt_nat_info *info = (struct ebt_nat_info *) data;
 
-	if ((hookmask & (1 << NF_BR_NUMHOOKS)) &&
-	   infostuff->target == EBT_RETURN)
-		return -EINVAL;
-	hookmask &= ~(1 << NF_BR_NUMHOOKS);
-	if (strcmp(tablename, "nat"))
-		return -EINVAL;
 	if (datalen != sizeof(struct ebt_nat_info))
+		return -EINVAL;
+	if (BASE_CHAIN && info->target == EBT_RETURN)
+		return -EINVAL;
+	CLEAR_BASE_CHAIN_BIT;
+	if (strcmp(tablename, "nat"))
 		return -EINVAL;
 	if (hookmask & ~(1 << NF_BR_POST_ROUTING))
 		return -EINVAL;
-	if (infostuff->target < -NUM_STANDARD_TARGETS || infostuff->target >= 0)
+	if (INVALID_TARGET)
 		return -EINVAL;
 	return 0;
 }

@@ -40,9 +40,13 @@
 #define EBT_RETURN   -4
 #define NUM_STANDARD_TARGETS   4
 
+// return values for match() functions
+#define EBT_MATCH 0
+#define EBT_NOMATCH 1
+
 struct ebt_counter
 {
-	__u64 pcnt;
+	uint64_t pcnt;
 };
 
 struct ebt_entries {
@@ -135,7 +139,7 @@ struct ebt_entry {
 	// this needs to be the first field
 	unsigned int bitmask;
 	unsigned int invflags;
-	__u16 ethproto;
+	uint16_t ethproto;
 	// the physical in-dev
 	char in[IFNAMSIZ];
 	// the logical in-dev
@@ -183,7 +187,7 @@ struct ebt_match
 	// 0 == it matches
 	int (*match)(const struct sk_buff *skb, const struct net_device *in,
 	   const struct net_device *out, const void *matchdata,
-	   unsigned int datalen, const struct ebt_counter *c);
+	   unsigned int datalen);
 	// 0 == let it in
 	int (*check)(const char *tablename, unsigned int hookmask,
 	   const struct ebt_entry *e, void *matchdata, unsigned int datalen);
@@ -197,7 +201,7 @@ struct ebt_watcher
 	const char name[EBT_FUNCTION_MAXNAMELEN];
 	void (*watcher)(const struct sk_buff *skb, const struct net_device *in,
 	   const struct net_device *out, const void *watcherdata,
-	   unsigned int datalen, const struct ebt_counter *c);
+	   unsigned int datalen);
 	// 0 == let it in
 	int (*check)(const char *tablename, unsigned int hookmask,
 	   const struct ebt_entry *e, void *watcherdata, unsigned int datalen);
@@ -210,12 +214,9 @@ struct ebt_target
 	struct list_head list;
 	const char name[EBT_FUNCTION_MAXNAMELEN];
 	// returns one of the standard verdicts
-	int (*target)(struct sk_buff **pskb,
-	       unsigned int hooknr,
-	       const struct net_device *in,
-	       const struct net_device *out,
-	       const void *targetdata,
-	       unsigned int datalen);
+	int (*target)(struct sk_buff **pskb, unsigned int hooknr,
+	   const struct net_device *in, const struct net_device *out,
+	   const void *targetdata, unsigned int datalen);
 	// 0 == let it in
 	int (*check)(const char *tablename, unsigned int hookmask,
 	   const struct ebt_entry *e, void *targetdata, unsigned int datalen);
@@ -270,6 +271,16 @@ extern void ebt_unregister_target(struct ebt_target *target);
 extern unsigned int ebt_do_table(unsigned int hook, struct sk_buff **pskb,
    const struct net_device *in, const struct net_device *out,
    struct ebt_table *table);
+
+   // Used in the kernel match() functions
+#define FWINV(bool,invflg) ((bool) ^ !!(info->invflags & invflg))
+// True if the hook mask denotes that the rule is in a base chain,
+// used in the check() functions
+#define BASE_CHAIN (hookmask & (1 << NF_BR_NUMHOOKS))
+// Clear the bit in the hook mask that tells if the rule is on a base chain
+#define CLEAR_BASE_CHAIN_BIT (hookmask &= ~(1 << NF_BR_NUMHOOKS))
+// True if the target is not a standard target
+#define INVALID_TARGET (info->target < -NUM_STANDARD_TARGETS || info->target >= 0)
 
 #endif /* __KERNEL__ */
 
@@ -333,9 +344,9 @@ extern unsigned int ebt_do_table(unsigned int hook, struct sk_buff **pskb,
 		if (__ret != 0)                             \
 			break;                              \
 		if (__entry->bitmask != 0)                  \
-		 __i += __entry->next_offset;               \
+			__i += __entry->next_offset;        \
 		else                                        \
-		 __i += sizeof(struct ebt_entries);         \
+			__i += sizeof(struct ebt_entries);  \
 	}                                                   \
 	if (__ret == 0) {                                   \
 		if (__i != (size))                          \

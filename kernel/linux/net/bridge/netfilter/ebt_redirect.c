@@ -10,8 +10,6 @@
 
 #include <linux/netfilter_bridge/ebtables.h>
 #include <linux/netfilter_bridge/ebt_redirect.h>
-#include <linux/netfilter_bridge.h>
-#include <linux/skbuff.h>
 #include <linux/module.h>
 #include <net/sock.h>
 #include "../br_private.h"
@@ -20,7 +18,7 @@ static int ebt_target_redirect(struct sk_buff **pskb, unsigned int hooknr,
    const struct net_device *in, const struct net_device *out,
    const void *data, unsigned int datalen)
 {
-	struct ebt_redirect_info *infostuff = (struct ebt_redirect_info *) data;
+	struct ebt_redirect_info *info = (struct ebt_redirect_info *)data;
 
 	if (hooknr != NF_BR_BROUTING)
 		memcpy((**pskb).mac.ethernet->h_dest,
@@ -30,24 +28,23 @@ static int ebt_target_redirect(struct sk_buff **pskb, unsigned int hooknr,
 		   in->dev_addr, ETH_ALEN);
 		(*pskb)->pkt_type = PACKET_HOST;
 	}
-	return infostuff->target;
+	return info->target;
 }
 
 static int ebt_target_redirect_check(const char *tablename, unsigned int hookmask,
    const struct ebt_entry *e, void *data, unsigned int datalen)
 {
-	struct ebt_redirect_info *infostuff = (struct ebt_redirect_info *) data;
+	struct ebt_redirect_info *info = (struct ebt_redirect_info *)data;
 
-	if ((hookmask & (1 << NF_BR_NUMHOOKS)) &&
-	   infostuff->target == EBT_RETURN)
+	if (datalen != sizeof(struct ebt_redirect_info))
 		return -EINVAL;
-	hookmask &= ~(1 << NF_BR_NUMHOOKS);
+	if (BASE_CHAIN && info->target == EBT_RETURN)
+		return -EINVAL;
+	CLEAR_BASE_CHAIN_BIT;
 	if ( (strcmp(tablename, "nat") || hookmask & ~(1 << NF_BR_PRE_ROUTING)) &&
 	     (strcmp(tablename, "broute") || hookmask & ~(1 << NF_BR_BROUTING)) )
 		return -EINVAL;
-	if (datalen != sizeof(struct ebt_redirect_info))
-		return -EINVAL;
-	if (infostuff->target < -NUM_STANDARD_TARGETS || infostuff->target >= 0)
+	if (INVALID_TARGET)
 		return -EINVAL;
 	return 0;
 }

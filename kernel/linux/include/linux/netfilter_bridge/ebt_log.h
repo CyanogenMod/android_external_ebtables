@@ -9,9 +9,9 @@
 
 struct ebt_log_info
 {
-	__u8 loglevel;
-	__u8 prefix[EBT_LOG_PREFIX_SIZE];
-	__u32 bitmask;
+	uint8_t loglevel;
+	uint8_t prefix[EBT_LOG_PREFIX_SIZE];
+	uint32_t bitmask;
 };
 
 #endif

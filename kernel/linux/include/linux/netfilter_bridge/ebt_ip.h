@@ -11,14 +11,14 @@
 // the same values are used for the invflags
 struct ebt_ip_info
 {
-	__u32 saddr;
-	__u32 daddr;
-	__u32 smsk;
-	__u32 dmsk;
-	__u8  tos;
-	__u8  protocol;
-	__u8  bitmask;
-	__u8  invflags;
+	uint32_t saddr;
+	uint32_t daddr;
+	uint32_t smsk;
+	uint32_t dmsk;
+	uint8_t  tos;
+	uint8_t  protocol;
+	uint8_t  bitmask;
+	uint8_t  invflags;
 };
 
 #endif

@@ -12,15 +12,15 @@
 
 struct ebt_arp_info
 {
-	__u16 htype;
-	__u16 ptype;
-	__u16 opcode;
-	__u32 saddr;
-	__u32 smsk;
-	__u32 daddr;
-	__u32 dmsk;
-	__u8  bitmask;
-	__u8  invflags;
+	uint16_t htype;
+	uint16_t ptype;
+	uint16_t opcode;
+	uint32_t saddr;
+	uint32_t smsk;
+	uint32_t daddr;
+	uint32_t dmsk;
+	uint8_t  bitmask;
+	uint8_t  invflags;
 };
 
 #endif

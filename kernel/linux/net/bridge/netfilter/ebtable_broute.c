@@ -12,8 +12,6 @@
  */
 
 #include <linux/netfilter_bridge/ebtables.h>
-#include <linux/netfilter_bridge.h>
-#include <linux/netdevice.h>
 #include <linux/module.h>
 #include <linux/if_bridge.h>
 #include <linux/brlock.h>
@@ -43,10 +41,8 @@ static struct ebt_table broute_table =
 };
 
 static unsigned int
-ebt_broute (unsigned int hook, struct sk_buff **pskb,
-			const struct net_device *in,
-			const struct net_device *out,
-			int (*okfn)(struct sk_buff *))
+ebt_broute(unsigned int hook, struct sk_buff **pskb, const struct net_device *in,
+   const struct net_device *out, int (*okfn)(struct sk_buff *))
 {
 	return ebt_do_table(hook, pskb, in, out, &broute_table);
 }

@@ -9,8 +9,6 @@
  */
 
 #include <linux/netfilter_bridge/ebtables.h>
-#include <linux/netfilter_bridge.h>
-#include <linux/netdevice.h>
 #include <linux/module.h>
 #define NAT_VALID_HOOKS ((1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_LOCAL_OUT) | \
    (1 << NF_BR_POST_ROUTING))
@@ -43,17 +41,15 @@ static struct ebt_table frame_nat =
 };
 
 static unsigned int
-ebt_nat_dst (unsigned int hook, struct sk_buff **pskb,
-   const struct net_device *in, const struct net_device *out,
-   int (*okfn)(struct sk_buff *))
+ebt_nat_dst(unsigned int hook, struct sk_buff **pskb, const struct net_device *in
+   , const struct net_device *out, int (*okfn)(struct sk_buff *))
 {
 	return ebt_do_table(hook, pskb, in, out, &frame_nat);
 }
 
-static unsigned int ebt_nat_src (unsigned int hook, struct sk_buff **pskb,
-			const struct net_device *in,
-			const struct net_device *out,
-			int (*okfn)(struct sk_buff *))
+static unsigned int
+ebt_nat_src(unsigned int hook, struct sk_buff **pskb, const struct net_device *in
+   , const struct net_device *out, int (*okfn)(struct sk_buff *))
 {
 	return ebt_do_table(hook, pskb, in, out, &frame_nat);
 }

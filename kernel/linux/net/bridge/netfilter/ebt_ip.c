@@ -13,49 +13,41 @@
 #include <linux/ip.h>
 #include <linux/module.h>
 
-#define FWINV2(bool,invflg) ((bool) ^ !!(infostuff->invflags & invflg))
-static int ebt_filter_ip(const struct sk_buff *skb,
-	       const struct net_device *in,
-	       const struct net_device *out,
-	       const void *data,
-	       unsigned int datalen, const struct ebt_counter *c)
+static int ebt_filter_ip(const struct sk_buff *skb, const struct net_device *in,
+   const struct net_device *out, const void *data,
+   unsigned int datalen)
 {
-	struct ebt_ip_info *infostuff = (struct ebt_ip_info *) data;
+	struct ebt_ip_info *info = (struct ebt_ip_info *)data;
 
-	if (infostuff->bitmask & EBT_IP_TOS &&
-	   FWINV2(infostuff->tos != ((*skb).nh.iph)->tos, EBT_IP_TOS))
-		return 1;
-	if (infostuff->bitmask & EBT_IP_PROTO && FWINV2(infostuff->protocol !=
+	if (info->bitmask & EBT_IP_TOS &&
+	   FWINV(info->tos != ((*skb).nh.iph)->tos, EBT_IP_TOS))
+		return EBT_NOMATCH;
+	if (info->bitmask & EBT_IP_PROTO && FWINV(info->protocol !=
 	   ((*skb).nh.iph)->protocol, EBT_IP_PROTO))
-		return 1;
-	if (infostuff->bitmask & EBT_IP_SOURCE &&
-	   FWINV2((((*skb).nh.iph)->saddr & infostuff->smsk) !=
-	   infostuff->saddr, EBT_IP_SOURCE))
-		return 1;
-	if ((infostuff->bitmask & EBT_IP_DEST) &&
-	   FWINV2((((*skb).nh.iph)->daddr & infostuff->dmsk) !=
-	   infostuff->daddr, EBT_IP_DEST))
-		return 1;
-	return 0;
+		return EBT_NOMATCH;
+	if (info->bitmask & EBT_IP_SOURCE &&
+	   FWINV((((*skb).nh.iph)->saddr & info->smsk) !=
+	   info->saddr, EBT_IP_SOURCE))
+		return EBT_NOMATCH;
+	if ((info->bitmask & EBT_IP_DEST) &&
+	   FWINV((((*skb).nh.iph)->daddr & info->dmsk) !=
+	   info->daddr, EBT_IP_DEST))
+		return EBT_NOMATCH;
+	return EBT_MATCH;
 }
 
 static int ebt_ip_check(const char *tablename, unsigned int hookmask,
    const struct ebt_entry *e, void *data, unsigned int datalen)
 {
-	struct ebt_ip_info *infostuff = (struct ebt_ip_info *) data;
+	struct ebt_ip_info *info = (struct ebt_ip_info *)data;
 
-	if (datalen != sizeof(struct ebt_ip_info)) {
+	if (datalen != sizeof(struct ebt_ip_info))
 		return -EINVAL;
-	}
-	if (e->bitmask & (EBT_NOPROTO | EBT_802_3) || 
-	    e->ethproto != __constant_htons(ETH_P_IP) ||
-	    e->invflags & EBT_IPROTO)
-	{
+	if (e->ethproto != __constant_htons(ETH_P_IP) ||
+	   e->invflags & EBT_IPROTO)
 		return -EINVAL;
-	}
-	if (infostuff->bitmask & ~EBT_IP_MASK) {
+	if (info->bitmask & ~EBT_IP_MASK || info->invflags & ~EBT_IP_MASK)
 		return -EINVAL;
-	}
 	return 0;
 }
 

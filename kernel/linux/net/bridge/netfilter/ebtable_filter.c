@@ -9,7 +9,6 @@
  */
 
 #include <linux/netfilter_bridge/ebtables.h>
-#include <linux/netfilter_bridge.h>
 #include <linux/module.h>
 
 #define FILTER_VALID_HOOKS ((1 << NF_BR_LOCAL_IN) | (1 << NF_BR_FORWARD) | \
@@ -42,10 +41,9 @@ static struct ebt_table frame_filter =
   RW_LOCK_UNLOCKED, check, NULL
 };
 
-static unsigned int ebt_hook (unsigned int hook, struct sk_buff **pskb,
-			const struct net_device *in,
-			const struct net_device *out,
-			int (*okfn)(struct sk_buff *))
+static unsigned int
+ebt_hook (unsigned int hook, struct sk_buff **pskb, const struct net_device *in,
+   const struct net_device *out, int (*okfn)(struct sk_buff *))
 {
 	return ebt_do_table(hook, pskb, in, out, &frame_filter);
 }
