@@ -656,9 +656,11 @@ int get_table(struct ebt_u_replace *u_repl)
 	struct ebt_u_entry **u_e;
 
 	strcpy(repl.name, u_repl->name);
-	if (u_repl->filename != NULL)
+	if (u_repl->filename != NULL) {
 		retrieve_from_file(u_repl->filename, &repl, u_repl->command);
-	else if (retrieve_from_kernel(&repl, u_repl->command) == -1)
+		// -L with a wrong table name should be dealt with silently
+		strcpy(u_repl->name, repl.name);
+	} else if (retrieve_from_kernel(&repl, u_repl->command) == -1)
 		return -1;
 
 	// translate the struct ebt_replace to a struct ebt_u_replace
