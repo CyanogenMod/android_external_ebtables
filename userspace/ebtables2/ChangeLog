@@ -1,3 +1,10 @@
+20030724
+	* added (automatic) Sparc64 support
+20030717
+	* added stp frames match type
+20030713
+	* added support for deleting all user-defined chains (-X option
+	  without specified chain)
 20030601
 	* added --Lmac2
 	* <csv_at_bluetail.com> Chris Vitale: basic 802.3/802.2 filtering
