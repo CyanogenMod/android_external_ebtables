@@ -6,30 +6,34 @@
 # 6 June 2002: added ebt_snat.c, ebt_dnat.c files, removed ebt_nat.c file
 # 31 July 2002: added mark match/target, bridge/br.c, bridge/Makefile;
 #               deleted netsyms
+# 20 August 2002: deleted br_db
 
 export FROM=linux
-export TO=ebt2.0-rc1
-export FILE=ebtables-v2.0-rc1_vs_2.4.18.diff
+export TO=ebt2.0-rc2
+export FILE=ebtables-v2.0-rc2_vs_2.4.20-pre4.diff
 
-echo "ebtables-v2.0-rc1 - 31 July" >$FILE
+echo "ebtables-v2.0-rc2-dev - 21 August 2002" >$FILE
 echo >>$FILE
 echo "*** modifications for brouter support ***" >>$FILE
 echo >>$FILE
 
-diff -urN $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h >> $FILE
-diff -urN $FROM/include/linux/if_bridge.h $TO/include/linux/if_bridge.h >> $FILE
-diff -urN $FROM/net/core/dev.c $TO/net/core/dev.c >> $FILE
-diff -urN $FROM/net/bridge/br_input.c $TO/net/bridge/br_input.c >> $FILE
-diff -urN $FROM/net/bridge/br.c $TO/net/bridge/br.c >> $FILE
-diff -urN $FROM/net/bridge/Makefile $TO/net/bridge/Makefile >> $FILE
-diff -urN $FROM/include/linux/netfilter_bridge.h $TO/include/linux/netfilter_bridge.h >> $FILE
+diff -urNp --exclude TAGS $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h >> $FILE
+diff -urNp --exclude TAGS $FROM/include/linux/if_bridge.h $TO/include/linux/if_bridge.h >> $FILE
+diff -urNp --exclude TAGS $FROM/net/core/dev.c $TO/net/core/dev.c >> $FILE
+diff -urNp --exclude TAGS $FROM/net/bridge/br_input.c $TO/net/bridge/br_input.c >> $FILE
+diff -urNp --exclude TAGS $FROM/net/bridge/br.c $TO/net/bridge/br.c >> $FILE
+diff -urNp --exclude TAGS $FROM/net/bridge/Makefile $TO/net/bridge/Makefile >> $FILE
+diff -urNp --exclude TAGS $FROM/include/linux/netfilter_bridge.h $TO/include/linux/netfilter_bridge.h >> $FILE
 
 echo >>$FILE
 echo "*** modifications for ebtables compilation ***" >> $FILE
 echo >>$FILE
 
-diff -urN $FROM/net/Makefile $TO/net/Makefile >> $FILE
-diff -urN $FROM/net/Config.in $TO/net/Config.in >> $FILE
+# only needed for 2.4.x
+diff -urNp --exclude TAGS $FROM/net/Makefile $TO/net/Makefile >> $FILE
+diff -urNp --exclude TAGS $FROM/net/Config.in $TO/net/Config.in >> $FILE
+
+exit
 
 echo >>$FILE
 echo "*** new ebtables files ***" >> $FILE
@@ -37,7 +41,6 @@ echo >>$FILE
 
 diff -urN /dev/null $TO/net/bridge/netfilter/Makefile >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/Config.in >> $FILE
-diff -urN /dev/null $TO/net/bridge/netfilter/br_db.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_filter.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_nat.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_broute.c >> $FILE
@@ -60,4 +63,3 @@ diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_nat.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_redirect.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_mark_m.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_mark_t.h >> $FILE
-diff -urN /dev/null $TO/include/linux/br_db.h >> $FILE
