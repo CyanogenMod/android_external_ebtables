@@ -211,7 +211,8 @@ int check_inverse(const char option[]);
 void __print_bug(char *file, int line, char *format, ...);
 #define print_bug(format, args...) \
    __print_bug(__FILE__, __LINE__, format, ##args)
-#define print_error(format,args...) {printf(format".\n",##args); exit(-1);}
+#define print_error(format,args...) {printf(format,##args);\
+   printf(".\n");exit(-1);}
 #define print_memory() {printf("Ebtables: " __FILE__ \
    " %s %d :Out of memory.\n", __FUNCTION__, __LINE__); exit(-1);}
 
