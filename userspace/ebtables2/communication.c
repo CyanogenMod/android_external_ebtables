@@ -27,7 +27,7 @@ extern char* hooknames[NF_BR_NUMHOOKS];
 
 int sockfd = -1;
 
-void get_sockfd()
+static void get_sockfd()
 {
 	if (sockfd == -1) {
 		sockfd = socket(AF_INET, SOCK_RAW, PF_INET);
@@ -209,6 +209,47 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	return new;
 }
 
+static void store_table_in_file(char *filename, struct ebt_replace *repl)
+{
+	char *command, *data;
+	int size;
+	FILE *file;
+
+	// start from an empty file with right priviliges
+	command = (char *)malloc(strlen(filename) + 15);
+	if (!command)
+		print_memory();
+	strcpy(command, "cat /dev/null>");
+	strcpy(command + 14, filename);
+	if (system(command))
+		print_error("Couldn't create file %s", filename);
+	strcpy(command, "chmod 600 ");
+	strcpy(command + 10, filename);
+	if (system(command))
+		print_error("Couldn't chmod file %s", filename);
+	free(command);
+
+	size = sizeof(struct ebt_replace) + repl->entries_size +
+	   repl->nentries * sizeof(struct ebt_counter);
+	data = (char *)malloc(size);
+	if (!data)
+		print_memory();
+	memcpy(data, repl, sizeof(struct ebt_replace));
+	memcpy(data + sizeof(struct ebt_replace), repl->entries,
+	   repl->entries_size);
+	// initialize counters to zero, deliver_counters() can update them
+	memset(data + sizeof(struct ebt_replace) + repl->entries_size,
+	   0, repl->nentries * sizeof(struct ebt_counter));
+	if (!(file = fopen(filename, "wb")))
+		print_error("Could not open file %s", filename);
+	if (fwrite(data, sizeof(char), size, file) != size) {
+		fclose(file);
+		print_error("Could not write everything to file %s", filename);
+	}
+	fclose(file);
+	free(data);
+}
+
 void deliver_table(struct ebt_u_replace *u_repl)
 {
 	socklen_t optlen;
@@ -216,13 +257,41 @@ void deliver_table(struct ebt_u_replace *u_repl)
 
 	// translate the struct ebt_u_replace to a struct ebt_replace
 	repl = translate_user2kernel(u_repl);
-	get_sockfd();
 	// give the data to the kernel
 	optlen = sizeof(struct ebt_replace) + repl->entries_size;
+	if (u_repl->filename != NULL) {
+		store_table_in_file(u_repl->filename, repl);
+		return;
+	}
+	get_sockfd();
 	if (setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_ENTRIES, repl, optlen))
 		print_error("The kernel doesn't support a certain ebtables"
 		  " extension, consider recompiling your kernel or insmod"
 		  " the extension");	
+}
+
+static void store_counters_in_file(char *filename, struct ebt_u_replace *repl)
+{
+	int size = repl->nentries * sizeof(struct ebt_counter);
+	int entries_size;
+	struct ebt_replace hlp;
+	FILE *file;
+
+	if (!(file = fopen(filename, "r+b")))
+		print_error("Could not open file %s", filename);
+	// find out entries_size and then set the file pointer to the counters
+	if (fseek(file, (char *)(&hlp.entries_size) - (char *)(&hlp), SEEK_SET)
+	   || fread(&entries_size, sizeof(char), sizeof(unsigned int), file) !=
+	   sizeof(unsigned int) ||
+	   fseek(file, entries_size + sizeof(struct ebt_replace), SEEK_SET)) {
+		fclose(file);
+		print_error("File %s is corrupt", filename);
+	}
+	if (fwrite(repl->counters, sizeof(char), size, file) != size) {
+		fclose(file);
+		print_error("Could not write everything to file %s", filename);
+	}
+	fclose(file);
 }
 
 // gets executed after deliver_table
@@ -273,6 +342,10 @@ deliver_counters(struct ebt_u_replace *u_repl, unsigned short *counterchanges)
 	free(u_repl->counters);
 	u_repl->counters = newcounters;
 	u_repl->num_counters = u_repl->nentries;
+	if (u_repl->filename != NULL) {
+		store_counters_in_file(u_repl->filename, u_repl);
+		return;
+	}
 	optlen = u_repl->nentries * sizeof(struct ebt_counter) +
 	   sizeof(struct ebt_replace);
 	// now put the stuff in the kernel's struct ebt_replace
@@ -484,37 +557,109 @@ ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
 	return 0;
 }
 
+static void retrieve_from_file(char *filename, struct ebt_replace *repl,
+   char command)
+{
+	FILE *file;
+	char *hlp;
+	int size;
+
+	if (!(file = fopen(filename, "r+b")))
+		print_error("Could not open file %s", filename);
+	// make sure table name is right if command isn't -L or --atomic-commit
+	if (command != 'L' && command != 8) {
+		hlp = (char *)malloc(strlen(repl->name));
+		if (!hlp)
+			print_memory();
+		strcpy(hlp, repl->name);
+	} else
+		if (!find_table(repl->name))
+			print_error("File %s contains invalid table name",
+			   filename);
+	if (fread(repl, sizeof(char), sizeof(struct ebt_replace), file)
+	   != sizeof(struct ebt_replace))
+		print_error("File %s is corrupt", filename);
+	if (command != 'L' && command != 8 && strcmp(hlp, repl->name))
+		print_error("File %s contains wrong table name or is corrupt",
+		   filename);
+	size = sizeof(struct ebt_replace) +
+	   repl->nentries * sizeof(struct ebt_counter) + repl->entries_size;
+	fseek(file, 0, SEEK_END);
+	if (size != ftell(file))
+		print_error("File %s has wrong size", filename);
+	repl->entries = (char *)malloc(repl->entries_size);
+	if (!repl->entries)
+		print_memory();
+	if (repl->nentries) {
+		repl->counters = (struct ebt_counter *)
+		   malloc(repl->nentries * sizeof(struct ebt_counter));
+		if (!repl->counters)
+			print_memory();
+	} else
+		repl->counters = NULL;
+	// copy entries and counters
+	if (fseek(file, sizeof(struct ebt_replace), SEEK_SET) ||
+	   fread(repl->entries, sizeof(char), repl->entries_size, file)
+	   != repl->entries_size ||
+	   fseek(file, sizeof(struct ebt_replace) + repl->entries_size, SEEK_SET)
+	   || fread(repl->counters, sizeof(char),
+	   repl->nentries * sizeof(struct ebt_counter), file)
+	   != repl->nentries * sizeof(struct ebt_counter))
+		print_error("File %s is corrupt", filename);
+	fclose(file);
+}
+
+static int retrieve_from_kernel(struct ebt_replace *repl, char command)
+{
+	socklen_t optlen;
+	int optname;
+
+	optlen = sizeof(struct ebt_replace);
+	get_sockfd();
+	if (command == 7)
+		optname = EBT_SO_GET_INIT_INFO;
+	else
+		optname = EBT_SO_GET_INFO;
+	if (getsockopt(sockfd, IPPROTO_IP, optname, repl, &optlen))
+		return -1;
+
+	if ( !(repl->entries = (char *) malloc(repl->entries_size)) )
+		print_memory();
+	if (repl->nentries) {
+		if (!(repl->counters = (struct ebt_counter *)
+		   malloc(repl->nentries * sizeof(struct ebt_counter))) )
+			print_memory();
+	}
+	else
+		repl->counters = NULL;
+
+	// we want to receive the counters
+	repl->num_counters = repl->nentries;
+	optlen += repl->entries_size + repl->num_counters *
+	   sizeof(struct ebt_counter);
+	if (command == 7)
+		optname = EBT_SO_GET_INIT_ENTRIES;
+	else
+		optname = EBT_SO_GET_ENTRIES;
+	if (getsockopt(sockfd, IPPROTO_IP, optname, repl, &optlen))
+		print_bug("hmm, what is wrong??? bug#1");
+
+	return 0;
+}
+
 // talk with kernel to receive the kernel's table
 int get_table(struct ebt_u_replace *u_repl)
 {
 	int i, j, k, hook;
-	socklen_t optlen;
 	struct ebt_replace repl;
 	struct ebt_u_entry **u_e;
 
-	get_sockfd();
-
-	optlen = sizeof(struct ebt_replace);
 	strcpy(repl.name, u_repl->name);
-	if (getsockopt(sockfd, IPPROTO_IP, EBT_SO_GET_INFO, &repl, &optlen))
-		return -1;
-
-	if ( !(repl.entries = (char *) malloc(repl.entries_size)) )
-		print_memory();
-	if (repl.nentries) {
-		if (!(repl.counters = (struct ebt_counter *)
-		   malloc(repl.nentries * sizeof(struct ebt_counter))) )
-			print_memory();
-	}
+	if (u_repl->filename != NULL)
+		retrieve_from_file(u_repl->filename, &repl, u_repl->command);
 	else
-		repl.counters = NULL;
-
-	// we want to receive the counters
-	repl.num_counters = repl.nentries;
-	optlen += repl.entries_size + repl.num_counters *
-	   sizeof(struct ebt_counter);
-	if (getsockopt(sockfd, IPPROTO_IP, EBT_SO_GET_ENTRIES, &repl, &optlen))
-		print_bug("hmm, what is wrong??? bug#1");
+		if (retrieve_from_kernel(&repl, u_repl->command) == -1)
+			return -1;
 
 	// translate the struct ebt_replace to a struct ebt_u_replace
 	memcpy(u_repl->name, repl.name, sizeof(u_repl->name));
