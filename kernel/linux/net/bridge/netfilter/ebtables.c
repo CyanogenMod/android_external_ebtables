@@ -545,8 +545,9 @@ static int translate_table(struct ebt_replace *repl,
 	ret = EBT_ENTRY_ITERATE(newinfo->entries, newinfo->entries_size,
 	   ebt_check_entry, newinfo, repl->name, &i, repl->valid_hooks);
 	if (ret != 0) {
-		BUGPRINT("ebt_check_entry gave fault back\n");
-		EBT_ENTRY_ITERATE(newinfo->entries, newinfo->entries_size, ebt_cleanup_entry, &i);
+//		BUGPRINT("ebt_check_entry gave fault back\n");
+		EBT_ENTRY_ITERATE(newinfo->entries, newinfo->entries_size,
+		   ebt_cleanup_entry, &i);
 	}
 	return ret;
 }
