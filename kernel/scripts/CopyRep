@@ -5,7 +5,7 @@
 export FROM=/ebtables-cvs/ebtables2/
 export TO=/usr/src/linux
 
-mkdir -p linux/net/bridge/netfilter
-mkdir -p linux/include/netfilter_bridge
+mkdir -p $FROM/linux/net/bridge/netfilter
+mkdir -p $FROM/linux/include/netfilter_bridge
 cp -r -f $FROM/br-nf-bds/linux/* $TO/
 cp -r -f $FROM/kernel/linux/* $TO/
