@@ -473,6 +473,19 @@ to explicitly load them with a -m option like in
 .BR iptables .
 However, these
 extensions deal with functionality supported by supplemental kernel modules.
+.SS 802.3
+Specify 802.3 DSAP/SSAP fields or SNAP type.  These only work if the protocol equals
+.BR "LENGTH " (see " protocol " above).
+.TP
+.BR "--802_3-sap " "[!] \fIsap\fP"
+DSAP and SSAP are two one byte 802.3 fields.  The bytes are always
+equal, so only one byte (hexadecimal) is needed as an argument.
+.TP
+.BR "--802_3-type " "[!] \fItype\fP"
+If the 802.3 DSAP and SSAP values are 0xaa then the SNAP type field must
+be consulted to determine the payload protocol.  This is a two byte
+(hexadecimal) argument.  Only 802.3 frames with DSAP/SSAP 0xaa are 
+checked for type.
 .SS arp
 Specify arp fields. These will only work if the protocol equals
 .BR ARP " or " RARP .
