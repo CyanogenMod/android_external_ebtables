@@ -23,8 +23,7 @@
 
 /*
   Currently, only support for specifying hardware addresses for Ethernet
-  is available. We actually set the hardware_length to 6 when hardware
-  addresses are specified (mask is set to 0).
+  is available.
   This tool is not luser-proof: you can specify an Ethernet source address
   and set hardware length to something different than 6, f.e.
 */
@@ -1213,6 +1212,7 @@ print_firewall(const struct arpt_entry *fw,
 	const struct arpt_entry_target *t;
 	u_int8_t flags;
 	char buf[BUFSIZ];
+	int i;
 
 	if (!arptc_is_chain(targname, handle))
 		target = find_target(targname, TRY_LOAD);
@@ -1269,20 +1269,17 @@ print_firewall(const struct arpt_entry *fw,
 		printf("-s %s ", buf);
 	}
 
-	if (fw->arp.arhln != 0) {
-		int i;
-
-		for (i = 0; i < fw->arp.arhln ; i++)
-			if (fw->arp.src_devaddr.mask[i] != 0)
-				break;
-		if (i == fw->arp.arhln)
-			goto after_devsrc;
-		printf("%s", fw->arp.invflags & ARPT_INV_SRCDEVADDR
-			? "! " : "");
-		printf("--src-mac ");
-		print_mac_and_mask(fw->arp.src_devaddr.addr, fw->arp.src_devaddr.mask, fw->arp.arhln);
-		printf(" ");
-	}
+	for (i = 0; i < ARPT_DEV_ADDR_LEN_MAX; i++)
+		if (fw->arp.src_devaddr.mask[i] != 0)
+			break;
+	if (i == ARPT_DEV_ADDR_LEN_MAX)
+		goto after_devsrc;
+	printf("%s", fw->arp.invflags & ARPT_INV_SRCDEVADDR
+		? "! " : "");
+	printf("--src-mac ");
+	print_mac_and_mask(fw->arp.src_devaddr.addr,
+		fw->arp.src_devaddr.mask, ETH_ALEN);
+	printf(" ");
 after_devsrc:
 
 	if (fw->arp.tmsk.s_addr != 0L) {
@@ -1296,20 +1293,17 @@ after_devsrc:
 		printf("-d %s ", buf);
 	}
 
-	if (fw->arp.arhln != 0) {
-		int i;
-
-		for (i = 0; i < fw->arp.arhln ; i++)
-			if (fw->arp.tgt_devaddr.mask[i] != 0)
-				break;
-		if (i == fw->arp.arhln)
-			goto after_devdst;
-		printf("%s",fw->arp.invflags & ARPT_INV_TGTDEVADDR
-			? "! " : "");
-		printf("--dst-mac ");
-		print_mac_and_mask(fw->arp.tgt_devaddr.addr, fw->arp.tgt_devaddr.mask, fw->arp.arhln);
-		printf(" ");
-	}
+	for (i = 0; i <ARPT_DEV_ADDR_LEN_MAX; i++)
+		if (fw->arp.tgt_devaddr.mask[i] != 0)
+			break;
+	if (i == ARPT_DEV_ADDR_LEN_MAX)
+		goto after_devdst;
+	printf("%s",fw->arp.invflags & ARPT_INV_TGTDEVADDR
+		? "! " : "");
+	printf("--dst-mac ");
+	print_mac_and_mask(fw->arp.tgt_devaddr.addr,
+		fw->arp.tgt_devaddr.mask, ETH_ALEN);
+	printf(" ");
 after_devdst:
 
 	if (fw->arp.arhln_mask != 0) {
@@ -1961,7 +1955,6 @@ int do_command(int argc, char *argv[], char **table, arptc_handle_t *handle)
 			   fw.arp.src_devaddr.addr, fw.arp.src_devaddr.mask))
 				exit_error(PARAMETER_PROBLEM, "Problem with specified "
 				            "source mac");
-			fw.arp.arhln = 6;
 			break;
 
 		case 3:/* dst-mac */
@@ -1973,7 +1966,6 @@ int do_command(int argc, char *argv[], char **table, arptc_handle_t *handle)
 			   fw.arp.tgt_devaddr.addr, fw.arp.tgt_devaddr.mask))
 				exit_error(PARAMETER_PROBLEM, "Problem with specified "
 				            "destination mac");
-			fw.arp.arhln = 6;
 			break;
 
 		case 'l':/* hardware length */
