@@ -40,9 +40,7 @@ static void decrease_chain_jumps(struct ebt_u_replace *replace);
 static void remove_udc(struct ebt_u_replace *replace);
 static int iterate_entries(struct ebt_u_replace *replace, int type);
 
-/*
- * The standard names
- */
+/* The standard names */
 const char *ebt_hooknames[NF_BR_NUMHOOKS] =
 {
 	[NF_BR_PRE_ROUTING]"PREROUTING",
@@ -53,9 +51,7 @@ const char *ebt_hooknames[NF_BR_NUMHOOKS] =
 	[NF_BR_BROUTING]"BROUTING"
 };
 
-/*
- * The four target names
- */
+/* The four target names */
 const char* ebt_standard_targets[NUM_STANDARD_TARGETS] =
 {
 	"ACCEPT",
@@ -64,22 +60,18 @@ const char* ebt_standard_targets[NUM_STANDARD_TARGETS] =
 	"RETURN",
 };
 
-/*
- * The lists of supported tables, matches, watchers and targets
- */
+/* The lists of supported tables, matches, watchers and targets */
 struct ebt_u_table *ebt_tables;
 struct ebt_u_match *ebt_matches;
 struct ebt_u_watcher *ebt_watchers;
 struct ebt_u_target *ebt_targets;
 
-/*
- * Find the right structure belonging to a name
- */
+/* Find the right structure belonging to a name */
 struct ebt_u_target *ebt_find_target(const char *name)
 {
 	struct ebt_u_target *t = ebt_targets;
 
-	while(t && strcmp(t->name, name))
+	while (t && strcmp(t->name, name))
 		t = t->next;
 	return t;
 }
@@ -88,7 +80,7 @@ struct ebt_u_match *ebt_find_match(const char *name)
 {
 	struct ebt_u_match *m = ebt_matches;
 
-	while(m && strcmp(m->name, name))
+	while (m && strcmp(m->name, name))
 		m = m->next;
 	return m;
 }
@@ -97,7 +89,7 @@ struct ebt_u_watcher *ebt_find_watcher(const char *name)
 {
 	struct ebt_u_watcher *w = ebt_watchers;
 
-	while(w && strcmp(w->name, name))
+	while (w && strcmp(w->name, name))
 		w = w->next;
 	return w;
 }
@@ -111,9 +103,7 @@ struct ebt_u_table *ebt_find_table(const char *name)
 	return t;
 }
 
-/*
- * Prints all registered extensions
- */
+/* Prints all registered extensions */
 void ebt_list_extensions()
 {
 	struct ebt_u_table *tbl = ebt_tables;
@@ -123,59 +113,51 @@ void ebt_list_extensions()
 
 	PRINT_VERSION;
 	printf("Supported userspace extensions:\n\nSupported tables:\n");
-        while(tbl) {
+        while (tbl) {
 		printf("%s\n", tbl->name);
                 tbl = tbl->next;
 	}
 	printf("\nSupported targets:\n");
-        while(t) {
+        while (t) {
 		printf("%s\n", t->name);
                 t = t->next;
 	}
 	printf("\nSupported matches:\n");
-        while(m) {
+        while (m) {
 		printf("%s\n", m->name);
                 m = m->next;
 	}
 	printf("\nSupported watchers:\n");
-        while(w) {
+        while (w) {
 		printf("%s\n", w->name);
                 w = w->next;
 	}
-	exit(0);
 }
 
-/*
- * Get the table from the kernel or from a binary file
+/* Get the table from the kernel or from a binary file
  * init: 1 = ask the kernel for the initial contents of a table, i.e. the
  *           way it looks when the table is insmod'ed
- *       0 = get the current data in the table
- */
-void ebt_get_kernel_table(struct ebt_u_replace *replace,
-			  struct ebt_u_table *table, int init)
+ *       0 = get the current data in the table */
+int ebt_get_kernel_table(struct ebt_u_replace *replace, int init)
 {
-	if ( !(table = ebt_find_table(replace->name)) )
+	if (!ebt_find_table(replace->name)) {
 		ebt_print_error("Bad table name");
-	/*
-	 * get the kernel's information
-	 */
-	if (ebt_get_table(replace, init)) {
-		ebtables_insmod("ebtables");
-		if (ebt_get_table(replace, init))
-			ebt_print_error("The kernel doesn't support the "
-			   "ebtables %s table", replace->name);
+		return -1;
 	}
-	/*
-	 * when listing a table contained in a file, we don't demand that
-	 * the user knows the table's name, so we update table if necessary
-	 */
-	if ( !(table = ebt_find_table(replace->name)) )
-		ebt_print_error("Bad table name");
+	/* Get the kernel's information */
+	if (ebt_get_table(replace, init)) {
+		if (ebt_errormsg[0] != '\0')
+			return -1;
+		ebtables_insmod("ebtables");
+		if (ebt_get_table(replace, init)) {
+			ebt_print_error("The kernel doesn't support the ebtables %s table", replace->name);
+			return -1;
+		}
+	}
+	return 0;
 }
 
-/*
- * Put sane values into a new entry
- */
+/* Put sane values into a new entry */
 void ebt_initialize_entry(struct ebt_u_entry *e)
 {
 	e->bitmask = EBT_NOPROTO;
@@ -188,16 +170,14 @@ void ebt_initialize_entry(struct ebt_u_entry *e)
 	e->m_list = NULL;
 	e->w_list = NULL;
 	e->t = (struct ebt_entry_target *)ebt_find_target(EBT_STANDARD_TARGET);
+	ebt_find_target(EBT_STANDARD_TARGET)->used = 1;
 
 	if (!e->t)
 		ebt_print_bug("Couldn't load standard target");
-	((struct ebt_standard_target *)
-	((struct ebt_u_target *)e->t)->t)->verdict = EBT_CONTINUE;
+	((struct ebt_standard_target *)((struct ebt_u_target *)e->t)->t)->verdict = EBT_CONTINUE;
 }
 
-/*
- * replace is reborn, i.e. rebirth of replace
- */
+/* Free up the memory of the table held in userspace, *replace can be reused */
 void ebt_cleanup_replace(struct ebt_u_replace *replace)
 {
 	int i;
@@ -245,6 +225,7 @@ void ebt_cleanup_replace(struct ebt_u_replace *replace)
 	}
 	udc1 = replace->udc;
 	while (udc1) {
+		free(udc1->udc);
 		udc2 = udc1->next;
 		free(udc1);
 		udc1 = udc2;
@@ -259,10 +240,8 @@ void ebt_cleanup_replace(struct ebt_u_replace *replace)
 	replace->counterchanges = NULL;
 }
 
-/*
- * Should be called between 2 rule adds, f.e.
- */
-void ebt_reinit_extensions(struct ebt_u_replace *replace)
+/* Should be called, e.g., between 2 rule adds */
+void ebt_reinit_extensions()
 {
 	struct ebt_u_match *m;
 	struct ebt_u_watcher *w;
@@ -273,42 +252,46 @@ void ebt_reinit_extensions(struct ebt_u_replace *replace)
 	 * called for the first time or not (when necessary). */
 	for (m = ebt_matches; m; m = m->next) {
 		size = EBT_ALIGN(m->size) + sizeof(struct ebt_entry_match);
-		if (m->m)
-			free(m->m);
-		m->m = (struct ebt_entry_match *)malloc(size);
-		if (!m->m)
-			ebt_print_memory();
-		m->used = 0;
-		m->flags = 0;
+		if (m->used) {
+			m->m = (struct ebt_entry_match *)malloc(size);
+			if (!m->m)
+				ebt_print_memory();
+			strcpy(m->m->u.name, m->name);
+			m->m->match_size = EBT_ALIGN(m->size);
+			m->used = 0;
+			m->flags = 0;
+		}
 		m->init(m->m);
 	}
 	for (w = ebt_watchers; w; w = w->next) {
 		size = EBT_ALIGN(w->size) + sizeof(struct ebt_entry_watcher);
-		if (w->w)
-			free(w->w);
-		w->w = (struct ebt_entry_watcher *)malloc(size);
-		if (!w->w)
-			ebt_print_memory();
-		w->used = 0;
-		w->flags = 0;
+		if (w->used) {
+			w->w = (struct ebt_entry_watcher *)malloc(size);
+			if (!w->w)
+				ebt_print_memory();
+			strcpy(w->w->u.name, w->name);
+			w->w->watcher_size = EBT_ALIGN(w->size);
+			w->used = 0;
+			w->flags = 0;
+		}
 		w->init(w->w);
 	}
-	for (t = ebt_targets; m; t = t->next) {
+	for (t = ebt_targets; t; t = t->next) {
 		size = EBT_ALIGN(t->size) + sizeof(struct ebt_entry_target);
-		if (t->t)
-			free(t->t);
-		t->t = (struct ebt_entry_target *)malloc(size);
-		if (!t->t)
-			ebt_print_memory();
-		t->used = 0;
-		t->flags = 0;
+		if (t->used) {
+			t->t = (struct ebt_entry_target *)malloc(size);
+			if (!t->t)
+				ebt_print_memory();
+			strcpy(t->t->u.name, t->name);
+			t->t->target_size = EBT_ALIGN(t->size);
+			t->used = 0;
+			t->flags = 0;
+		}
 		t->init(t->t);
 	}
 }
 
-/*
- * This doesn't free e, becoz the calling function might need e->next
- */
+/* This doesn't free e, because the calling function might need e->next */
 void ebt_free_u_entry(struct ebt_u_entry *e)
 {
 	struct ebt_u_match_list *m_l, *m_l2;
@@ -331,10 +314,8 @@ void ebt_free_u_entry(struct ebt_u_entry *e)
 	free(e->t);
 }
 
-/*
- * Blatently stolen (again) from iptables.c userspace program
- * find out where the modprobe utility is located
- */
+/* Blatently stolen (again) from iptables.c userspace program
+ * find out where the modprobe utility is located */
 static char *get_modprobe(void)
 {
 	int procfile;
@@ -350,8 +331,8 @@ static char *get_modprobe(void)
 		case -1: goto fail;
 		case 1024: goto fail; /* Partial read.  Wierd */
 		}
-		if (ret[strlen(ret)-1]=='\n')
-			ret[strlen(ret)-1]=0;
+		if (ret[strlen(ret)-1] == '\n')
+			ret[strlen(ret)-1] = 0;
 		close(procfile);
 		return ret;
 	}
@@ -362,9 +343,7 @@ static char *get_modprobe(void)
 }
 
 char *ebt_modprobe;
-/*
- * Try to load the kernel module
- */
+/* Try to load the kernel module */
 int ebtables_insmod(const char *modname)
 {
 	char *buf = NULL;
@@ -385,12 +364,12 @@ int ebtables_insmod(const char *modname)
 		argv[2] = NULL;
 		execv(argv[0], argv);
 
-		/* not usually reached */
+		/* Not usually reached */
 		exit(0);
 	case -1:
 		return -1;
 
-	default: /* parent */
+	default: /* Parent */
 		wait(NULL);
 	}
 
@@ -398,11 +377,9 @@ int ebtables_insmod(const char *modname)
 	return 0;
 }
 
-/*
- * Gives back a pointer to the chain base, based on nr.
+/* Gives back a pointer to the chain base, based on nr.
  * If nr >= NF_BR_NUMHOOKS you'll get back a user-defined chain.
- * Returns NULL on failure.
- */
+ * Returns NULL on failure. */
 struct ebt_u_entries *ebt_nr_to_chain(const struct ebt_u_replace *replace,
 				       int nr)
 {
@@ -426,20 +403,16 @@ struct ebt_u_entries *ebt_nr_to_chain(const struct ebt_u_replace *replace,
 	}
 }
 
-/*
- * Gives back a pointer to the chain base of selected_chain
- */
+/* Gives back a pointer to the chain base of selected_chain */
 struct ebt_u_entries *ebt_to_chain(const struct ebt_u_replace *replace)
 {
 	return ebt_nr_to_chain(replace, replace->selected_chain);
 }
 
-/*
- * Parse the chain name and return a pointer to the chain base.
- * Returns NULL on failure.
- */
+/* Parse the chain name and return a pointer to the chain base.
+ * Returns NULL on failure. */
 struct ebt_u_entries *ebt_name_to_chain(const struct ebt_u_replace *replace,
-				    const char* arg)
+					const char* arg)
 {
 	int i;
 	struct ebt_u_chain_list *cl = replace->udc;
@@ -458,10 +431,8 @@ struct ebt_u_entries *ebt_name_to_chain(const struct ebt_u_replace *replace,
 	return NULL;
 }
 
-/*
- * Parse the chain name and return the corresponding chain nr
- * returns -1 on failure
- */
+/* Parse the chain name and return the corresponding chain nr
+ * returns -1 on failure */
 int ebt_get_chainnr(const struct ebt_u_replace *replace, const char* arg)
 {
 	int i;
@@ -490,23 +461,19 @@ int ebt_get_chainnr(const struct ebt_u_replace *replace, const char* arg)
 ************
      */
 
-/*
- * Chainge the policy of selected_chain.
- * No sanity checks are done.
- */
+/* Change the policy of selected_chain.
+ * Handing a bad policy to this function is a bug. */
 void ebt_change_policy(struct ebt_u_replace *replace, int policy)
 {
 	struct ebt_u_entries *entries = ebt_to_chain(replace);
 
 	if (policy < -NUM_STANDARD_TARGETS || policy == EBT_CONTINUE)
-		ebt_print_bug("wrong policy: %d", policy);
+		ebt_print_bug("Wrong policy: %d", policy);
 	entries->policy = policy;
 }
 
-/*
- * Flush one chain or the complete table
- * If selected_chain == -1: flush the complete table
- */
+/* Flush one chain or the complete table
+ * If selected_chain == -1: flush the complete table */
 void ebt_flush_chains(struct ebt_u_replace *replace)
 {
 	int i, j, numdel;
@@ -515,17 +482,13 @@ void ebt_flush_chains(struct ebt_u_replace *replace)
 	struct ebt_cntchanges *cc = replace->counterchanges;
 	struct ebt_cntchanges **prev_cc =  &(replace->counterchanges);
 
-	/*
-	 * flush whole table
-	 */
+	/* Flush whole table */
 	if (!entries) {
 		if (replace->nentries == 0)
 			return;
 		replace->nentries = 0;
 
-		/*
-		 * free everything and zero (n)entries
-		 */
+		/* Free everything and zero (n)entries */
 		i = -1;
 		while (1) {
 			i++;
@@ -547,9 +510,7 @@ void ebt_flush_chains(struct ebt_u_replace *replace)
 				u_e = tmp;
 			}
 		}
-		/*
-		 * update the counters
-		 */
+		/* Update the counters */
 		while (cc) {
 			if (cc->type == CNT_ADD) {
 				*prev_cc = cc->next;
@@ -569,10 +530,8 @@ void ebt_flush_chains(struct ebt_u_replace *replace)
 	replace->nentries -= entries->nentries;
 	numdel = entries->nentries;
 
-	/*
-	 * delete the counters belonging to the specified chain,
-	 * update counter_offset
-	 */
+	/* Delete the counters belonging to the specified chain,
+	 * update counter_offset */
 	i = -1;
 	while (1) {
 		i++;
@@ -589,7 +548,7 @@ void ebt_flush_chains(struct ebt_u_replace *replace)
 		}
 		j = entries->nentries;
 		while (j) {
-			/* don't count deleted entries */
+			/* Don't count deleted entries */
 			if (cc->type == CNT_DEL)
 				goto letscontinue;
 			if (i == replace->selected_chain) {
@@ -619,15 +578,12 @@ letscontinue:
 		u_e = tmp;
 	}
 	entries->entries = NULL;
-	return;
 }
 
-/*
- * returns the rule number on success (starting from 0), -1 on failure
+/* Returns the rule number on success (starting from 0), -1 on failure
  *
  * This function expects the ebt_{match,watcher,target} members of new_entry
- * to contain pointers to ebt_u_{match,watcher,target}.
- */
+ * to contain pointers to ebt_u_{match,watcher,target} */
 int ebt_check_rule_exists(struct ebt_u_replace *replace,
 			  struct ebt_u_entry *new_entry)
 {
@@ -641,10 +597,8 @@ int ebt_check_rule_exists(struct ebt_u_replace *replace,
 	int i, j, k;
 
 	u_e = entries->entries;
-	/*
-	 * check for an existing rule (if there are duplicate rules,
-	 * take the first occurance)
-	 */
+	/* Check for an existing rule (if there are duplicate rules,
+	 * take the first occurance) */
 	for (i = 0; i < entries->nentries; i++, u_e = u_e->next) {
 		if (!u_e)
 			ebt_print_bug("Hmm, trouble");
@@ -659,17 +613,15 @@ int ebt_check_rule_exists(struct ebt_u_replace *replace,
 		if (strcmp(u_e->logical_out, new_entry->logical_out))
 			continue;
 		if (new_entry->bitmask & EBT_SOURCEMAC &&
-		   memcmp(u_e->sourcemac, new_entry->sourcemac, ETH_ALEN))
+		    memcmp(u_e->sourcemac, new_entry->sourcemac, ETH_ALEN))
 			continue;
 		if (new_entry->bitmask & EBT_DESTMAC &&
-		   memcmp(u_e->destmac, new_entry->destmac, ETH_ALEN))
+		    memcmp(u_e->destmac, new_entry->destmac, ETH_ALEN))
 			continue;
 		if (new_entry->bitmask != u_e->bitmask ||
-		   new_entry->invflags != u_e->invflags)
+		    new_entry->invflags != u_e->invflags)
 			continue;
-		/*
-		 * compare all matches
-		 */
+		/* Compare all matches */
 		m_l = new_entry->m_list;
 		j = 0;
 		while (m_l) {
@@ -682,9 +634,7 @@ int ebt_check_rule_exists(struct ebt_u_replace *replace,
 			j++;
 			m_l = m_l->next;
 		}
-		/*
-		 * now be sure they have the same nr of matches
-		 */
+		/* Now be sure they have the same nr of matches */
 		k = 0;
 		m_l = u_e->m_list;
 		while (m_l) {
@@ -694,9 +644,7 @@ int ebt_check_rule_exists(struct ebt_u_replace *replace,
 		if (j != k)
 			continue;
 
-		/*
-		 * compare all watchers
-		 */
+		/* Compare all watchers */
 		w_l = new_entry->w_list;
 		j = 0;
 		while (w_l) {
@@ -732,13 +680,14 @@ letscontinue:;
  * rule_nr > 0 : insert the rule right before the rule_nr'th rule
  *               (the first rule is rule 1)
  * rule_nr < 0 : insert the rule right before the (n+rule_nr+1)'th rule,
- *               where n denotes the number of rule in the chain
+ *               where n denotes the number of rules in the chain
  * rule_nr == 0: add a new rule at the end of the chain
  *
  * This function expects the ebt_{match,watcher,target} members of new_entry
  * to contain pointers to ebt_u_{match,watcher,target} and updates these
- * pointers before adding the rule to the chain.
- */
+ * pointers so that they point to ebt_{match,watcher,target}, before adding
+ * the rule to the chain. Don't free() the ebt_{match,watcher,target} after a
+ * successful call to ebt_add_rule() */
 void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 		  int rule_nr)
 {
@@ -754,17 +703,15 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 		rule_nr += entries->nentries;
 	else
 		rule_nr--;
-	if (rule_nr > entries->nentries || rule_nr < 0)
+	if (rule_nr > entries->nentries || rule_nr < 0) {
 		ebt_print_error("The specified rule number is incorrect");
-	/*
-	 * we're adding one rule
-	 */
+		return;
+	}
+	/* We're adding one rule */
 	replace->nentries++;
 	entries->nentries++;
 
-	/*
-	 * handle counter stuff
-	 */
+	/* Handle counter stuff */
 	for (i = 0; i < replace->selected_chain; i++) {
 		if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
 			continue;
@@ -783,32 +730,26 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 		prev_cc = &(cc->next);
 		cc = cc->next;
 	}
-	if (cc && cc->type == CNT_DEL) /* The add is victorious and conquers
-					* the delete */
+	if (cc && cc->type == CNT_DEL)
 		cc->type = CNT_OWRITE;
 	else {
 		new_cc = (struct ebt_cntchanges *)
 			 malloc(sizeof(struct ebt_cntchanges));
+		if (!new_cc)
+			ebt_print_memory();
 		new_cc->type = CNT_ADD;
 		new_cc->next = cc;
 		*prev_cc = new_cc;
 	}
-
-	/*
-	 * go to the right position in the chain
-	 */
+	/* Go to the right position in the chain */
 	u_e = &entries->entries;
 	for (i = 0; i < rule_nr; i++)
 		u_e = &(*u_e)->next;
-	/*
-	 * insert the rule
-	 */
+	/* Insert the rule */
 	new_entry->next = *u_e;
 	*u_e = new_entry;
 
-	/*
-	 * put the ebt_[match, watcher, target] pointers in place
-	 */
+	/* Put the ebt_{match, watcher, target} pointers in place */
 	m_l = new_entry->m_list;
 	while (m_l) {
 		m_l->m = ((struct ebt_u_match *)m_l->m)->m;
@@ -820,10 +761,7 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 		w_l = w_l->next;
 	}
 	new_entry->t = ((struct ebt_u_target *)new_entry->t)->t;
-
-	/*
-	 * update the counter_offset of chains behind this one
-	 */
+	/* Update the counter_offset of chains behind this one */
 	i = replace->selected_chain;
 	while (1) {
 		i++;
@@ -838,14 +776,12 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 	}
 }
 
-/*
- * Delete a rule or rules
+/* Delete a rule or rules
  * begin == end == 0: delete the rule corresponding to new_entry
  *
- * the first rule has rule nr 1, the last rule has rule nr -1, etc.
+ * The first rule has rule nr 1, the last rule has rule nr -1, etc.
  * This function expects the ebt_{match,watcher,target} members of new_entry
- * to contain pointers to ebt_u_{match,watcher,target}.
- */
+ * to contain pointers to ebt_u_{match,watcher,target}. */
 void ebt_delete_rule(struct ebt_u_replace *replace,
 		     struct ebt_u_entry *new_entry, int begin, int end)
 {
@@ -860,8 +796,10 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 	if (end < 0)
 		end += entries->nentries + 1;
 
-	if (begin < 0 || begin > end || end > entries->nentries)
+	if (begin < 0 || begin > end || end > entries->nentries) {
 		ebt_print_error("Sorry, wrong rule numbers");
+		return;
+	}
 
 	if ((begin * end == 0) && (begin + end != 0))
 		ebt_print_bug("begin and end should be either both zero, "
@@ -872,20 +810,18 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 	} else {
 		begin = ebt_check_rule_exists(replace, new_entry);
 		end = begin;
-		if (begin == -1)
+		if (begin == -1) {
 			ebt_print_error("Sorry, rule does not exist");
+			return;
+		}
 	}
 
-	/*
-	 * we're deleting rules
-	 */
+	/* We're deleting rules */
 	nr_deletes = end - begin + 1;
 	replace->nentries -= nr_deletes;
 	entries->nentries -= nr_deletes;
 
-	/*
-	 * handle counter stuff
-	 */
+	/* Handle counter stuff */
 	for (i = 0; i < replace->selected_chain; i++) {
 		if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
 			continue;
@@ -920,27 +856,21 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 		cc = cc->next;
 	}
 
-	/*
-	 * go to the right position in the chain
-	 */
+	/* Go to the right position in the chain */
 	u_e = &entries->entries;
 	for (j = 0; j < begin; j++)
 		u_e = &(*u_e)->next;
-	/*
-	 * remove the rules
-	 */
+	/* Remove the rules */
 	j = nr_deletes;
 	while(j--) {
 		u_e2 = *u_e;
 		*u_e = (*u_e)->next;
-		/* free everything */
+		/* Free everything */
 		ebt_free_u_entry(u_e2);
 		free(u_e2);
 	}
 
-	/*
-	 * update the counter_offset of chains behind this one
-	 */
+	/* Update the counter_offset of chains behind this one */
 	j = replace->selected_chain;
 	while (1) {
 		j++;
@@ -955,10 +885,8 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 	}
 }
 
-/*
- * Selected_chain == -1 : zero all counters
- * else, zero the counters of selected_chain
- */
+/* Selected_chain == -1 : zero all counters
+ * Otherwise, zero the counters of selected_chain */
 void ebt_zero_counters(struct ebt_u_replace *replace)
 {
 	struct ebt_u_entries *entries = ebt_to_chain(replace);
@@ -976,8 +904,7 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 			return;
 
 		for (i = 0; i < replace->selected_chain; i++) {
-			if (i < NF_BR_NUMHOOKS &&
-			    !(replace->valid_hooks & (1 << i)))
+			if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
 				continue;
 			j = ebt_nr_to_chain(replace, i)->nentries;
 			while (j) {
@@ -998,20 +925,22 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 	}
 }
 
-/*
- * Add a new chain and specify its policy
- */
+/* Add a new chain and specify its policy */
 void ebt_new_chain(struct ebt_u_replace *replace, const char *name, int policy)
 {
 	struct ebt_u_chain_list *cl, **cl2;
 
-	if (ebt_get_chainnr(replace, name) != -1)
+	if (ebt_get_chainnr(replace, name) != -1) {
 		ebt_print_error("Chain %s already exists", optarg);
-	if (ebt_find_target(name))
+		return;
+	} else if (ebt_find_target(name)) {
 		ebt_print_error("Target with name %s exists", optarg);
-	if (strlen(optarg) >= EBT_CHAIN_MAXNAMELEN)
+		return;
+	} else if (strlen(optarg) >= EBT_CHAIN_MAXNAMELEN) {
 		ebt_print_error("Chain name length can't exceed %d",
 				EBT_CHAIN_MAXNAMELEN - 1);
+		return;
+	}
 	cl = (struct ebt_u_chain_list *)
 	     malloc(sizeof(struct ebt_u_chain_list));
 	if (!cl)
@@ -1028,39 +957,37 @@ void ebt_new_chain(struct ebt_u_replace *replace, const char *name, int policy)
 	strcpy(cl->udc->name, name);
 	cl->udc->entries = NULL;
 	cl->kernel_start = NULL;
-	/*
-	 * put the new chain at the end
-	 */
+	/* Put the new chain at the end */
 	cl2 = &(replace->udc);
 	while (*cl2)
 		cl2 = &((*cl2)->next);
 	*cl2 = cl;
 }
 
-/*
- * Selected_chain == -1: delete all non-referenced udc
- * selected_chain < NF_BR_NUMHOOKS is illegal
- */
+/* Selected_chain == -1: delete all non-referenced udc
+ * selected_chain < NF_BR_NUMHOOKS is illegal */
 void ebt_delete_chain(struct ebt_u_replace *replace)
 {
-	int chain_nr = replace->selected_chain;
+	int chain_nr = replace->selected_chain, print_error = 1;
 
 	if (chain_nr != -1 && chain_nr < NF_BR_NUMHOOKS)
 		ebt_print_bug("You can't remove a standard chain");
-	if (chain_nr == -1)
+	if (chain_nr == -1) {
+		print_error = 0;
 		replace->selected_chain = NF_BR_NUMHOOKS;
+	}
 	do {
 		if (ebt_to_chain(replace) == NULL) {
 			if (chain_nr == -1)
 				break;
 			ebt_print_bug("udc nr %d doesn't exist", chain_nr);
 		}
-		/*
-		 * if the chain is referenced, don't delete it,
+		/* If the chain is referenced, don't delete it,
 		 * also decrement jumps to a chain behind the
-		 * one we're deleting
-		 */
-		if (ebt_check_for_references(replace)) {
+		 * one we're deleting */
+		if (ebt_check_for_references(replace, print_error)) {
+			if (chain_nr != -1) 
+				break;
 			replace->selected_chain++;
 			continue;
 		}
@@ -1068,12 +995,10 @@ void ebt_delete_chain(struct ebt_u_replace *replace)
 		ebt_flush_chains(replace);
 		remove_udc(replace);
 	} while (chain_nr == -1);
-	replace->selected_chain = chain_nr;
+	replace->selected_chain = chain_nr; /* Put back to -1 */
 }
 
-/*
- * Rename an existing chain.
- */
+/* Rename an existing chain. */
 void ebt_rename_chain(struct ebt_u_replace *replace, const char *name)
 {
 	struct ebt_u_entries *entries = ebt_to_chain(replace);
@@ -1093,11 +1018,10 @@ void ebt_rename_chain(struct ebt_u_replace *replace, const char *name)
             */
 
 
-/*
- * executes the final_check() function for all extensions used by the rule
+/* Executes the final_check() function for all extensions used by the rule
  * ebt_check_for_loops should have been executed earlier, to make sure the
- * hook_mask is correct.
- */
+ * hook_mask is correct. The time argument to final_check() is set to 1,
+ * meaning it's the second time the final_check() function is executed. */
 void ebt_do_final_checks(struct ebt_u_replace *replace, struct ebt_u_entry *e,
 			 struct ebt_u_entries *entries)
 {
@@ -1113,12 +1037,16 @@ void ebt_do_final_checks(struct ebt_u_replace *replace, struct ebt_u_entry *e,
 		m = ebt_find_match(m_l->m->u.name);
 		m->final_check(e, m_l->m, replace->name,
 		   entries->hook_mask, 1);
+		if (ebt_errormsg[0] != '\0')
+			return;
 		m_l = m_l->next;
 	}
 	while (w_l) {
 		w = ebt_find_watcher(w_l->w->u.name);
 		w->final_check(e, w_l->w, replace->name,
 		   entries->hook_mask, 1);
+		if (ebt_errormsg[0] != '\0')
+			return;
 		w_l = w_l->next;
 	}
 	t = ebt_find_target(e->t->u.name);
@@ -1126,26 +1054,29 @@ void ebt_do_final_checks(struct ebt_u_replace *replace, struct ebt_u_entry *e,
 	   entries->hook_mask, 1);
 }
 
-/*
- * returns 1 when the chain is referenced,
- * 0 when it isn't.
- */
-int ebt_check_for_references(struct ebt_u_replace *replace)
+/* Returns 1 (if it returns) when the chain is referenced, 0 when it isn't.
+ * print_err: 0 (resp. 1) = don't (resp. do) print error when referenced */
+int ebt_check_for_references(struct ebt_u_replace *replace, int print_err)
 {
-	return iterate_entries(replace, 1);
+	if (print_err)
+		return iterate_entries(replace, 1);
+	else
+		return iterate_entries(replace, 2);
 }
 
-/*
- * chain_nr: nr of the udc (>= NF_BR_NUMHOOKS)
- * returns 1 when the chain is referenced,
- * 0 when it isn't.
- */
-int ebt_check_for_references2(struct ebt_u_replace *replace, int chain_nr)
+/* chain_nr: nr of the udc (>= NF_BR_NUMHOOKS)
+ * Returns 1 (if it returns) when the chain is referenced, 0 when it isn't.
+ * print_err: 0 (resp. 1) = don't (resp. do) print error when referenced */
+int ebt_check_for_references2(struct ebt_u_replace *replace, int chain_nr,
+                              int print_err)
 {
 	int tmp = replace->selected_chain, ret;
 
 	replace->selected_chain = chain_nr;
-	ret = iterate_entries(replace, 1);
+	if (print_err)
+		ret = iterate_entries(replace, 1);
+	else
+		ret = iterate_entries(replace, 2);
 	replace->selected_chain = tmp;
 	return ret;
 }
@@ -1158,12 +1089,10 @@ struct ebt_u_stack
 	struct ebt_u_entries *entries;
 };
 
-/*
- * Checks for loops
+/* Checks for loops
  * As a by-product, the hook_mask member of each chain is filled in
  * correctly. The check functions of the extensions need this hook_mask
- * to know from which standard chains they can be called.
- */
+ * to know from which standard chains they can be called. */
 void ebt_check_for_loops(struct ebt_u_replace *replace)
 {
 	int chain_nr , i, j , k, sp = 0, verdict;
@@ -1172,9 +1101,7 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 	struct ebt_u_entry *e;
 
 	i = -1;
-	/*
-	 * initialize hook_mask to 0
-	 */
+	/* Initialize hook_mask to 0 */
 	while (1) {
 		i++;
 		if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
@@ -1191,17 +1118,13 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 			ebt_print_memory();
 	}
 
-	/*
-	 * check for loops, starting from every base chain
-	 */
+	/* Check for loops, starting from every base chain */
 	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
 		if (!(replace->valid_hooks & (1 << i)))
 			continue;
 		entries = ebt_nr_to_chain(replace, i);
-		/*
-		 * (1 << NF_BR_NUMHOOKS) implies it's a standard chain
-		 * (usefull in the final_check() funtions)
-		 */
+		/* (1 << NF_BR_NUMHOOKS) implies it's a standard chain
+		 * (usefull in the final_check() funtions) */
 		entries->hook_mask = (1 << i) | (1 << NF_BR_NUMHOOKS);
 		chain_nr = i;
 
@@ -1212,20 +1135,17 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 			verdict = ((struct ebt_standard_target *)(e->t))->verdict;
 			if (verdict < 0)
 				goto letscontinue;
-			entries2 = ebt_nr_to_chain(replace,
-						   verdict + NF_BR_NUMHOOKS);
+			entries2 = ebt_nr_to_chain(replace, verdict + NF_BR_NUMHOOKS);
 			entries2->hook_mask |= entries->hook_mask;
-			/*
-			 * now see if we've been here before
-			 */
+			/* Now see if we've been here before */
 			for (k = 0; k < sp; k++)
-				if (stack[k].chain_nr == verdict + NF_BR_NUMHOOKS)
-					ebt_print_error("Loop from chain %s to chain %s",
+				if (stack[k].chain_nr == verdict + NF_BR_NUMHOOKS) {
+					ebt_print_error("Loop from chain '%s' to chain '%s'",
 					   ebt_nr_to_chain(replace, chain_nr)->name,
 					   ebt_nr_to_chain(replace, stack[k].chain_nr)->name);
-			/*
-			 * jump to the chain, make sure we know how to get back
-			 */
+					goto free_stack;
+				}
+			/* Jump to the chain, make sure we know how to get back */
 			stack[sp].chain_nr = chain_nr;
 			stack[sp].n = j;
 			stack[sp].entries = entries;
@@ -1239,14 +1159,10 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 letscontinue:
 			e = e->next;
 		}
-		/*
-		 * we are at the end of a standard chain
-		 */
+		/* We are at the end of a standard chain */
 		if (sp == 0)
 			continue;
-		/*
-		 * go back to the chain one level higher
-		 */
+		/* Go back to the chain one level higher */
 		sp--;
 		j = stack[sp].n;
 		chain_nr = stack[sp].chain_nr;
@@ -1254,13 +1170,16 @@ letscontinue:
 		entries = stack[sp].entries;
 		goto letscontinue;
 	}
+free_stack:
 	free(stack);
 	return;
 }
 
-/*
- * the user will use the match, so put it in new_entry
- */
+/* The user will use the match, so put it in new_entry. The ebt_u_match
+ * pointer is put in the ebt_entry_match pointer. ebt_add_rule will
+ * fill in the final value for new->m. Unless the rule is added to a chain,
+ * the pointer will keep pointing to the ebt_u_match (until the new_entry
+ * is freed). I know, I should use a union for these 2 pointer types... */
 void ebt_add_match(struct ebt_u_entry *new_entry, struct ebt_u_match *m)
 {
 	struct ebt_u_match_list **m_list, *new;
@@ -1300,13 +1219,12 @@ void ebt_add_watcher(struct ebt_u_entry *new_entry, struct ebt_u_watcher *w)
          */
 
 
-/*
- * type = 0 => update chain jumps
- * type = 1 => check for reference
+/* type = 0 => update chain jumps
+ * type = 1 => check for reference, print error when referenced
+ * type = 2 => check for reference, don't print error when referenced
  *
- * returns 1 when type == 1 and the chain is referenced
- * returns 0 otherwise
- */
+ * Returns 1 when type == 1 and the chain is referenced
+ * returns 0 otherwise */
 static int iterate_entries(struct ebt_u_replace *replace, int type)
 {
 	int i = -1, j, chain_nr = replace->selected_chain - NF_BR_NUMHOOKS;
@@ -1338,19 +1256,21 @@ static int iterate_entries(struct ebt_u_replace *replace, int type)
 				    verdict;
 			switch (type) {
 			case 1:
+			case 2:
 			if (chain_jmp == chain_nr) {
-				ebt_print_error("Can't delete the chain, it's "
-				   "referenced in chain %s, rule %d",
-				   entries->name, j);
+				if (type == 2)
+					return 1;
+				ebt_print_error("Can't delete the chain '%s', it's referenced in chain '%s', rule %d",
+				                ebt_nr_to_chain(replace, chain_nr + NF_BR_NUMHOOKS)->name, entries->name, j);
 				return 1;
 			}
 			break;
 			case 0:
-			/* adjust the chain jumps when necessary */
+			/* Adjust the chain jumps when necessary */
 			if (chain_jmp > chain_nr)
 				((struct ebt_standard_target *)e->t)->verdict--;
 			break;
-			} /* end switch */
+			} /* End switch */
 			e = e->next;
 		}
 	}
@@ -1362,9 +1282,7 @@ static void decrease_chain_jumps(struct ebt_u_replace *replace)
 	iterate_entries(replace, 0);
 }
 
-/*
- * selected_chain >= NF_BR_NUMHOOKS
- */
+/* Selected_chain >= NF_BR_NUMHOOKS */
 static void remove_udc(struct ebt_u_replace *replace)
 {
 	struct ebt_u_chain_list *cl, **cl2;
@@ -1375,7 +1293,7 @@ static void remove_udc(struct ebt_u_replace *replace)
 	if (chain_nr < NF_BR_NUMHOOKS)
 		ebt_print_bug("remove_udc: chain_nr = %d < %d", chain_nr,
 			      NF_BR_NUMHOOKS);
-	/* first free the rules */
+	/* First free the rules */
 	entries = ebt_nr_to_chain(replace, chain_nr);
 	u_e = entries->entries;
 	while (u_e) {
@@ -1395,10 +1313,7 @@ static void remove_udc(struct ebt_u_replace *replace)
 	free(cl);
 }
 
-
-/*
- * used in initialization code of modules
- */
+/* Used in initialization code of modules */
 void ebt_register_match(struct ebt_u_match *m)
 {
 	int size = EBT_ALIGN(m->size) + sizeof(struct ebt_entry_match);
@@ -1480,9 +1395,7 @@ void ebt_iterate_targets(void (*f)(struct ebt_u_target *))
 		f(i);
 }
 
-/*
- * Don't use this function, use ebt_print_bug()
- */
+/* Don't use this function, use ebt_print_bug() */
 void __ebt_print_bug(char *file, int line, char *format, ...)
 {
 	va_list l;
@@ -1495,26 +1408,20 @@ void __ebt_print_bug(char *file, int line, char *format, ...)
 	exit (-1);
 }
 
-/*
- * The error messages are put in here when ebt_silent == 1
- * ebt_errormsg[0] == '\0' implies there was no error
- */
+/* The error messages are put in here when ebt_silent == 1
+ * ebt_errormsg[0] == '\0' implies there was no error */
 char ebt_errormsg[ERRORMSG_MAXLEN];
-/*
- * When error messages should not be printed on the screen, after which
- * the program exit()s, set ebt_silent to 1.
- */
+/* When error messages should not be printed on the screen, after which
+ * the program exit()s, set ebt_silent to 1. */
 int ebt_silent;
-/*
- * Don't use this function, use ebt_print_error()
- */
+/* Don't use this function, use ebt_print_error() */
 void __ebt_print_error(char *format, ...)
 {
 	va_list l;
 
 	va_start(l, format);
-	if (ebt_silent) {
-		snprintf(ebt_errormsg, ERRORMSG_MAXLEN, format, l);
+	if (ebt_silent && ebt_errormsg[0] == '\0') {
+		vsnprintf(ebt_errormsg, ERRORMSG_MAXLEN, format, l);
 		va_end(l);
 	} else {
 		vprintf(format, l);

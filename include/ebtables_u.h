@@ -26,6 +26,9 @@
 #include <netinet/in.h>
 #include <linux/netfilter_bridge/ebtables.h>
 
+#define EXEC_STYLE_PRG		0
+#define EXEC_STYLE_DAEMON	1
+
 #ifndef EBT_MIN_ALIGN
 #define EBT_MIN_ALIGN (__alignof__(struct ebt_entry_target))
 #endif
@@ -223,8 +226,7 @@ void ebt_register_table(struct ebt_u_table *);
 void ebt_register_match(struct ebt_u_match *);
 void ebt_register_watcher(struct ebt_u_watcher *);
 void ebt_register_target(struct ebt_u_target *t);
-void ebt_get_kernel_table(struct ebt_u_replace *replace,
-			  struct ebt_u_table *table, int init);
+int ebt_get_kernel_table(struct ebt_u_replace *replace, int init);
 struct ebt_u_target *ebt_find_target(const char *name);
 struct ebt_u_match *ebt_find_match(const char *name);
 struct ebt_u_watcher *ebt_find_watcher(const char *name);
@@ -232,6 +234,8 @@ struct ebt_u_table *ebt_find_table(const char *name);
 int ebtables_insmod(const char *modname);
 void ebt_list_extensions();
 void ebt_initialize_entry(struct ebt_u_entry *e);
+void ebt_cleanup_replace(struct ebt_u_replace *replace);
+void ebt_reinit_extensions();
 void ebt_free_u_entry(struct ebt_u_entry *e);
 struct ebt_u_entries *ebt_name_to_chain(const struct ebt_u_replace *replace,
 				    const char* arg);
@@ -257,8 +261,9 @@ void ebt_rename_chain(struct ebt_u_replace *replace, const char *name);
 /**/
 void ebt_do_final_checks(struct ebt_u_replace *replace, struct ebt_u_entry *e,
 			 struct ebt_u_entries *entries);
-int ebt_check_for_references(struct ebt_u_replace *replace);
-int ebt_check_for_references2(struct ebt_u_replace *replace, int chain_nr);
+int ebt_check_for_references(struct ebt_u_replace *replace, int print_err);
+int ebt_check_for_references2(struct ebt_u_replace *replace, int chain_nr,
+			      int print_err);
 void ebt_check_for_loops(struct ebt_u_replace *replace);
 void ebt_add_match(struct ebt_u_entry *new_entry, struct ebt_u_match *m);
 void ebt_add_watcher(struct ebt_u_entry *new_entry, struct ebt_u_watcher *w);
@@ -271,7 +276,7 @@ void __ebt_print_error(char *format, ...);
 /* communication.c */
 
 int ebt_get_table(struct ebt_u_replace *repl, int init);
-void ebt_deliver_counters(struct ebt_u_replace *repl);
+void ebt_deliver_counters(struct ebt_u_replace *repl, int exec_style);
 void ebt_deliver_table(struct ebt_u_replace *repl);
 
 /* useful_functions.c */
@@ -284,6 +289,9 @@ void ebt_print_mac_and_mask(const char *mac, const char *mask);
 int ebt_get_mac_and_mask(char *from, char *to, char *mask);
 void ebt_parse_ip_address(char *address, uint32_t *addr, uint32_t *msk);
 char *ebt_mask_to_dotted(uint32_t mask);
+
+int do_command(int argc, char *argv[], int exec_style,
+               struct ebt_u_replace *replace_);
 
 struct ethertypeent *parseethertypebynumber(int type);
 

@@ -24,31 +24,43 @@
 .\"     
 .\"
 .SH NAME
-ebtables (v.2.0.7) \- Ethernet bridge frame table administration
+ebtables (v.2.0.7), ebtablesd, ebtablesu \- Ethernet bridge frame table administration
 .SH SYNOPSIS
-.BR "ebtables " [ "-t table" ] " -" [ ADI ] " chain rule specification " [ "match extensions" "] [" "watcher extensions" ] " target"
+.BR "ebtables " [ -t " table ] " - [ ADI "] chain rule specification [match extensions] [watcher extensions] target"
 .br
-.BR "ebtables " [ "-t table" ] " -P chain ACCEPT " | " DROP " | " RETURN"
+.BR "ebtables " [ -t " table ] " -P " chain " ACCEPT " | " DROP " | " RETURN
 .br
-.BR "ebtables " [ "-t table" ] " -F " [ chain ]
+.BR "ebtables " [ -t " table ] " -F " [chain]"
 .br
-.BR "ebtables " [ "-t table" ] " -Z " [ chain ]
+.BR "ebtables " [ -t " table ] " -Z " [chain]"
 .br
-.BR "ebtables " [ "-t table" ] " -L " [ -Z "] [" " chain" "] [ [ [" --Ln "] [" --Lc "] ] | [" --Lx "] ] [" --Lmac2 "]"
+.BR "ebtables " [ -t " table ] " -L " [" -Z "] [chain] [ [ [" --Ln "] [" --Lc "] ] | [" --Lx "] ] [" --Lmac2 ]
 .br
-.BR "ebtables " [ "-t table" ] " -N chain " [ "-P ACCEPT " | " DROP " | " RETURN" ]
+.BR "ebtables " [ -t " table ] " -N " chain [" "-P ACCEPT " | " DROP " | " RETURN" ]
 .br
-.BR "ebtables " [ "-t table" ] " -X " [ chain ]
+.BR "ebtables " [ -t " table ] " -X " [chain]"
 .br
-.BR "ebtables " [ "-t table" ] " -E old-chain-name new-chain-name"
+.BR "ebtables " [ -t " table ] " -E " old-chain-name new-chain-name"
 .br
-.BR "ebtables " [ "-t table" ] " --init-table"
+.BR "ebtables " [ -t " table ] " --init-table
 .br
-.BR "ebtables " [ "-t table" "] [" "--atomic-file file" ] " --atomic-commit"
+.BR "ebtables " [ -t " table ] [" --atomic-file " file] " --atomic-commit
 .br
-.BR "ebtables " [ "-t table" "] [" "--atomic-file file" ] " --atomic-init"
+.BR "ebtables " [ -t " table ] [" --atomic-file " file] " --atomic-init
 .br
-.BR "ebtables " [ "-t table" "] [" "--atomic-file file" ] " --atomic-save"
+.BR "ebtables " [ -t " table ] [" --atomic-file " file] " --atomic-save
+.br
+.BR "ebtablesu open " table 
+.br
+.BR "ebtablesu fopen " "table file"
+.br
+.BR "ebtablesu free " table 
+.br
+.BR "ebtablesu commit " table
+.br
+.BR "ebtablesu fcommit " "table file"
+.br
+.B ebtablesu quit
 .br
 .SH DESCRIPTION
 .B ebtables
@@ -59,6 +71,52 @@ It is analogous to the
 .B iptables
 application, but less complicated, due to the fact that the Ethernet protocol
 is much simpler than the IP protocol.
+.br
+.BR ebtablesu " and " ebtablesd " can be used to speed up adding rules using a script when the"
+.B --atomic-commit
+option is not satisfactory. The
+.BR open " command makes ebtablesd open the specified kernel table for processing"
+.BR "" "in userspace (multiple tables can be open in the same time). The " fopen
+command opens the table from the specified file.
+.BR "" "The " free " command removes the specified table out of the memory of ebtablesd."
+No data is written to a file or to the kernel.
+.BR "" "The " commit " command stores the table from the memory of ebtablesd to the kernel."
+.BR "" "The " fcommit " command stores the table from the memory of ebtablesd to the specified file."
+This file can be read later, e.g. with
+.BR "ebtables --atomic-file " file " -L" .
+.BR "" "The " quit " command lets ebtablesd finish gracefully."
+All commands, options and extensions that ebtables uses can be used with ebtablesu, except for
+.BR --init-table ", " --atomic-file ", " --atomic-commit ", " --atomic-init ", " --atomic-save " and " -h .
+.br
+Example usage:
+.br
+# ebtablesd&
+.br
+# ebtablesu open filter
+.br
+# ebtablesu -A FORWARD -j DROP
+.br
+# ebtablesu commit filter
+.br
+# ebtablesu quit
+.br
+Alternatively, the commands can be echo'ed directly to the pipe used by ebtablesd,
+which has default location /tmp/ebtables-vx.y.z/ebtablesd_pipe, where
+x.y.z is the ebtables version (e.g. 2.0.7). Using echo instead of ebtablesu is
+much faster because echo is a bash built-in command. Commands like cat can be used
+too, of course.
+.br
+Example usage:
+.br
+# (./ebtablesd&) ; PIPE=/tmp/ebtables-v2.0.7/ebtablesd_pipe ; sleep 1
+.br
+# echo "ebtablesu open filter" >> $PIPE
+.br
+# echo "ebtablesu -A FORWARD -j DROP" >> $PIPE
+.br
+# echo "ebtablesu commit filter" >> $PIPE
+.br
+# echo "ebtablesu quit" >> $PIPE
 .SS CHAINS
 There are three ebtables tables with built-in chains in the
 Linux kernel. These tables are used to divide functionality into

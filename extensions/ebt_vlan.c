@@ -141,8 +141,7 @@ parse(int c,
 		ebt_check_option(flags, OPT_VLAN_ID);
 		CHECK_INV_FLAG(EBT_VLAN_ID);
 		CHECK_IF_MISSING_VALUE;
-		(unsigned short) local.id =
-		    strtoul(argv[optind - 1], &end, 10);
+		local.id = strtoul(argv[optind - 1], &end, 10);
 		CHECK_RANGE(local.id > 4094 || *end != '\0');
 		vlaninfo->id = local.id;
 		SET_BITMASK(EBT_VLAN_ID);
@@ -152,8 +151,7 @@ parse(int c,
 		ebt_check_option(flags, OPT_VLAN_PRIO);
 		CHECK_INV_FLAG(EBT_VLAN_PRIO);
 		CHECK_IF_MISSING_VALUE;
-		(unsigned char) local.prio =
-		    strtoul(argv[optind - 1], &end, 10);
+		local.prio = strtoul(argv[optind - 1], &end, 10);
 		CHECK_RANGE(local.prio >= 8 || *end != '\0');
 		vlaninfo->prio = local.prio;
 		SET_BITMASK(EBT_VLAN_PRIO);
@@ -163,8 +161,7 @@ parse(int c,
 		ebt_check_option(flags, OPT_VLAN_ENCAP);
 		CHECK_INV_FLAG(EBT_VLAN_ENCAP);
 		CHECK_IF_MISSING_VALUE;
-		(unsigned short) local.encap =
-		    strtoul(argv[optind - 1], &end, 16);
+		local.encap = strtoul(argv[optind - 1], &end, 16);
 		if (*end != '\0') {
 			ethent = getethertypebyname(argv[optind - 1]);
 			if (ethent == NULL)
