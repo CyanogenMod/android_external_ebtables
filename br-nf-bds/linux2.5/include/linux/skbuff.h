@@ -177,10 +177,8 @@ struct sk_buff {
 	struct sock		*sk;
 	struct timeval		stamp;
 	struct net_device	*dev;
-#ifdef CONFIG_BRIDGE_NF
 	struct net_device	*physindev;
 	struct net_device	*physoutdev;
-#endif
 
 	union {
 		struct tcphdr	*th;

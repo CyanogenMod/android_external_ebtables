@@ -4,7 +4,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_private.h,v 1.2 2002/08/24 13:42:35 bdschuym Exp $
+ *	$Id: br_private.h,v 1.3 2002/09/18 18:28:48 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
