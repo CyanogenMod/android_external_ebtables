@@ -107,7 +107,7 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 	char *base;
 
 	read_lock_bh(&table->lock);
-	cs = table->private->chainstack;
+	cs = table->private->chainstack[cpu_number_map(smp_processor_id())];
 	chaininfo = table->private->hook_entry[hook];
 	nentries = table->private->hook_entry[hook]->nentries;
 	point = (struct ebt_entry *)(table->private->hook_entry[hook]->data);
@@ -768,10 +768,22 @@ static int translate_table(struct ebt_replace *repl,
 	if (udc_cnt) {
 		// this will get free'd in do_replace()/ebt_register_table()
 		// if an error occurs
-		newinfo->chainstack = (struct ebt_chainstack *)
-		   vmalloc(udc_cnt * sizeof(struct ebt_chainstack));
+		newinfo->chainstack = (struct ebt_chainstack **)
+		   vmalloc(smp_num_cpus * sizeof(struct ebt_chainstack));
 		if (!newinfo->chainstack)
 			return -ENOMEM;
+		for (i = 0; i < smp_num_cpus; i++) {
+			newinfo->chainstack[i] =
+			   vmalloc(udc_cnt * sizeof(struct ebt_chainstack));
+			if (!newinfo->chainstack[i]) {
+				while (i)
+					vfree(newinfo->chainstack[--i]);
+				vfree(newinfo->chainstack);
+				newinfo->chainstack = NULL;
+				break;
+			}
+		}
+
 		cl_s = (struct ebt_cl_stack *)
 		   vmalloc(udc_cnt * sizeof(struct ebt_cl_stack));
 		if (!cl_s)
@@ -845,7 +857,7 @@ static inline void get_counters(struct ebt_table_info *info,
 // replace the table
 static int do_replace(void *user, unsigned int len)
 {
-	int ret;
+	int ret, i;
 	struct ebt_table_info *newinfo;
 	struct ebt_replace tmp;
 	struct ebt_table *t;
@@ -959,8 +971,11 @@ static int do_replace(void *user, unsigned int len)
 	vfree(table->entries);
 	if (table->counters)
 		vfree(table->counters);
-	if (table->chainstack)
+	if (table->chainstack) {
+		for (i = 0; i < smp_num_cpus; i++)
+			vfree(table->chainstack[i]);
 		vfree(table->chainstack);
+	}
 	vfree(table);
 
 	if (counterstmp)
@@ -975,8 +990,11 @@ free_counterstmp:
 	if (counterstmp)
 		vfree(counterstmp);
 	// can be initialized in translate_table()
-	if (newinfo->chainstack)
+	if (newinfo->chainstack) {
+		for (i = 0; i < smp_num_cpus; i++)
+			vfree(newinfo->chainstack[i]);
 		vfree(newinfo->chainstack);
+	}
 free_entries:
 	if (newinfo->entries)
 		vfree(newinfo->entries);
@@ -1067,7 +1085,7 @@ void ebt_unregister_watcher(struct ebt_watcher *watcher)
 int ebt_register_table(struct ebt_table *table)
 {
 	struct ebt_table_info *newinfo;
-	int ret;
+	int ret, i;
 
 	if (!table || !table->table ||!table->table->entries ||
 	    table->table->entries_size == 0 ||
@@ -1135,8 +1153,11 @@ free_unlock:
 free_counters:
 	if (newinfo->counters)
 		vfree(newinfo->counters);
-	if (newinfo->chainstack)
+	if (newinfo->chainstack) {
+		for (i = 0; i < smp_num_cpus; i++)
+			vfree(newinfo->chainstack[i]);
 		vfree(newinfo->chainstack);
+	}
 free_entries:
 	vfree(newinfo->entries);
 free_newinfo:
@@ -1146,6 +1167,8 @@ free_newinfo:
 
 void ebt_unregister_table(struct ebt_table *table)
 {
+	int i;
+
 	if (!table) {
 		BUGPRINT("Request to unregister NULL table!!!\n");
 		return;
@@ -1159,8 +1182,11 @@ void ebt_unregister_table(struct ebt_table *table)
 		vfree(table->private->counters);
 	if (table->private->entries)
 		vfree(table->private->entries);
-	if (table->private->chainstack)
+	if (table->private->chainstack) {
+		for (i = 0; i < smp_num_cpus; i++)
+			vfree(table->private->chainstack[i]);
 		vfree(table->private->chainstack);
+	}
 	vfree(table->private);
 	MOD_DEC_USE_COUNT;
 }

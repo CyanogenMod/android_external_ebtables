@@ -238,7 +238,7 @@ struct ebt_table_info
 	struct ebt_entries *hook_entry[NF_BR_NUMHOOKS];
 	struct ebt_counter *counters;
 	// room to maintain the stack used for jumping from and into udc
-	struct ebt_chainstack *chainstack;
+	struct ebt_chainstack **chainstack;
 	char *entries;
 };
 
