@@ -64,7 +64,7 @@ ebtables.o: ebtables.c include/ebtables_u.h
 	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
 
 ebtables: $(OBJECTS)
-	ld -shared -soname libebtc.so -o libebtc.so -lc $(OBJECTS2)
+	$(LD) -shared -soname libebtc.so -o libebtc.so -lc $(OBJECTS2)
 	$(CC) $(CFLAGS) -o $@ ebtables.o -I$(KERNEL_INCLUDES) -L/root/ \
 	-L. -Lextensions/ -lebtc $(EXT_LIBSI)
 	
