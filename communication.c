@@ -23,6 +23,12 @@
 
 extern char* hooknames[NF_BR_NUMHOOKS];
 
+#ifdef KERNEL_64_USERSPACE_32
+#define sparc_cast (uint64_t)
+#else
+#define sparc_cast
+#endif
+
 int sockfd = -1;
 
 static void get_sockfd()
@@ -55,7 +61,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	strcpy(new->name, u_repl->name);
 	new->nentries = u_repl->nentries;
 	new->num_counters = u_repl->num_counters;
-	new->counters = u_repl->counters;
+	new->counters = sparc_cast u_repl->counters;
 	/* determine nr of udc */
 	i = 0;
 	cl = u_repl->udc;
@@ -113,12 +119,12 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	}
 
 	new->entries_size = entries_size;
-	new->entries = (char *)malloc(entries_size);
-	if (!new->entries)
+	p = (char *)malloc(entries_size);
+	if (!p)
 		print_memory();
 
 	/* put everything in one block */
-	p = new->entries;
+	new->entries = sparc_cast p;
 	i = 0;
 	cl = u_repl->udc;
 	while (1) {
@@ -131,7 +137,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 				continue;
 			}
 			entries = u_repl->hook_entry[i];
-			new->hook_entry[i] = hlp;
+			new->hook_entry[i] = sparc_cast hlp;
 		} else {
 			if (!cl)
 				break;
@@ -202,7 +208,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	}
 
 	/* sanity check */
-	if (p - new->entries != new->entries_size)
+	if (p - (char *)new->entries != new->entries_size)
 		print_bug("Entries_size bug");
 	free(chain_offsets);
 	return new;
@@ -234,7 +240,7 @@ static void store_table_in_file(char *filename, struct ebt_replace *repl)
 	if (!data)
 		print_memory();
 	memcpy(data, repl, sizeof(struct ebt_replace));
-	memcpy(data + sizeof(struct ebt_replace), repl->entries,
+	memcpy(data + sizeof(struct ebt_replace), (char *)repl->entries,
 	   repl->entries_size);
 	/* initialize counters to zero, deliver_counters() can update them */
 	memset(data + sizeof(struct ebt_replace) + repl->entries_size,
@@ -361,7 +367,7 @@ void deliver_counters(struct ebt_u_replace *u_repl)
 	optlen = u_repl->nentries * sizeof(struct ebt_counter) +
 	   sizeof(struct ebt_replace);
 	/* now put the stuff in the kernel's struct ebt_replace */
-	repl.counters = u_repl->counters;
+	repl.counters = sparc_cast u_repl->counters;
 	repl.num_counters = u_repl->num_counters;
 	memcpy(repl.name, u_repl->name, sizeof(repl.name));
 
@@ -575,7 +581,8 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
    char command)
 {
 	FILE *file;
-	char *hlp = NULL;
+	char *hlp = NULL, *entries;
+	struct ebt_counter *counters;
 	int size;
 
 	if (!(file = fopen(filename, "r+b")))
@@ -609,22 +616,24 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 		fclose(file);
 		print_error("File %s has wrong size", filename);
 	}
-	repl->entries = (char *)malloc(repl->entries_size);
-	if (!repl->entries)
+	entries = (char *)malloc(repl->entries_size);
+	if (!entries)
 		print_memory();
+	repl->entries = sparc_cast entries;
 	if (repl->nentries) {
-		repl->counters = (struct ebt_counter *)
+		counters = (struct ebt_counter *)
 		   malloc(repl->nentries * sizeof(struct ebt_counter));
 		if (!repl->counters)
 			print_memory();
+		repl->counters = sparc_cast counters;
 	} else
-		repl->counters = NULL;
+		repl->counters = sparc_cast NULL;
 	/* copy entries and counters */
 	if (fseek(file, sizeof(struct ebt_replace), SEEK_SET) ||
-	   fread(repl->entries, sizeof(char), repl->entries_size, file)
+	   fread((char *)repl->entries, sizeof(char), repl->entries_size, file)
 	   != repl->entries_size ||
 	   fseek(file, sizeof(struct ebt_replace) + repl->entries_size, SEEK_SET)
-	   || fread(repl->counters, sizeof(char),
+	   || fread((char *)repl->counters, sizeof(char),
 	   repl->nentries * sizeof(struct ebt_counter), file)
 	   != repl->nentries * sizeof(struct ebt_counter)) {
 		fclose(file);
@@ -637,6 +646,7 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 {
 	socklen_t optlen;
 	int optname;
+	char *entries;
 
 	optlen = sizeof(struct ebt_replace);
 	get_sockfd();
@@ -648,15 +658,19 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 	if (getsockopt(sockfd, IPPROTO_IP, optname, repl, &optlen))
 		return -1;
 
-	if ( !(repl->entries = (char *)malloc(repl->entries_size)) )
+	if ( !(entries = (char *)malloc(repl->entries_size)) )
 		print_memory();
+	repl->entries = sparc_cast entries;
 	if (repl->nentries) {
-		if (!(repl->counters = (struct ebt_counter *)
+		struct ebt_counter *counters;
+
+		if (!(counters = (struct ebt_counter *)
 		   malloc(repl->nentries * sizeof(struct ebt_counter))) )
 			print_memory();
+		repl->counters = sparc_cast counters;
 	}
 	else
-		repl->counters = NULL;
+		repl->counters = sparc_cast NULL;
 
 	/* we want to receive the counters */
 	repl->num_counters = repl->nentries;
@@ -692,7 +706,7 @@ int get_table(struct ebt_u_replace *u_repl)
 	u_repl->valid_hooks = repl.valid_hooks;
 	u_repl->nentries = repl.nentries;
 	u_repl->num_counters = repl.num_counters;
-	u_repl->counters = repl.counters;
+	u_repl->counters = (struct ebt_counter *)repl.counters;
 	u_repl->udc = NULL;
 	hook = -1;
 	EBT_ENTRY_ITERATE(repl.entries, repl.entries_size, ebt_translate_chains,
@@ -705,8 +719,8 @@ int get_table(struct ebt_u_replace *u_repl)
 	 */
 	k = 0;
 	hook = -1;
-	EBT_ENTRY_ITERATE(repl.entries, repl.entries_size, ebt_translate_entry,
-	   &hook, &i, &j, &k, &u_e, u_repl, u_repl->valid_hooks, repl.entries);
+	EBT_ENTRY_ITERATE((char *)repl.entries, repl.entries_size, ebt_translate_entry,
+	   &hook, &i, &j, &k, &u_e, u_repl, u_repl->valid_hooks, (char *)repl.entries);
 	if (k != u_repl->nentries)
 		print_bug("Wrong total nentries");
 	return 0;

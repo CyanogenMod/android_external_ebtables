@@ -309,14 +309,14 @@ merge_options(struct option *oldopts, const struct option *newopts,
 
 void register_match(struct ebt_u_match *m)
 {
-	int size = m->size + sizeof(struct ebt_entry_match);
+	int size = EBT_ALIGN(m->size) + sizeof(struct ebt_entry_match);
 	struct ebt_u_match **i;
 
 	m->m = (struct ebt_entry_match *)malloc(size);
 	if (!m->m)
 		print_memory();
 	strcpy(m->m->u.name, m->name);
-	m->m->match_size = m->size;
+	m->m->match_size = EBT_ALIGN(m->size);
 	ebt_options = merge_options
 	   (ebt_options, m->extra_ops, &(m->option_offset));
 	m->init(m->m);
@@ -328,14 +328,14 @@ void register_match(struct ebt_u_match *m)
 
 void register_watcher(struct ebt_u_watcher *w)
 {
-	int size = w->size + sizeof(struct ebt_entry_watcher);
+	int size = EBT_ALIGN(w->size) + sizeof(struct ebt_entry_watcher);
 	struct ebt_u_watcher **i;
 
 	w->w = (struct ebt_entry_watcher *)malloc(size);
 	if (!w->w)
 		print_memory();
 	strcpy(w->w->u.name, w->name);
-	w->w->watcher_size = w->size;
+	w->w->watcher_size = EBT_ALIGN(w->size);
 	ebt_options = merge_options
 	   (ebt_options, w->extra_ops, &(w->option_offset));
 	w->init(w->w);
@@ -347,14 +347,14 @@ void register_watcher(struct ebt_u_watcher *w)
 
 void register_target(struct ebt_u_target *t)
 {
-	int size = t->size + sizeof(struct ebt_entry_target);
+	int size = EBT_ALIGN(t->size) + sizeof(struct ebt_entry_target);
 	struct ebt_u_target **i;
 
 	t->t = (struct ebt_entry_target *)malloc(size);
 	if (!t->t)
 		print_memory();
 	strcpy(t->t->u.name, t->name);
-	t->t->target_size = t->size;
+	t->t->target_size = EBT_ALIGN(t->size);
 	ebt_options = merge_options
 	   (ebt_options, t->extra_ops, &(t->option_offset));
 	t->init(t->t);
