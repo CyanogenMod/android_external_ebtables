@@ -157,7 +157,7 @@ static void print_s(const struct ebt_u_entry *entry,
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
 
 	printf("--to-src ");
-	printf("%s", ether_ntoa((struct ether_addr *)natinfo->mac));
+	print_mac(natinfo->mac);
 	printf(" --snat-target %s", TARGET_NAME(natinfo->target));
 }
 
@@ -167,7 +167,7 @@ static void print_d(const struct ebt_u_entry *entry,
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
 
 	printf("--to-dst ");
-	printf("%s", ether_ntoa((struct ether_addr *)natinfo->mac));
+	print_mac(natinfo->mac);
 	printf(" --dnat-target %s", TARGET_NAME(natinfo->target));
 }
 
@@ -176,7 +176,6 @@ static int compare(const struct ebt_entry_target *t1,
 {
 	struct ebt_nat_info *natinfo1 = (struct ebt_nat_info *)t1->data;
 	struct ebt_nat_info *natinfo2 = (struct ebt_nat_info *)t2->data;
-
 
 	return !memcmp(natinfo1->mac, natinfo2->mac, sizeof(natinfo1->mac)) &&
 	   natinfo1->target == natinfo2->target;
