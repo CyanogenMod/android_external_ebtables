@@ -349,7 +349,7 @@ int disregard_tabspace(char *buffer, FILE *ifp)
 	return 0;
 }
 
-// helper function: processes a line of data from the file /etc/etherproto
+// helper function: processes a line of data from the file /etc/ethertypes
 int get_a_line(char *buffer, char *value, FILE *ifp)
 {
 	int i, hlp;
@@ -389,7 +389,7 @@ int get_a_line(char *buffer, char *value, FILE *ifp)
 			break;
 	}
 	if (i == 5) return -1;
-	/* discard comments at the end of a line */
+	// discard comments at the end of a line
 	if (value[i] == '\t' || value[i] == ' ')
 		while (1) {
 			hlp = fscanf(ifp, "%c", &anotherhlp);
