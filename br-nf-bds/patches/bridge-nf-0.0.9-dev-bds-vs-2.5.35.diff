@@ -88,7 +88,7 @@ bridge-nf-0.0.9-dev-bds vs 2.5.35 - 18 September
  }
  
 -static int __dev_queue_push_xmit(struct sk_buff *skb)
-+int dev_queue_push_xmit(struct sk_buff *skb)
++int br_dev_queue_push_xmit(struct sk_buff *skb)
  {
  	skb_push(skb, ETH_HLEN);
  	dev_queue_xmit(skb);
@@ -101,7 +101,7 @@ bridge-nf-0.0.9-dev-bds vs 2.5.35 - 18 September
  {
  	NF_HOOK(PF_BRIDGE, NF_BR_POST_ROUTING, skb, NULL, skb->dev,
 -			__dev_queue_push_xmit);
-+			dev_queue_push_xmit);
++			br_dev_queue_push_xmit);
  
  	return 0;
  }
@@ -407,7 +407,7 @@ bridge-nf-0.0.9-dev-bds vs 2.5.35 - 18 September
 + *	Lennert Buytenhek               <buytenh@gnu.org>
 + *	Bart De Schuymer		<bart.de.schuymer@pandora.be>
 + *
-+ *	$Id: bridge-nf-0.0.9-dev-bds-vs-2.5.35.diff,v 1.1 2002/09/18 20:47:52 bdschuym Exp $
++ *	$Id: bridge-nf-0.0.9-dev-bds-vs-2.5.35.diff,v 1.2 2002/09/18 21:45:53 bdschuym Exp $
 + *
 + *	This program is free software; you can redistribute it and/or
 + *	modify it under the terms of the GNU General Public License
