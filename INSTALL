@@ -1,7 +1,9 @@
 FOLLOW THESE SIMPLE GUIDELINES:
 -------------------------------
 
-Compiling the source code and putting the files in the right directories:
+Compile the source code:
+%make
+put the files in the right directories:
 %make install
 
 If you are using the CVS code or need your own kernel includes, do this
@@ -15,10 +17,11 @@ WHAT GETS INSTALLED?
   To put the manual somewhere else, include MANDIR=<<man-path/man>> as
   option on the command line.
   The Makefile will append /man8/ebtables.8.
-- ethertypes is by default placed in /usr/local/etc/, if you
+- ethertypes is by default placed in /etc/, if you
   want to change this, include ETHERTYPESPATH=<<path/>>.
 
 - the userspace program ebtables is compiled and the executable is copied
   to /sbin/ebtables.
+  To put the binary somewhere else, include BINDIR=<<path/>>.
 
 That's all
