@@ -7,7 +7,7 @@ PROGDATE:=January\ 2004
 # default paths
 LIBDIR:=/usr/lib
 MANDIR:=/usr/local/man
-BINDIR:=/sbin
+BINDIR:=/usr/sbin
 ETCDIR:=/etc
 DESTDIR:=
 
