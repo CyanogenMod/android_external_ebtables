@@ -9,7 +9,7 @@
 
 static struct option opts[] =
 {
-	{ "mark"     , required_argument, 0, MARK },
+	{ "mark", required_argument, 0, MARK },
 	{ 0 }
 };
 

@@ -5,11 +5,13 @@
  *
  */
 
-// All the userspace/kernel communication is in this file.
-// The other code should not have to know anything about the way the
-// kernel likes the structure of the table data.
-// The other code works with linked lists, lots of linked lists.
-// So, the translation is done here.
+/*
+ * All the userspace/kernel communication is in this file.
+ * The other code should not have to know anything about the way the
+ * kernel likes the structure of the table data.
+ * The other code works with linked lists, lots of linked lists.
+ * So, the translation is done here.
+ */
 
 #include <getopt.h>
 #include <string.h>
@@ -54,7 +56,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	new->nentries = u_repl->nentries;
 	new->num_counters = u_repl->num_counters;
 	new->counters = u_repl->counters;
-	// determine nr of udc
+	/* determine nr of udc */
 	i = 0;
 	cl = u_repl->udc;
 	while (cl) {
@@ -63,7 +65,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	}
 	i += NF_BR_NUMHOOKS;
 	chain_offsets = (unsigned int *)malloc(i * sizeof(unsigned int));
-	// determine size
+	/* determine size */
 	i = 0;
 	cl = u_repl->udc;
 	while (1) {
@@ -101,7 +103,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 			   sizeof(struct ebt_entry_target);
 			e = e->next;
 		}
-		// a little sanity check
+		/* a little sanity check */
 		if (j != entries->nentries)
 			print_bug("Wrong nentries: %d != %d, hook = %s", j,
 			   entries->nentries, entries->name);
@@ -115,7 +117,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	if (!new->entries)
 		print_memory();
 
-	// put everything in one block
+	/* put everything in one block */
 	p = new->entries;
 	i = 0;
 	cl = u_repl->udc;
@@ -139,7 +141,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 		hlp->policy = entries->policy;
 		strcpy(hlp->name, entries->name);
 		hlp->counter_offset = entries->counter_offset;
-		hlp->distinguisher = 0; // make the kernel see the light
+		hlp->distinguisher = 0; /* make the kernel see the light */
 		p += sizeof(struct ebt_entries);
 		e = entries->entries;
 		while (e) {
@@ -184,7 +186,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 			if (!strcmp(e->t->u.name, EBT_STANDARD_TARGET)) {
 				struct ebt_standard_target *st =
 				   (struct ebt_standard_target *)p;
-				// translate the jump to a udc
+				/* translate the jump to a udc */
 				if (st->verdict >= 0)
 					st->verdict = chain_offsets
 					   [st->verdict + NF_BR_NUMHOOKS];
@@ -199,7 +201,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 		i++;
 	}
 
-	// sanity check
+	/* sanity check */
 	if (p - new->entries != new->entries_size)
 		print_bug("Entries_size bug");
 	free(chain_offsets);
@@ -212,7 +214,7 @@ static void store_table_in_file(char *filename, struct ebt_replace *repl)
 	int size;
 	FILE *file;
 
-	// start from an empty file with right priviliges
+	/* start from an empty file with right priviliges */
 	command = (char *)malloc(strlen(filename) + 15);
 	if (!command)
 		print_memory();
@@ -234,7 +236,7 @@ static void store_table_in_file(char *filename, struct ebt_replace *repl)
 	memcpy(data, repl, sizeof(struct ebt_replace));
 	memcpy(data + sizeof(struct ebt_replace), repl->entries,
 	   repl->entries_size);
-	// initialize counters to zero, deliver_counters() can update them
+	/* initialize counters to zero, deliver_counters() can update them */
 	memset(data + sizeof(struct ebt_replace) + repl->entries_size,
 	   0, repl->nentries * sizeof(struct ebt_counter));
 	if (!(file = fopen(filename, "wb")))
@@ -252,13 +254,13 @@ void deliver_table(struct ebt_u_replace *u_repl)
 	socklen_t optlen;
 	struct ebt_replace *repl;
 
-	// translate the struct ebt_u_replace to a struct ebt_replace
+	/* translate the struct ebt_u_replace to a struct ebt_replace */
 	repl = translate_user2kernel(u_repl);
 	if (u_repl->filename != NULL) {
 		store_table_in_file(u_repl->filename, repl);
 		return;
 	}
-	// give the data to the kernel
+	/* give the data to the kernel */
 	optlen = sizeof(struct ebt_replace) + repl->entries_size;
 	get_sockfd();
 	if (setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_ENTRIES, repl, optlen))
@@ -276,7 +278,10 @@ static void store_counters_in_file(char *filename, struct ebt_u_replace *repl)
 
 	if (!(file = fopen(filename, "r+b")))
 		print_error("Could not open file %s", filename);
-	// find out entries_size and then set the file pointer to the counters
+	/* 
+	 * find out entries_size and then set the file pointer to the
+	 * counters
+	 */
 	if (fseek(file, (char *)(&hlp.entries_size) - (char *)(&hlp), SEEK_SET)
 	   || fread(&entries_size, sizeof(char), sizeof(unsigned int), file) !=
 	   sizeof(unsigned int) ||
@@ -291,9 +296,8 @@ static void store_counters_in_file(char *filename, struct ebt_u_replace *repl)
 	fclose(file);
 }
 
-// gets executed after deliver_table
-void
-deliver_counters(struct ebt_u_replace *u_repl)
+/* gets executed after deliver_table */
+void deliver_counters(struct ebt_u_replace *u_repl)
 {
 	unsigned short *point;
 	struct ebt_counter *old, *new, *newcounters;
@@ -314,21 +318,23 @@ deliver_counters(struct ebt_u_replace *u_repl)
 	point = counterchanges;
 	while (*point != CNT_END) {
 		if (*point == CNT_NORM) {
-			// 'normal' rule, meaning we didn't do anything to it
-			// So, we just copy
+			/*
+			 *'normal' rule, meaning we didn't do anything to it
+			 * So, we just copy
+			 */
 			new->pcnt = old->pcnt;
-			// we've used an old counter
+			/* we've used an old counter */
 			old++;
-			// we've set a new counter
+			/* we've set a new counter */
 			new++;
 		} else if (*point == CNT_DEL) {
-			// don't use this old counter
+			/* don't use this old counter */
 			old++;
 		} else if (*point == CNT_ADD) {
-			// new counter, let it stay 0
+			/* new counter, let it stay 0 */
 			new++;
 		} else {
-			// zero it (let it stay 0)
+			/* zero it (let it stay 0) */
 			old++;
 			new++;
 		}
@@ -344,7 +350,7 @@ deliver_counters(struct ebt_u_replace *u_repl)
 	}
 	optlen = u_repl->nentries * sizeof(struct ebt_counter) +
 	   sizeof(struct ebt_replace);
-	// now put the stuff in the kernel's struct ebt_replace
+	/* now put the stuff in the kernel's struct ebt_replace */
 	repl.counters = u_repl->counters;
 	repl.num_counters = u_repl->num_counters;
 	memcpy(repl.name, u_repl->name, sizeof(repl.name));
@@ -406,7 +412,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
    int *totalcnt, struct ebt_u_entry ***u_e, struct ebt_u_replace *u_repl,
    unsigned int valid_hooks, char *base)
 {
-	// an entry
+	/* an entry */
 	if (e->bitmask & EBT_ENTRY_OR_ENTRIES) {
 		struct ebt_u_entry *new;
 		struct ebt_u_match_list **m_l;
@@ -417,7 +423,10 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 		if (!new)
 			print_memory();
 		new->bitmask = e->bitmask;
-		// plain userspace code doesn't know about EBT_ENTRY_OR_ENTRIES
+		/*
+		 * plain userspace code doesn't know about
+		 * EBT_ENTRY_OR_ENTRIES
+		 */
 		new->bitmask &= ~EBT_ENTRY_OR_ENTRIES;
 		new->invflags = e->invflags;
 		new->ethproto = e->ethproto;
@@ -447,7 +456,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 			            "userspace tool", t->u.name);
 		memcpy(new->t, t, t->target_size +
 		   sizeof(struct ebt_entry_target));
-		// deal with jumps to udc
+		/* deal with jumps to udc */
 		if (!strcmp(t->u.name, EBT_STANDARD_TARGET)) {
 			char *tmp = base;
 			int verdict = ((struct ebt_standard_target *)t)->verdict;
@@ -468,13 +477,13 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 			}
 		}
 
-		// I love pointers
+		/* I love pointers */
 		**u_e = new;
 		*u_e = &new->next;
 		(*cnt)++;
 		(*totalcnt)++;
 		return 0;
-	} else { // a new chain
+	} else { /* a new chain */
 		int i;
 		struct ebt_entries *entries = (struct ebt_entries *)e;
 		struct ebt_u_chain_list *cl;
@@ -487,8 +496,8 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 			if (valid_hooks & (1 << i))
 				break;
 		*hook = i;
-		// makes use of fact that standard chains come before udc
-		if (i >= NF_BR_NUMHOOKS) { // udc
+		/* makes use of fact that standard chains come before udc */
+		if (i >= NF_BR_NUMHOOKS) { /* udc */
 			i -= NF_BR_NUMHOOKS;
 			cl = u_repl->udc;
 			while (i-- > 0)
@@ -500,7 +509,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 	}
 }
 
-// initialize all chain headers
+/* initialize all chain headers */
 static int
 ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
    struct ebt_u_replace *u_repl, unsigned int valid_hooks)
@@ -514,10 +523,10 @@ ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
 		for (i = *hook + 1; i < NF_BR_NUMHOOKS; i++)
 			if (valid_hooks & (1 << i))
 				break;
-		// makes use of fact that standard chains come before udc
-		if (i >= NF_BR_NUMHOOKS) { // udc
+		/* makes use of fact that standard chains come before udc */
+		if (i >= NF_BR_NUMHOOKS) { /* udc */
 			chain_list = &u_repl->udc;
-			// add in the back
+			/* add in the back */
 			while (*chain_list)
 				chain_list = &((*chain_list)->next);
 			*chain_list = (struct ebt_u_chain_list *)
@@ -530,8 +539,10 @@ ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
 			if (!((*chain_list)->udc))
 				print_memory();
 			new = (*chain_list)->udc;
-			// ebt_translate_entry depends on this for knowing
-			// to which chain is being jumped
+			/*
+			 * ebt_translate_entry depends on this for knowing
+			 * to which chain is being jumped
+			 */
 			(*chain_list)->kernel_start = (char *)e;
 		} else {
 			*hook = i;
@@ -559,7 +570,9 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 
 	if (!(file = fopen(filename, "r+b")))
 		print_error("Could not open file %s", filename);
-	// make sure table name is right if command isn't -L or --atomic-commit
+	/*
+	 * make sure table name is right if command isn't -L or --atomic-commit
+	 */
 	if (command != 'L' && command != 8) {
 		hlp = (char *)malloc(strlen(repl->name) + 1);
 		if (!hlp)
@@ -596,7 +609,7 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 			print_memory();
 	} else
 		repl->counters = NULL;
-	// copy entries and counters
+	/* copy entries and counters */
 	if (fseek(file, sizeof(struct ebt_replace), SEEK_SET) ||
 	   fread(repl->entries, sizeof(char), repl->entries_size, file)
 	   != repl->entries_size ||
@@ -617,7 +630,7 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 
 	optlen = sizeof(struct ebt_replace);
 	get_sockfd();
-	// --atomic-init || --init-table
+	/* --atomic-init || --init-table */
 	if (command == 7 || command == 11)
 		optname = EBT_SO_GET_INIT_INFO;
 	else
@@ -635,7 +648,7 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 	else
 		repl->counters = NULL;
 
-	// we want to receive the counters
+	/* we want to receive the counters */
 	repl->num_counters = repl->nentries;
 	optlen += repl->entries_size + repl->num_counters *
 	   sizeof(struct ebt_counter);
@@ -658,12 +671,14 @@ int get_table(struct ebt_u_replace *u_repl)
 	strcpy(repl.name, u_repl->name);
 	if (u_repl->filename != NULL) {
 		retrieve_from_file(u_repl->filename, &repl, u_repl->command);
-		// -L with a wrong table name should be dealt with silently
+		/*
+		 * -L with a wrong table name should be dealt with silently
+		 */
 		strcpy(u_repl->name, repl.name);
 	} else if (retrieve_from_kernel(&repl, u_repl->command) == -1)
 		return -1;
 
-	// translate the struct ebt_replace to a struct ebt_u_replace
+	/* translate the struct ebt_replace to a struct ebt_u_replace */
 	u_repl->valid_hooks = repl.valid_hooks;
 	u_repl->nentries = repl.nentries;
 	u_repl->num_counters = repl.num_counters;
@@ -672,10 +687,13 @@ int get_table(struct ebt_u_replace *u_repl)
 	hook = -1;
 	EBT_ENTRY_ITERATE(repl.entries, repl.entries_size, ebt_translate_chains,
 	   &hook, u_repl, u_repl->valid_hooks);
-	i = 0; // holds the expected nr. of entries for the chain
-	j = 0; // holds the up to now counted entries for the chain
-	k = 0; // holds the total nr. of entries,
-	       // should equal u_repl->nentries afterwards
+	i = 0; /* holds the expected nr. of entries for the chain */
+	j = 0; /* holds the up to now counted entries for the chain */
+	/*
+	 * holds the total nr. of entries,
+	 * should equal u_repl->nentries afterwards
+	 */
+	k = 0;
 	hook = -1;
 	EBT_ENTRY_ITERATE(repl.entries, repl.entries_size, ebt_translate_entry,
 	   &hook, &i, &j, &k, &u_e, u_repl, u_repl->valid_hooks, repl.entries);

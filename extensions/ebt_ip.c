@@ -2,7 +2,7 @@
  *  ebtables ebt_ip: IP extension module for userspace
  * 
  *  Authors:
- *   Bart De Schuymer <bart.de.schuymer@pandora.be>
+ *   Bart De Schuymer <bdschuym@pandora.be>
  *
  *  Changes:
  *    added ip-sport and ip-dport; parsing of port arguments is
@@ -36,7 +36,7 @@
 
 #define IP_SOURCE '1'
 #define IP_DEST   '2'
-#define IP_myTOS  '3' // include/bits/in.h seems to already define IP_TOS
+#define IP_myTOS  '3' /* include/bits/in.h seems to already define IP_TOS */
 #define IP_PROTO  '4'
 #define IP_SPORT  '5'
 #define IP_DPORT  '6'
@@ -57,9 +57,7 @@ static struct option opts[] =
 	{ 0 }
 };
 
-struct protoent *pe;
-
-// put the ip string into 4 bytes
+/* put the ip string into 4 bytes */
 static int undot_ip(char *ip, unsigned char *ip2)
 {
 	char *p, *q, *end;
@@ -89,7 +87,7 @@ static int undot_ip(char *ip, unsigned char *ip2)
 	return 0;
 }
 
-// put the mask into 4 bytes
+/* put the mask into 4 bytes */
 static int ip_mask(char *mask, unsigned char *mask2)
 {
 	char *end;
@@ -97,7 +95,7 @@ static int ip_mask(char *mask, unsigned char *mask2)
 	uint32_t mask22;
 
 	if (undot_ip(mask, mask2)) {
-		// not the /a.b.c.e format, maybe the /x format
+		/* not the /a.b.c.e format, maybe the /x format */
 		bits = strtol(mask, &end, 10);
 		if (*end != '\0' || bits > 32 || bits < 0)
 			return -1;
@@ -112,12 +110,12 @@ static int ip_mask(char *mask, unsigned char *mask2)
 	return 0;
 }
 
-// set the ip mask and ip address
+/* set the ip mask and ip address */
 void parse_ip_address(char *address, uint32_t *addr, uint32_t *msk)
 {
 	char *p;
 
-	// first the mask
+	/* first the mask */
 	if ((p = strrchr(address, '/')) != NULL) {
 		*p = '\0';
 		if (ip_mask(p + 1, (unsigned char *)msk))
@@ -131,7 +129,7 @@ void parse_ip_address(char *address, uint32_t *addr, uint32_t *msk)
 	*addr = *addr & *msk;
 }
 
-// transform the ip mask into a string ready for output
+/* transform the ip mask into a string ready for output */
 char *mask_to_dotted(uint32_t mask)
 {
 	int i;
@@ -140,14 +138,14 @@ char *mask_to_dotted(uint32_t mask)
 
 	maskaddr = ntohl(mask);
 
-	// don't print /32
+	/* don't print /32 */
 	if (mask == 0xFFFFFFFFL) {
 		*buf = '\0';
 		return buf;
 	}
 
 	i = 32;
-	bits = 0xFFFFFFFEL; // case 0xFFFFFFFF has just been dealt with
+	bits = 0xFFFFFFFEL; /* case 0xFFFFFFFF has just been dealt with */
 	while (--i >= 0 && maskaddr != bits)
 		bits <<= 1;
 
@@ -156,7 +154,7 @@ char *mask_to_dotted(uint32_t mask)
 	else if (!i)
 		*buf = '\0';
 	else
-		// mask was not a decent combination of 1's and 0's
+		/* mask was not a decent combination of 1's and 0's */
 		sprintf(buf, "/%d.%d.%d.%d", ((unsigned char *)&mask)[0],
 		   ((unsigned char *)&mask)[1], ((unsigned char *)&mask)[2],
 		   ((unsigned char *)&mask)[3]);
@@ -164,7 +162,7 @@ char *mask_to_dotted(uint32_t mask)
 	return buf;
 }
 
-// transform a protocol and service name into a port number
+/* transform a protocol and service name into a port number */
 static uint16_t parse_port(const char *protocol, const char *name)
 {
 	struct servent *service;
@@ -317,6 +315,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			print_error("Missing IP protocol argument");
 		(unsigned char) i = strtoul(argv[optind - 1], &end, 10);
 		if (*end != '\0') {
+			struct protoent *pe;
+
 			pe = getprotobyname(argv[optind - 1]);
 			if (pe == NULL)
 				print_error
@@ -384,6 +384,8 @@ static void print(const struct ebt_u_entry *entry,
 		printf("0x%02X ", ipinfo->tos);
 	}
 	if (ipinfo->bitmask & EBT_IP_PROTO) {
+		struct protoent *pe;
+
 		printf("--ip-proto ");
 		if (ipinfo->invflags & EBT_IP_PROTO)
 			printf("! ");
