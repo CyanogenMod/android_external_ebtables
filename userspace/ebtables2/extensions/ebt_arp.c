@@ -180,7 +180,8 @@ static void final_check(const struct ebt_u_entry *entry,
    unsigned int hook_mask, unsigned int time)
 {
 	if (entry->bitmask & EBT_NOPROTO || entry->bitmask & EBT_802_3 ||
-	   (entry->ethproto != ETH_P_ARP && entry->ethproto != ETH_P_RARP))
+	   (entry->ethproto != ETH_P_ARP && entry->ethproto != ETH_P_RARP) ||
+	    entry->invflags & EBT_IPROTO)
 		print_error("For (R)ARP filtering the protocol must be "
 		            "specified as ARP or RARP");
 }

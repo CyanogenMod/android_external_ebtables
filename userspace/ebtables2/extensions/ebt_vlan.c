@@ -225,7 +225,8 @@ final_check (const struct ebt_u_entry *entry,
 	/*
 	 * Is any proto param specified there? Or specified proto isn't 802.1Q?
 	 */
-	if (entry->bitmask & EBT_NOPROTO || entry->ethproto != ETH_P_8021Q)
+	if (entry->bitmask & EBT_NOPROTO || entry->ethproto != ETH_P_8021Q ||
+	    entry->invflags & EBT_IPROTO)
 		print_error
 		    ("For use 802.1Q extension the protocol must be specified as 802_1Q");
 	/*

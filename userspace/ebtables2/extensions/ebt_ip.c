@@ -222,7 +222,7 @@ static void final_check(const struct ebt_u_entry *entry,
    unsigned int hook_mask, unsigned int time)
 {
 	if (entry->bitmask & EBT_NOPROTO || entry->bitmask & EBT_802_3 ||
-	   entry->ethproto != ETH_P_IP)
+	   entry->ethproto != ETH_P_IP || entry->invflags & EBT_IPROTO)
 		print_error("For IP filtering the protocol must be "
 		            "specified as IPv4");
 }
