@@ -42,7 +42,7 @@ struct ebt_u_chain_list
 {
 	struct ebt_u_entries *udc;
 	struct ebt_u_chain_list *next;
-	// this is only used internally, in communications.c
+	// this is only used internally, in communication.c
 	char *kernel_start;
 };
 
