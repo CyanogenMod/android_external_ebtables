@@ -296,12 +296,13 @@ static void store_counters_in_file(char *filename, struct ebt_u_replace *repl)
 
 // gets executed after deliver_table
 void
-deliver_counters(struct ebt_u_replace *u_repl, unsigned short *counterchanges)
+deliver_counters(struct ebt_u_replace *u_repl)
 {
 	unsigned short *point;
 	struct ebt_counter *old, *new, *newcounters;
 	socklen_t optlen;
 	struct ebt_replace repl;
+	unsigned short *counterchanges = u_repl->counterchanges;
 
 	if (u_repl->nentries == 0)
 		return;
