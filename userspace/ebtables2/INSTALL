@@ -18,7 +18,7 @@ WHAT GETS INSTALLED?
 - ethertypes is by default placed in /etc/, if you
   want to change this, include ETHERTYPESPATH=<<path>>.
 - the userspace program ebtables is compiled and the executable is copied
-  by default to /sbin/ebtables. If you want to put the executable
+  by default to /usr/sbin/ebtables. If you want to put the executable
   somewhere else, include BINPATH=<<path>>.
 
 That's all
