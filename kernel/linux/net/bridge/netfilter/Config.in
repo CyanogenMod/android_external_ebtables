@@ -9,6 +9,8 @@ dep_tristate '    ebt: log support' CONFIG_BRIDGE_EBT_LOG $CONFIG_BRIDGE_NF_EBTA
 dep_tristate '    ebt: IP filter support' CONFIG_BRIDGE_EBT_IPF $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: ARP filter support' CONFIG_BRIDGE_EBT_ARPF $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: 802.1Q VLAN filter support' CONFIG_BRIDGE_EBT_VLANF $CONFIG_BRIDGE_NF_EBTABLES
+dep_tristate '    ebt: 802.3 filter support' CONFIG_BRIDGE_EBT_802_3 $CONFIG_BRIDGE_NF_EBTABLES
+dep_tristate '    ebt: packet type filter support' CONFIG_BRIDGE_PKTTYPE $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: mark filter support' CONFIG_BRIDGE_EBT_MARKF $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: snat target support' CONFIG_BRIDGE_EBT_SNAT $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: dnat target support' CONFIG_BRIDGE_EBT_DNAT $CONFIG_BRIDGE_NF_EBTABLES
