@@ -491,6 +491,28 @@ If the 802.3 DSAP and SSAP values are 0xaa then the SNAP type field must
 be consulted to determine the payload protocol.  This is a two byte
 (hexadecimal) argument.  Only 802.3 frames with DSAP/SSAP 0xaa are
 checked for type.
+.SS among
+Match a MAC address or MAC/IP address pair versus a list of MAC addresses
+and MAC/IP address pairs.
+A list entry has the following format: xx:xx:xx:xx:xx:xx[=ip.ip.ip.ip][,]. Multiple
+list entries are separated by a comma, specifying an IP address corresponding to
+the MAC address is optional. Multiple MAC/IP address pairs with the same MAC address
+but different IP address (and vice versa) can be specified. If the MAC address doesn't
+match any entry from the list, the frame doesn't match the rule (unless '!' was used).
+.TP
+.BR "--among-dst " "[!] \fIlist\fP"
+Compare the MAC destination to the given list. If the Ethernet frame has type
+.BR IPv4 " or " ARP ,
+then comparison with MAC/IP destination address pairs from the
+list is possible.
+
+.TP
+.BR "--among-src " "[!] \fIlist\fP"
+Compare the MAC source to the given list. If the Ethernet frame has type
+.BR IPv4 " or " ARP ,
+then comparison with MAC/IP source address pairs from the list
+is possible.
+
 .SS arp
 Specify arp fields. The protocol must be specified as
 .BR ARP " or " RARP .
