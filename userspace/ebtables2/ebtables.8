@@ -1,4 +1,4 @@
-.TH EBTABLES 8  "23 July 2002"
+.TH EBTABLES 8  "11 August 2002"
 .\"
 .\" Man page written by Bart De Schuymer <bart.de.schuymer@pandora.be>
 .\" It is based on the iptables man page.
@@ -32,10 +32,6 @@ ebtables (v.2.0) \- Ethernet bridge frame table administration
 .BR "ebtables -[NX] " chain
 .br
 .BR "ebtables -E " "old-chain-name new-chain-name"
-.br
-.B "ebtables -L DB"
-.br
-.BR "ebtables -[b] [" "y/n" "]"
 .br
 .BR "ebtables --init-table"
 .br
@@ -147,18 +143,9 @@ the head of the chain).
 .TP
 .B "-L, --list"
 List all rules in the selected chain. If no chain is selected, all chains
-are listed. If the chainname equals 
-.BR DB ,
-.B ebtables
-will try to show the database. This database gives a survey of the kind of
-frames that pass the different bridge hooks. It uses the interfaces where
-the frame came in or will go out, the protocol field and the hook. This
-database is independent from the rest of
-.B ebtables
-and is in a different kernel module.
+are listed.
 .br
-The following three options change the output when not listing the
-database:
+The following three options change the output:
 .br
 .B "--Ln"
 .br
@@ -335,9 +322,6 @@ Give a brief description of the command syntax. Here you can also specify
 names of extensions and
 .B ebtables
 will try to write help about those extensions. E.g. ebtables -h snat log ip arp.
-.TP
-.BR "-b --db " [ "y/n" ]
-Enable (y) or disable (n) the database.
 .TP
 .BR "-j, --jump " "\fItarget\fP"
 The target of the rule. This is one of the following values:
