@@ -4,9 +4,9 @@
 #               deleted netsyms
 # 10 September 2002: added br_forward.c
 
-export FROM=linux-2.5.32
-export TO=linux-2.5.34
-export FILE=iets.diff
+export FROM=linux-2.4.20-pre5
+export TO=linux-2.4.20-pre5-ebtables
+export FILE=ebtables-v2.0_vs_2.4.20-pre5.001.diff
 
 # brouter support
 
