@@ -241,10 +241,10 @@ static void store_table_in_file(char *filename, struct ebt_replace *repl)
 	memset(data + sizeof(struct ebt_replace) + repl->entries_size,
 	   0, repl->nentries * sizeof(struct ebt_counter));
 	if (!(file = fopen(filename, "wb")))
-		print_error("Could not open file %s", filename);
+		print_error("Couldn't open file %s", filename);
 	if (fwrite(data, sizeof(char), size, file) != size) {
 		fclose(file);
-		print_error("Could not write everything to file %s", filename);
+		print_error("Couldn't write everything to file %s", filename);
 	}
 	fclose(file);
 	free(data);
@@ -572,21 +572,28 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 		if (!hlp)
 			print_memory();
 		strcpy(hlp, repl->name);
-	} else
-		if (!find_table(repl->name))
-			print_error("File %s contains invalid table name",
-			   filename);
+	}
 	if (fread(repl, sizeof(char), sizeof(struct ebt_replace), file)
 	   != sizeof(struct ebt_replace))
 		print_error("File %s is corrupt", filename);
-	if (command != 'L' && command != 8 && strcmp(hlp, repl->name))
+	if (command != 'L' && command != 8 && strcmp(hlp, repl->name)) {
+		fclose(file);
 		print_error("File %s contains wrong table name or is corrupt",
 		   filename);
+	} else
+		if (!find_table(repl->name)) {
+			fclose(file);
+			print_error("File %s contains invalid table name",
+			   filename);
+		}
+
 	size = sizeof(struct ebt_replace) +
 	   repl->nentries * sizeof(struct ebt_counter) + repl->entries_size;
 	fseek(file, 0, SEEK_END);
-	if (size != ftell(file))
+	if (size != ftell(file)) {
+		fclose(file);
 		print_error("File %s has wrong size", filename);
+	}
 	repl->entries = (char *)malloc(repl->entries_size);
 	if (!repl->entries)
 		print_memory();
@@ -604,8 +611,10 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 	   fseek(file, sizeof(struct ebt_replace) + repl->entries_size, SEEK_SET)
 	   || fread(repl->counters, sizeof(char),
 	   repl->nentries * sizeof(struct ebt_counter), file)
-	   != repl->nentries * sizeof(struct ebt_counter))
+	   != repl->nentries * sizeof(struct ebt_counter)) {
+		fclose(file);
 		print_error("File %s is corrupt", filename);
+	}
 	fclose(file);
 }
 
@@ -616,7 +625,8 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 
 	optlen = sizeof(struct ebt_replace);
 	get_sockfd();
-	if (command == 7)
+	// --atomic-init || --init-table
+	if (command == 7 || command == 11)
 		optname = EBT_SO_GET_INIT_INFO;
 	else
 		optname = EBT_SO_GET_INFO;
@@ -637,7 +647,7 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 	repl->num_counters = repl->nentries;
 	optlen += repl->entries_size + repl->num_counters *
 	   sizeof(struct ebt_counter);
-	if (command == 7)
+	if (command == 7 || command == 11)
 		optname = EBT_SO_GET_INIT_ENTRIES;
 	else
 		optname = EBT_SO_GET_ENTRIES;
