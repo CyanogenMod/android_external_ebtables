@@ -77,10 +77,8 @@ static struct ebt_target ebt_standard_target =
 { {NULL, NULL}, EBT_STANDARD_TARGET, NULL, NULL, NULL, NULL};
 
 static inline int ebt_do_watcher (struct ebt_entry_watcher *w,
-	    const struct sk_buff *skb,
-	    const struct net_device *in,
-	    const struct net_device *out,
-	    const struct ebt_counter *c)
+   const struct sk_buff *skb, const struct net_device *in,
+   const struct net_device *out, const struct ebt_counter *c)
 {
 	w->u.watcher->watcher(skb, in, out, w->data,
 	   w->watcher_size, c);
@@ -89,10 +87,8 @@ static inline int ebt_do_watcher (struct ebt_entry_watcher *w,
 }
 
 static inline int ebt_do_match (struct ebt_entry_match *m,
-	    const struct sk_buff *skb,
-	    const struct net_device *in,
-	    const struct net_device *out,
-	    const struct ebt_counter *c)
+   const struct sk_buff *skb, const struct net_device *in,
+   const struct net_device *out, const struct ebt_counter *c)
 {
 	return m->u.match->match(skb, in, out, m->data,
 	   m->match_size, c);
@@ -214,9 +210,11 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 		}
 		if (verdict == EBT_RETURN) {
 letsreturn:
-			if (sp == 0)
+			if (sp == 0) {
+				BUGPRINT("RETURN on base chain");
 				// act like this is EBT_CONTINUE
 				goto letscontinue;
+			}
 			sp--;
 			// put all the local variables right
 			i = cs[sp].n;
@@ -571,14 +569,16 @@ ebt_check_entry(struct ebt_entry *e, struct ebt_table_info *newinfo,
 		else
 			break;
 	}
+	// (1 << NF_BR_NUMHOOKS) tells the check functions the rule is on
+	// a base chain
 	if (i < NF_BR_NUMHOOKS)
-		hookmask = (1 << hook);
+		hookmask = (1 << hook) | (1 << NF_BR_NUMHOOKS);
 	else {
 		for (i = 0; i < udc_cnt; i++)
 			if ((char *)(cl_s[i].cs.chaininfo) > (char *)e)
 				break;
 		if (i == 0)
-			hookmask = (1 << hook);
+			hookmask = (1 << hook) | (1 << NF_BR_NUMHOOKS);
 		else
 			hookmask = cl_s[i - 1].hookmask;
 	}

@@ -38,6 +38,10 @@ static int ebt_target_redirect_check(const char *tablename, unsigned int hookmas
 {
 	struct ebt_redirect_info *infostuff = (struct ebt_redirect_info *) data;
 
+	if ((hookmask & (1 << NF_BR_NUMHOOKS)) &&
+	   infostuff->target == EBT_RETURN)
+		return -EINVAL;
+	hookmask &= ~(1 << NF_BR_NUMHOOKS);
 	if ( (strcmp(tablename, "nat") || hookmask & ~(1 << NF_BR_PRE_ROUTING)) &&
 	     (strcmp(tablename, "broute") || hookmask & ~(1 << NF_BR_BROUTING)) )
 		return -EINVAL;

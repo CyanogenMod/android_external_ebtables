@@ -31,6 +31,10 @@ static int ebt_target_snat_check(const char *tablename, unsigned int hookmask,
 {
 	struct ebt_nat_info *infostuff = (struct ebt_nat_info *) data;
 
+	if ((hookmask & (1 << NF_BR_NUMHOOKS)) &&
+	   infostuff->target == EBT_RETURN)
+		return -EINVAL;
+	hookmask &= ~(1 << NF_BR_NUMHOOKS);
 	if (strcmp(tablename, "nat"))
 		return -EINVAL;
 	if (datalen != sizeof(struct ebt_nat_info))

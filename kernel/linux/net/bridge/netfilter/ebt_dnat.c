@@ -31,6 +31,10 @@ static int ebt_target_dnat_check(const char *tablename, unsigned int hookmask,
 {
 	struct ebt_nat_info *infostuff = (struct ebt_nat_info *) data;
 
+	if ((hookmask & (1 << NF_BR_NUMHOOKS)) &&
+	   infostuff->target == EBT_RETURN)
+		return -EINVAL;
+	hookmask &= ~(1 << NF_BR_NUMHOOKS);
 	if ( (strcmp(tablename, "nat") ||
 	   (hookmask & ~((1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_LOCAL_OUT)))) &&
 	   (strcmp(tablename, "broute") || hookmask & ~(1 << NF_BR_BROUTING)) )

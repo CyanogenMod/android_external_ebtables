@@ -40,6 +40,10 @@ static int ebt_target_mark_check(const char *tablename, unsigned int hookmask,
 {
 	struct ebt_mark_t_info *infostuff = (struct ebt_mark_t_info *) data;
 
+	if ((hookmask & (1 << NF_BR_NUMHOOKS)) &&
+	   infostuff->target == EBT_RETURN)
+		return -EINVAL;
+	hookmask &= ~(1 << NF_BR_NUMHOOKS);
 	if (datalen != sizeof(struct ebt_mark_t_info))
 		return -EINVAL;
 	if (infostuff->target < -NUM_STANDARD_TARGETS || infostuff->target >= 0)
