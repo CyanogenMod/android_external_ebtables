@@ -1,7 +1,7 @@
 /*
  * Description: EBTables 802.1Q match extension kernelspace module.
  * Authors: Nick Fedchik <nick@fedchik.org.ua>
- *          Bart De Schuymer <bart.de.schuymer@pandora.be>
+ *          Bart De Schuymer <bdschuym@pandora.be>
  *    
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -2,7 +2,7 @@
  *  ebt_snat
  *
  *	Authors:
- *	Bart De Schuymer <bart.de.schuymer@pandora.be>
+ *	Bart De Schuymer <bdschuym@pandora.be>
  *
  *  June, 2002
  *

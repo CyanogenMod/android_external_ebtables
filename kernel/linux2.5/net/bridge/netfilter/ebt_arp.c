@@ -2,7 +2,7 @@
  *  ebt_arp
  *
  *	Authors:
- *	Bart De Schuymer <bart.de.schuymer@pandora.be>
+ *	Bart De Schuymer <bdschuym@pandora.be>
  *	Tim Gardner <timg@tpi.com>
  *
  *  April, 2002

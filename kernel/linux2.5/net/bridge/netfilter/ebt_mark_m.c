@@ -2,7 +2,7 @@
  *  ebt_mark_m
  *
  *	Authors:
- *	Bart De Schuymer <bart.de.schuymer@pandora.be>
+ *	Bart De Schuymer <bdschuym@pandora.be>
  *
  *  July, 2002
  *
