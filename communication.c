@@ -623,9 +623,9 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 	if (repl->nentries) {
 		counters = (struct ebt_counter *)
 		   malloc(repl->nentries * sizeof(struct ebt_counter));
+		repl->counters = sparc_cast counters;
 		if (!repl->counters)
 			print_memory();
-		repl->counters = sparc_cast counters;
 	} else
 		repl->counters = sparc_cast NULL;
 	/* copy entries and counters */
