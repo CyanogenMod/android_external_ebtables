@@ -101,10 +101,10 @@ struct ebt_u_entry
 	char logical_in[IFNAMSIZ];
 	char out[IFNAMSIZ];
 	char logical_out[IFNAMSIZ];
-	char sourcemac[ETH_ALEN];
-	char sourcemsk[ETH_ALEN];
-	char destmac[ETH_ALEN];
-	char destmsk[ETH_ALEN];
+	unsigned char sourcemac[ETH_ALEN];
+	unsigned char sourcemsk[ETH_ALEN];
+	unsigned char destmac[ETH_ALEN];
+	unsigned char destmsk[ETH_ALEN];
 	struct ebt_u_match_list *m_list;
 	struct ebt_u_watcher_list *w_list;
 	struct ebt_entry_target *t;

@@ -144,10 +144,10 @@ struct ebt_entry {
 	char out[IFNAMSIZ];
 	// the logical out-dev
 	char logical_out[IFNAMSIZ];
-	char sourcemac[ETH_ALEN];
-	char sourcemsk[ETH_ALEN];
-	char destmac[ETH_ALEN];
-	char destmsk[ETH_ALEN];
+	unsigned char sourcemac[ETH_ALEN];
+	unsigned char sourcemsk[ETH_ALEN];
+	unsigned char destmac[ETH_ALEN];
+	unsigned char destmsk[ETH_ALEN];
 	// sizeof ebt_entry + matches
 	unsigned int watchers_offset;
 	// sizeof ebt_entry + matches + watchers
