@@ -17,8 +17,8 @@ mkdir -p $TO/include/linux/netfilter_bridge
 # /bin/cp -r -f $FROM/kernel/linux2.5/* $TO/
 /bin/cp -r -f $FROM/kernel/linux2.5/net/bridge/netfilter/* $TO/net/bridge/netfilter/
 /bin/cp -r -f $FROM/kernel/linux2.5/include/linux/netfilter_bridge/* $TO/include/linux/netfilter_bridge/
-/bin/rm -r -f $TO/kernel/linux2.5/net/bridge/netfilter/CVS
-/bin/rm -r -f $TO/kernel/linux2.5/include/linux/netfilter_bridge/CVS
+/bin/rm -r -f $TO/net/bridge/netfilter/CVS
+/bin/rm -r -f $TO/include/linux/netfilter_bridge/CVS
 
 /bin/cp -r -f $FROM/br-nf-bds/linux2.5/* $TO/
 /bin/rm -r -f $TO/CVS
