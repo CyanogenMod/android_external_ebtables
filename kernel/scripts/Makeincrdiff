@@ -2,8 +2,8 @@
 # used for making the incremental kernel diffs
 
 export FROM=linux
-export TO=ebt2.0pre8.001
-export FILE=ebtables-v2.0_vs_2.4.18.pre8.001.diff
+export TO=ebt2.0pre9.001
+export FILE=ebtables-v2.0_vs_2.4.18.pre9.001.diff
 
 # brouter support
 
@@ -32,7 +32,8 @@ diff -urN $FROM/net/bridge/netfilter/ebt_arp.c $TO/net/bridge/netfilter/ebt_arp.
 diff -urN $FROM/net/bridge/netfilter/ebt_ip.c $TO/net/bridge/netfilter/ebt_ip.c >> $FILE
 diff -urN $FROM/net/bridge/netfilter/ebt_vlan.c $TO/net/bridge/netfilter/ebt_vlan.c >> $FILE
 diff -urN $FROM/net/bridge/netfilter/ebt_log.c $TO/net/bridge/netfilter/ebt_log.c >> $FILE
-diff -urN $FROM/net/bridge/netfilter/ebt_nat.c $TO/net/bridge/netfilter/ebt_nat.c >> $FILE
+diff -urN $FROM/net/bridge/netfilter/ebt_snat.c $TO/net/bridge/netfilter/ebt_snat.c >> $FILE
+diff -urN $FROM/net/bridge/netfilter/ebt_dnat.c $TO/net/bridge/netfilter/ebt_dnat.c >> $FILE
 diff -urN $FROM/net/bridge/netfilter/ebtables.c $TO/net/bridge/netfilter/ebtables.c >> $FILE
 diff -urN $FROM/include/linux/netfilter_bridge/ebtables.h $TO/include/linux/netfilter_bridge/ebtables.h >> $FILE
 diff -urN $FROM/include/linux/netfilter_bridge/ebt_arp.h $TO/include/linux/netfilter_bridge/ebt_arp.h >> $FILE
