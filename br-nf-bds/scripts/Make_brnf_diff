@@ -1,0 +1,30 @@
+#!/bin/bash
+# for making the bridge-nf-bds patches
+
+export FROM=linux
+export TO=bridge-nf-0.0.8-bds
+export FILE=bridge-nf-0.0.8-bds-against-2.4.18.diff
+
+echo "bridge-nf-0.0.8-bds - 26 May" >$FILE
+echo >>$FILE
+echo "difference between 0.0.7 and 0.0.8:" >>$FILE
+echo >>$FILE
+echo "let iptables mangle table FORWARD chain see the physical out-dev" >>$FILE
+echo >>$FILE
+
+diff -urN $FROM/include/linux/netfilter.h $TO/include/linux/netfilter.h >> $FILE
+diff -urN $FROM/include/linux/netfilter_ipv4.h $TO/include/linux/netfilter_ipv4.h >> $FILE
+diff -urN $FROM/include/linux/skbuff.h $TO/include/linux/skbuff.h >> $FILE
+
+diff -urN $FROM/net/bridge/br.c $TO/net/bridge/br.c >> $FILE
+diff -urN $FROM/net/bridge/br_forward.c $TO/net/bridge/br_forward.c >> $FILE
+diff -urN $FROM/net/bridge/br_input.c $TO/net/bridge/br_input.c >> $FILE
+diff -urN $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h >> $FILE
+diff -urN $FROM/net/bridge/Makefile $TO/net/bridge/Makefile >> $FILE
+diff -urN $FROM/net/Config.in $TO/net/Config.in >> $FILE
+diff -urN $FROM/net/core/netfilter.c $TO/net/core/netfilter.c >> $FILE
+diff -urN $FROM/net/core/skbuff.c $TO/net/core/skbuff.c >> $FILE
+diff -urN $FROM/net/ipv4/ip_output.c $TO/net/ipv4/ip_output.c >> $FILE
+diff -urN $FROM/net/ipv4/netfilter/ip_tables.c $TO/net/ipv4/netfilter/ip_tables.c >> $FILE
+diff -urN $FROM/net/ipv4/netfilter/ipt_LOG.c $TO/net/ipv4/netfilter/ipt_LOG.c >> $FILE
+diff -urN /dev/null $TO/net/bridge/br_netfilter.c >> $FILE
