@@ -26,7 +26,6 @@
 #define BRNF_PKT_TYPE			0x01
 #define BRNF_BRIDGED_DNAT		0x02
 #define BRNF_DONT_TAKE_PARENT		0x04
-#define BRNF_COPY_HEADER		0x08
 
 enum nf_br_hook_priorities {
 	NF_BR_PRI_FIRST = INT_MIN,
@@ -39,7 +38,6 @@ enum nf_br_hook_priorities {
 	NF_BR_PRI_LAST = INT_MAX,
 };
 
-/* Used in br_netfilter.c */
 static inline
 struct nf_bridge_info *nf_bridge_alloc(struct sk_buff *skb)
 {
