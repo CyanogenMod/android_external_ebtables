@@ -2,15 +2,8 @@ ebtables-v2.0pre9 - 27 June
 
 *** modifications for brouter support ***
 
---- linux/net/bridge/br_private.h	Thu Jun 27 19:21:12 2002
-+++ ebt2.0pre9/net/bridge/br_private.h	Thu Jun 27 19:11:50 2002
-@@ -4,7 +4,7 @@
-  *	Authors:
-  *	Lennert Buytenhek		<buytenh@gnu.org>
-  *
-  *
-  *	This program is free software; you can redistribute it and/or
-  *	modify it under the terms of the GNU General Public License
+--- linux/net/bridge/br_private.h	Fri Jun 28 17:52:15 2002
++++ ebt2.0pre9/net/bridge/br_private.h	Thu Jun 27 20:16:49 2002
 @@ -170,7 +170,7 @@
  
  /* br_input.c */
@@ -21,14 +14,7 @@ ebtables-v2.0pre9 - 27 June
  /* br_ioctl.c */
  extern void br_call_ioctl_atomic(void (*fn)(void));
 --- linux/include/linux/if_bridge.h	Thu Nov 22 20:47:12 2001
-+++ ebt2.0pre9/include/linux/if_bridge.h	Thu Jun 27 19:11:50 2002
-@@ -4,7 +4,7 @@
-  *	Authors:
-  *	Lennert Buytenhek		<buytenh@gnu.org>
-  *
-  *
-  *	This program is free software; you can redistribute it and/or
-  *	modify it under the terms of the GNU General Public License
++++ ebt2.0pre9/include/linux/if_bridge.h	Thu Jun 27 20:00:23 2002
 @@ -102,8 +102,13 @@
  struct net_bridge_port;
  
@@ -95,15 +81,8 @@ ebtables-v2.0pre9 - 27 June
  			}
  #endif
  
---- linux/net/bridge/br_input.c	Thu Jun 27 19:21:12 2002
+--- linux/net/bridge/br_input.c	Fri Jun 28 17:52:15 2002
 +++ ebt2.0pre9/net/bridge/br_input.c	Thu Jun 27 19:11:50 2002
-@@ -5,7 +5,7 @@
-  *	Authors:
-  *	Lennert Buytenhek		<buytenh@gnu.org>
-  *
-  *
-  *	This program is free software; you can redistribute it and/or
-  *	modify it under the terms of the GNU General Public License
 @@ -19,7 +19,10 @@
  #include <linux/if_bridge.h>
  #include <linux/netfilter_bridge.h>
@@ -173,7 +152,7 @@ ebtables-v2.0pre9 - 27 June
  EXPORT_SYMBOL(br_ioctl_hook);
  #endif
 --- linux/include/linux/netfilter_bridge.h	Tue Jun 12 04:15:27 2001
-+++ ebt2.0pre9/include/linux/netfilter_bridge.h	Thu Jun 27 19:11:50 2002
++++ ebt2.0pre9/include/linux/netfilter_bridge.h	Thu Jun 27 20:17:07 2002
 @@ -18,7 +18,19 @@
  #define NF_BR_LOCAL_OUT		3
  /* Packets about to hit the wire. */
@@ -223,7 +202,7 @@ ebtables-v2.0pre9 - 27 June
  endif
  endif
  
---- linux/net/Config.in	Thu Jun 27 19:21:12 2002
+--- linux/net/Config.in	Fri Jun 28 17:52:15 2002
 +++ ebt2.0pre9/net/Config.in	Thu Jun 27 19:11:50 2002
 @@ -60,6 +60,9 @@
     source net/decnet/Config.in
@@ -3103,7 +3082,7 @@ ebtables-v2.0pre9 - 27 June
 +module_exit(fini);
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ ebt2.0pre9/include/linux/netfilter_bridge/ebtables.h	Thu Jun 27 19:11:50 2002
++++ ebt2.0pre9/include/linux/netfilter_bridge/ebtables.h	Thu Jun 27 20:18:07 2002
 @@ -0,0 +1,345 @@
 +/*
 + *  ebtables
@@ -3580,7 +3559,7 @@ ebtables-v2.0pre9 - 27 June
 +
 +#endif
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ ebt2.0pre9/include/linux/br_db.h	Thu Jun 27 19:11:50 2002
++++ ebt2.0pre9/include/linux/br_db.h	Thu Jun 27 20:18:35 2002
 @@ -0,0 +1,53 @@
 +/*
 + *  bridge ethernet protocol filter
