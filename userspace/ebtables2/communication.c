@@ -42,9 +42,11 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	struct ebt_u_entry *e;
 	struct ebt_u_match_list *m_l;
 	struct ebt_u_watcher_list *w_l;
+	struct ebt_u_chain_list *cl;
+	struct ebt_u_entries *entries;
 	char *p, *base;
 	int i, j;
-	unsigned int entries_size = 0;
+	unsigned int entries_size = 0, *chain_offsets;
 
 	new = (struct ebt_replace *)malloc(sizeof(struct ebt_replace));
 	if (!new)
@@ -54,15 +56,34 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	new->nentries = u_repl->nentries;
 	new->num_counters = u_repl->num_counters;
 	new->counters = u_repl->counters;
-	memcpy(new->counter_entry, u_repl->counter_entry,
-	   sizeof(new->counter_entry));
+	// determine nr of udc
+	i = 0;
+	cl = u_repl->udc;
+	while (cl) {
+		i++;
+		cl = cl->next;
+	}
+	i += NF_BR_NUMHOOKS;
+	chain_offsets = (unsigned int *)malloc(i * sizeof(unsigned int));
 	// determine size
-	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
-		if (!(new->valid_hooks & (1 << i)))
-			continue;
+	i = 0;
+	cl = u_repl->udc;
+	while (1) {
+		if (i < NF_BR_NUMHOOKS) {
+			if (!(new->valid_hooks & (1 << i))) {
+				i++;
+				continue;
+			}
+			entries = u_repl->hook_entry[i];
+		} else {
+			if (!cl)
+				break;
+			entries = cl->udc;
+		}
+		chain_offsets[i] = entries_size;
 		entries_size += sizeof(struct ebt_entries);
 		j = 0;
-		e = u_repl->hook_entry[i]->entries;
+		e = entries->entries;
 		while (e) {
 			j++;
 			entries_size += sizeof(struct ebt_entry);
@@ -83,9 +104,12 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 			e = e->next;
 		}
 		// a little sanity check
-		if (j != u_repl->hook_entry[i]->nentries)
+		if (j != entries->nentries)
 			print_bug("Wrong nentries: %d != %d, hook = %s", j,
-			   u_repl->hook_entry[i]->nentries, hooknames[i]);
+			   entries->nentries, entries->name);
+		if (i >= NF_BR_NUMHOOKS)
+			cl = cl->next;
+		i++;
 	}
 
 	new->entries_size = entries_size;
@@ -95,18 +119,31 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 
 	// put everything in one block
 	p = new->entries;
-	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
+	i = 0;
+	cl = u_repl->udc;
+	while (1) {
 		struct ebt_entries *hlp;
 
-		if (!(new->valid_hooks & (1 << i)))
-			continue;
 		hlp = (struct ebt_entries *)p;
-		new->hook_entry[i] = hlp;
-		hlp->nentries = u_repl->hook_entry[i]->nentries;
-		hlp->policy = u_repl->hook_entry[i]->policy;
+		if (i < NF_BR_NUMHOOKS) {
+			if (!(new->valid_hooks & (1 << i))) {
+				i++;
+				continue;
+			}
+			entries = u_repl->hook_entry[i];
+			new->hook_entry[i] = hlp;
+		} else {
+			if (!cl)
+				break;
+			entries = cl->udc;
+		}
+		hlp->nentries = entries->nentries;
+		hlp->policy = entries->policy;
+		strcpy(hlp->name, entries->name);
+		hlp->counter_offset = entries->counter_offset;
 		hlp->distinguisher = 0; // make the kernel see the light
 		p += sizeof(struct ebt_entries);
-		e = u_repl->hook_entry[i]->entries;
+		e = entries->entries;
 		while (e) {
 			struct ebt_entry *tmp = (struct ebt_entry *)p;
 
@@ -148,16 +185,27 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 			tmp->target_offset = p - base;
 			memcpy(p, e->t, e->t->target_size +
 			   sizeof(struct ebt_entry_target));
+			if (!strcmp(e->t->u.name, EBT_STANDARD_TARGET)) {
+				struct ebt_standard_target *st =
+				   (struct ebt_standard_target *)p;
+				// translate the jump to a udc
+				if (st->verdict >= 0)
+					st->verdict = chain_offsets[st->verdict];
+			}
 			p += e->t->target_size +
 			   sizeof(struct ebt_entry_target);
 			tmp->next_offset = p - base;
 			e = e->next;
 		}
+		if (i >= NF_BR_NUMHOOKS)
+			cl = cl->next;
+		i++;
 	}
 
 	// sanity check
 	if (p - new->entries != new->entries_size)
 		print_bug("Entries_size bug");
+	free(chain_offsets);
 	return new;
 }
 
@@ -287,7 +335,7 @@ ebt_translate_watcher(struct ebt_entry_watcher *w,
 static int
 ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
    int *totalcnt, struct ebt_u_entry ***u_e, struct ebt_u_replace *u_repl,
-   unsigned int valid_hooks)
+   unsigned int valid_hooks, char *base)
 {
 	// an entry
 	if (e->bitmask & EBT_ENTRY_OR_ENTRIES) {
@@ -332,6 +380,26 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 			            "userspace tool", t->u.name);
 		memcpy(new->t, t, t->target_size +
 		   sizeof(struct ebt_entry_target));
+		// deal with jumps to udc
+		if (!strcmp(t->u.name, EBT_STANDARD_TARGET)) {
+			char *tmp = base;
+			int verdict = ((struct ebt_standard_target *)t)->verdict;
+			int i;
+			struct ebt_u_chain_list *cl;
+
+			if (verdict >= 0) {
+				tmp += verdict;
+				cl = u_repl->udc;
+				i = 0;
+				while (cl && cl->kernel_start != tmp) {
+					i++;
+					cl = cl->next;
+				}
+				if (!cl)
+					print_bug("can't find udc for jump");
+				((struct ebt_standard_target *)new->t)->verdict = i;
+			}
+		}
 
 		// I love pointers
 		**u_e = new;
@@ -342,29 +410,78 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 	} else { // a new chain
 		int i;
 		struct ebt_entries *entries = (struct ebt_entries *)e;
-		struct ebt_u_entries *new;
+		struct ebt_u_chain_list *cl;
 
-		for (i = *hook + 1; i < NF_BR_NUMHOOKS; i++)
-			if (valid_hooks & (1 << i))
-				break;
-		if (i >= NF_BR_NUMHOOKS)
-			print_bug("Not enough valid hooks");
-		*hook = i;
 		if (*n != *cnt)
 			print_bug("Nr of entries in the chain is wrong");
 		*n = entries->nentries;
 		*cnt = 0;
-		new = (struct ebt_u_entries *)
-		   malloc(sizeof(struct ebt_u_entries));
-		if (!new)
-			print_memory();
+		for (i = *hook + 1; i < NF_BR_NUMHOOKS; i++)
+			if (valid_hooks & (1 << i))
+				break;
+		*hook = i;
+		// makes use of fact that standard chains come before udc
+		if (i >= NF_BR_NUMHOOKS) { // udc
+			i -= NF_BR_NUMHOOKS;
+			cl = u_repl->udc;
+			while (i-- > 0)
+				cl = cl->next;
+			*u_e = &(cl->udc->entries);
+		} else {
+			*u_e = &(u_repl->hook_entry[*hook]->entries);
+		}
+		return 0;
+	}
+}
+
+// initialize all chain headers
+static int
+ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
+   struct ebt_u_replace *u_repl, unsigned int valid_hooks)
+{
+	int i;
+	struct ebt_entries *entries = (struct ebt_entries *)e;
+	struct ebt_u_entries *new;
+	struct ebt_u_chain_list **chain_list;
+
+	if (!(e->bitmask & EBT_ENTRY_OR_ENTRIES)) {
+		for (i = *hook + 1; i < NF_BR_NUMHOOKS; i++)
+			if (valid_hooks & (1 << i))
+				break;
+		// makes use of fact that standard chains come before udc
+		if (i >= NF_BR_NUMHOOKS) { // udc
+			chain_list = &u_repl->udc;
+			// add in the back
+			while (*chain_list)
+				chain_list = &((*chain_list)->next);
+			*chain_list = (struct ebt_u_chain_list *)
+			   malloc(sizeof(struct ebt_u_chain_list));
+			if (!(*chain_list))
+				print_memory();
+			(*chain_list)->next = NULL;
+			(*chain_list)->udc = (struct ebt_u_entries *)
+			   malloc(sizeof(struct ebt_u_entries));
+			if (!((*chain_list)->udc))
+				print_memory();
+			new = (*chain_list)->udc;
+			// ebt_translate_entry depends on this for knowing
+			// to which chain is being jumped
+			(*chain_list)->kernel_start = (char *)e;
+		} else {
+			*hook = i;
+			new = (struct ebt_u_entries *)
+			   malloc(sizeof(struct ebt_u_entries));
+			if (!new)
+				print_memory();
+			u_repl->hook_entry[*hook] = new;
+		}
 		new->nentries = entries->nentries;
 		new->policy = entries->policy;
 		new->entries = NULL;
-		u_repl->hook_entry[*hook] = new;
-		*u_e = &new->entries;
-		return 0;
+		new->counter_offset = entries->counter_offset;
+		strcpy(new->name, entries->name);
 	}
+	return 0;
 }
 
 // talk with kernel to receive the kernel's table
@@ -405,15 +522,17 @@ int get_table(struct ebt_u_replace *u_repl)
 	u_repl->nentries = repl.nentries;
 	u_repl->num_counters = repl.num_counters;
 	u_repl->counters = repl.counters;
-	memcpy(u_repl->counter_entry, repl.counter_entry,
-	   sizeof(repl.counter_entry));
+	u_repl->udc = NULL;
 	hook = -1;
+	EBT_ENTRY_ITERATE(repl.entries, repl.entries_size, ebt_translate_chains,
+	   &hook, u_repl, u_repl->valid_hooks);
 	i = 0; // holds the expected nr. of entries for the chain
 	j = 0; // holds the up to now counted entries for the chain
 	k = 0; // holds the total nr. of entries,
 	       // should equal u_repl->nentries afterwards
+	hook = -1;
 	EBT_ENTRY_ITERATE(repl.entries, repl.entries_size, ebt_translate_entry,
-	   &hook, &i, &j, &k, &u_e, u_repl, u_repl->valid_hooks);
+	   &hook, &i, &j, &k, &u_e, u_repl, u_repl->valid_hooks, repl.entries);
 	if (k != u_repl->nentries)
 		print_bug("Wrong total nentries");
 	return 0;
