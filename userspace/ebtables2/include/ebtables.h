@@ -156,9 +156,6 @@ struct ebt_entry {
 	unsigned int target_offset;
 	/* sizeof ebt_entry + matches + watchers + target */
 	unsigned int next_offset;
-#ifdef KERNEL_64_USERSPACE_32
-	unsigned int pad[2];
-#endif
 	unsigned char elems[0];
 };
 
