@@ -75,7 +75,7 @@ struct ebt_u_replace
 struct ebt_u_table
 {
 	char name[EBT_TABLE_MAXNAMELEN];
-	int (*check)(struct ebt_u_replace *repl);
+	void (*check)(struct ebt_u_replace *repl);
 	void (*help)(char **);
 	struct ebt_u_table *next;
 };
