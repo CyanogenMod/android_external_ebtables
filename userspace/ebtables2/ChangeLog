@@ -1,3 +1,16 @@
+20021120
+	* changed the way of compiling. New releases will now contain their
+	  own set of kernel includes. No more copying of kernel includes to
+	  /usr/include/linux
+	* added getethertype.c (Nick) and use it. Removed name_to_number()
+	  and number_to_name().
+20021106
+	* added possibility to specify a rule number interval when deleting
+	  rules
+20021102
+	* added ! - option possibility, which is equivalent to - ! option
+20021102
+	* since last entry: added byte counters and udp/tcp port matching
 20020830
 	* updated the kernel files for 2.4.20-pre5 and 2.5.32
 	* last big cleanup of kernel and userspace code just finished
