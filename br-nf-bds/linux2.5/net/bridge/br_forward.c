@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_forward.c,v 1.3 2002/09/18 18:24:19 bdschuym Exp $
+ *	$Id: br_forward.c,v 1.4 2002/09/18 21:35:05 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -30,7 +30,7 @@ static inline int should_deliver(struct net_bridge_port *p, struct sk_buff *skb)
 	return 1;
 }
 
-int dev_queue_push_xmit(struct sk_buff *skb)
+int br_dev_queue_push_xmit(struct sk_buff *skb)
 {
 	skb_push(skb, ETH_HLEN);
 	dev_queue_xmit(skb);
@@ -41,7 +41,7 @@ int dev_queue_push_xmit(struct sk_buff *skb)
 int br_forward_finish(struct sk_buff *skb)
 {
 	NF_HOOK(PF_BRIDGE, NF_BR_POST_ROUTING, skb, NULL, skb->dev,
-			dev_queue_push_xmit);
+			br_dev_queue_push_xmit);
 
 	return 0;
 }
