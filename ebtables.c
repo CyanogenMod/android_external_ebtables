@@ -25,13 +25,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
-#include <netinet/ether.h>
 #include "include/ebtables_u.h"
 #include "include/ethernetdb.h"
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/wait.h>
 
 #define OPT_COMMANDS (replace->flags & OPT_COMMAND || replace->flags & OPT_ZERO)
 
@@ -51,7 +46,7 @@
 #define OPT_CNT_INCR	0x2000 /* This value is also defined in libebtc.c */
 #define OPT_CNT_DECR	0x4000 /* This value is also defined in libebtc.c */
 
-/* dDfault command line options. Do not mess around with the already
+/* Default command line options. Do not mess around with the already
  * assigned numbers unless you know what you are doing */
 static struct option ebt_original_options[] =
 {
@@ -103,15 +98,15 @@ static struct option *ebt_options = ebt_original_options;
 static struct ebt_u_replace *replace;
 
 /* The chosen table */
-static struct ebt_u_table *table = NULL;
+static struct ebt_u_table *table;
 
 /* The pointers in here are special:
- * The struct ebt_target * pointer is actually a struct ebt_u_target * pointer.
+ * The struct ebt_target pointer is actually a struct ebt_u_target pointer.
  * instead of making yet a few other structs, we just do a cast.
- * We need a struct ebt_u_target pointer because we know the address of the data
+ * I do not feel like using a union.
  * they point to won't change. We want to allow that the struct ebt_u_target.t
  * member can change.
- * Same holds for the struct ebt_match and struct ebt_watcher pointers */
+ * The same holds for the struct ebt_match and struct ebt_watcher pointers */
 static struct ebt_u_entry *new_entry;
 
 
@@ -247,8 +242,7 @@ static void list_em(struct ebt_u_entries *entries, struct ebt_cntchanges *cc)
 			else {
 				struct ethertypeent *ent;
 
-				ent = getethertypebynumber
-				      (ntohs(hlp->ethproto));
+				ent = getethertypebynumber(ntohs(hlp->ethproto));
 				if (!ent)
 					printf("0x%x ", ntohs(hlp->ethproto));
 				else
@@ -418,7 +412,7 @@ static void list_rules()
 		printf("Bridge table: %s\n", table->name);
 	if (replace->selected_chain != -1) {
 		for (i = 0; i < replace->selected_chain; i++) {
-			if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
+			if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
 				continue;
 			j = ebt_nr_to_chain(replace, i)->nentries;
 			while (j) {
@@ -440,9 +434,8 @@ static void list_rules()
 			}
 			cl = replace->udc;
 			for (i = 0; i < NF_BR_NUMHOOKS; i++)
-				if (replace->valid_hooks & (1 << i) &&
-				   strcmp(replace->hook_entry[i]->name,
-					  ebt_hooknames[i]))
+				if (replace->hook_entry[i] &&
+				   strcmp(replace->hook_entry[i]->name, ebt_hooknames[i]))
 					printf("ebtables -t %s -E %s %s\n",
 					   replace->name, ebt_hooknames[i],
 					   replace->hook_entry[i]->name);
@@ -450,34 +443,28 @@ static void list_rules()
 		i = 0;
 		while (1) {
 			if (i < NF_BR_NUMHOOKS) {
-				if (replace->valid_hooks & (1 << i)) {
+				if (replace->hook_entry[i]) {
 					list_em(replace->hook_entry[i], cc);
-					j = ebt_nr_to_chain(replace, i)->nentries;
-					while (j) {
-						if (cc->type != CNT_DEL)
-							j--;
-						cc = cc->next;
-					}
+					j = replace->hook_entry[i]->nentries;
 				}
-				i++;
-				continue;
 			} else {
 				if (!cl)
 					break;
 				list_em(cl->udc, cc);
-				j = ebt_nr_to_chain(replace, i)->nentries;
-				while (j) {
-					if (cc->type != CNT_DEL)
-						j--;
-					cc = cc->next;
-				}
+				j = cl->udc->nentries;
 				cl = cl->next;
 			}
+			while (j) {
+				if (cc->type != CNT_DEL)
+					j--;
+				cc = cc->next;
+			}
+			i++;
 		}
 	}
 }
 
-static int parse_delete_rule(const char *argv, int *rule_nr, int *rule_nr_end)
+static int parse_rule_range(const char *argv, int *rule_nr, int *rule_nr_end)
 {
 	char *colon = strchr(argv, ':'), *buffer;
 
@@ -513,7 +500,7 @@ static int parse_change_counters_rule(int argc, char **argv, int *rule_nr, int *
 	if (optind + 2 < argc && (argv[optind + 2][0] != '-' || (argv[optind + 2][1] >= '0' && argv[optind + 2][1] <= '9'))) {
 		if (optind + 3 != argc)
 			ebt_print_error2("No extra options allowed with -C start_nr[:end_nr] pcnt bcnt");
-		if (parse_delete_rule(argv[optind], rule_nr, rule_nr_end))
+		if (parse_rule_range(argv[optind], rule_nr, rule_nr_end))
 			ebt_print_error2("Something is wrong with the rule number specification '%s'", argv[optind]);
 		optind++;
 	}
@@ -538,8 +525,8 @@ static int parse_change_counters_rule(int argc, char **argv, int *rule_nr, int *
 		new_entry->cnt_surplus.bcnt = strtoull(argv[optind] + 1, &buffer, 10);
 	} else {
 		if (argv[optind + 1][0] == '-' || argv[optind + 1][0] == '+')
-			ebt_print_error2("If one counter is %screased, the other should be %screased too (perhaps put a '%s' before '%s')",
-			   argv[optind + 1][0] == '-' ? "de" : "in", argv[optind + 1][0] == '-' ? "de" : "in", argv[optind]);
+			ebt_print_error2("If one counter is %screased, the other should be %screased too (perhaps put a '%c' before '%s')",
+			   argv[optind + 1][0] == '-' ? "de" : "in", argv[optind + 1][0] == '-' ? "de" : "in", argv[optind + 1][0], argv[optind]);
 		new_entry->cnt_surplus.pcnt = strtoull(argv[optind], &buffer, 10);
 		optind++;
 		new_entry->cnt_surplus.bcnt = strtoull(argv[optind], &buffer, 10);
@@ -559,8 +546,7 @@ static int parse_iface(char *iface, char *option)
 
 	if ((c = strchr(iface, '+'))) {
 		if (*(c + 1) != '\0') {
-			ebt_print_error("Spurious characters after '+' "
-			                "wildcard for %s", option);
+			ebt_print_error("Spurious characters after '+' wildcard for '%s'", option);
 			return -1;
 		} else
 			*c = IF_WILDCARD;
@@ -580,8 +566,7 @@ int do_command(int argc, char *argv[], int exec_style,
 {
 	char *buffer;
 	int c, i;
-	/* Needed for the -Z option (we can have -Z <this> -L <that>) */
-	int zerochain = -1;
+	int zerochain = -1; /* Needed for the -Z option (we can have -Z <this> -L <that>) */
 	int policy = 0;
 	int rule_nr = 0;
 	int rule_nr_end = 0;
@@ -670,7 +655,7 @@ int do_command(int argc, char *argv[], int exec_style,
 					ebt_print_error2("No extra options allowed with -X");
 
 				if ((replace->selected_chain = ebt_get_chainnr(replace, argv[optind])) == -1)
-					ebt_print_error2("Chain %s doesn't exist", argv[optind]);
+					ebt_print_error2("Chain '%s' doesn't exist", argv[optind]);
 				ebt_delete_chain(replace);
 				if (ebt_errormsg[0] != '\0')
 					return -1;
@@ -679,25 +664,25 @@ int do_command(int argc, char *argv[], int exec_style,
 			}
 
 			if ((replace->selected_chain = ebt_get_chainnr(replace, optarg)) == -1)
-				ebt_print_error2("Chain %s doesn't exist", optarg);
+				ebt_print_error2("Chain '%s' doesn't exist", optarg);
 			if (c == 'E') {
 				if (optind >= argc)
 					ebt_print_error2("No new chain name specified");
 				if (optind < argc - 1)
 					ebt_print_error2("No extra options allowed with -E");
-				if (strlen(argv[optind])>=EBT_CHAIN_MAXNAMELEN)
-					ebt_print_error2("Chain name length can't exceed %d", EBT_CHAIN_MAXNAMELEN - 1);
+				if (strlen(argv[optind]) >= EBT_CHAIN_MAXNAMELEN)
+					ebt_print_error2("Chain name length can't exceed %d characters", EBT_CHAIN_MAXNAMELEN - 1);
 				if (ebt_get_chainnr(replace, argv[optind]) != -1)
-					ebt_print_error2("Chain %s already exists", argv[optind]);
+					ebt_print_error2("Chain '%s' already exists", argv[optind]);
 				if (ebt_find_target(argv[optind]))
-					ebt_print_error2("Target with name %s exists", argv[optind]);
+					ebt_print_error2("Target with name '%s' exists", argv[optind]);
 				ebt_rename_chain(replace, argv[optind]);
 				optind++;
 				break;
 			} else if (c == 'D' && optind < argc && (argv[optind][0] != '-' || (argv[optind][1] >= '0' && argv[optind][1] <= '9'))) {
 				if (optind != argc - 1)
 					ebt_print_error2("No extra options allowed with -D start_nr[:end_nr]");
-				if (parse_delete_rule(argv[optind], &rule_nr, &rule_nr_end))
+				if (parse_rule_range(argv[optind], &rule_nr, &rule_nr_end))
 					ebt_print_error2("Problem with the specified rule number(s) '%s'", argv[optind]);
 				optind++;
 			} else if (c == 'C') {
@@ -708,7 +693,7 @@ int do_command(int argc, char *argv[], int exec_style,
 					ebt_print_error2("No rulenr for -I specified");
 				rule_nr = strtol(argv[optind], &buffer, 10);
 				if (*buffer != '\0')
-					ebt_print_error2("Problem with the specified rule number");
+					ebt_print_error2("Problem with the specified rule number '%s'", argv[optind]);
 				optind++;
 			} else if (c == 'P') {
 handle_P:
@@ -718,9 +703,11 @@ handle_P:
 					if (!strcmp(argv[optind], ebt_standard_targets[i])) {
 						policy = -i -1;
 						if (policy == EBT_CONTINUE)
-							ebt_print_error2("Wrong policy: '%s'", argv[optind]);
+							ebt_print_error2("Wrong policy '%s'", argv[optind]);
 						break;
 					}
+				if (i == NUM_STANDARD_TARGETS)
+					ebt_print_error2("Unknown policy '%s'", argv[optind]);
 				optind++;
 			}
 			break;
@@ -733,17 +720,17 @@ print_zero:
 					ebt_print_error2("Command -Z only allowed together with command -L");
 				replace->flags |= OPT_ZERO;
 			} else {
-				replace->command = c;
 				if (replace->flags & OPT_COMMAND)
 					ebt_print_error2("Multiple commands are not allowed");
+				replace->command = c;
 				replace->flags |= OPT_COMMAND;
-				if (replace->flags & OPT_ZERO)
+				if (replace->flags & OPT_ZERO && c != 'L')
 					goto print_zero;
 			}
 
 #ifdef SILENT_DAEMON
 			if (c== 'L' && exec_style == EXEC_STYLE_DAEMON)
-				ebt_print_error2("-L not supported in daemon mode not supported in daemon mode");
+				ebt_print_error2("-L not supported in daemon mode");
 #endif
 
 			if (!(replace->flags & OPT_KERNELDATA))
@@ -751,7 +738,7 @@ print_zero:
 			i = -1;
 			if (optind < argc && argv[optind][0] != '-') {
 				if ((i = ebt_get_chainnr(replace, argv[optind])) == -1)
-					ebt_print_error2("Chain %s doesn't exist", argv[optind]);
+					ebt_print_error2("Chain '%s' doesn't exist", argv[optind]);
 				optind++;
 			}
 			if (i != -1) {
@@ -762,9 +749,9 @@ print_zero:
 			}
 			break;
 		case 'V': /* Version */
-			replace->command = 'V';
 			if (OPT_COMMANDS)
 				ebt_print_error2("Multiple commands are not allowed");
+			replace->command = 'V';
 			if (exec_style == EXEC_STYLE_DAEMON)
 				ebt_print_error2(PROGNAME" v"PROGVERSION" ("PROGDATE")\n");
 			PRINT_VERSION;
@@ -798,7 +785,7 @@ print_zero:
 					ebt_add_watcher(new_entry, w);
 				else {
 					if (!(t = ebt_find_target(argv[optind])))
-						ebt_print_error2("Extension %s not found", argv[optind]);
+						ebt_print_error2("Extension '%s' not found", argv[optind]);
 					if (replace->flags & OPT_JUMP)
 						ebt_print_error2("Sorry, you can only see help for one target extension at a time");
 					replace->flags |= OPT_JUMP;
@@ -808,11 +795,11 @@ print_zero:
 			}
 			break;
 		case 't': /* Table */
-			if (replace->command != 'h')
+			if (OPT_COMMANDS)
 				ebt_print_error2("Please put the -t option first");
 			ebt_check_option2(&(replace->flags), OPT_TABLE);
 			if (strlen(optarg) > EBT_TABLE_MAXNAMELEN - 1)
-				ebt_print_error2("Table name too long");
+				ebt_print_error2("Table name length cannot exceed %d characters", EBT_TABLE_MAXNAMELEN - 1);
 			strcpy(replace->name, optarg);
 			break;
 		case 'i': /* Input interface */
@@ -836,7 +823,8 @@ print_zero:
 					new_entry->invflags |= EBT_IIN;
 
 				if (strlen(optarg) >= IFNAMSIZ)
-					ebt_print_error2("Interface name length must be less than %d", IFNAMSIZ);
+big_iface_length:
+					ebt_print_error2("Interface name length cannot exceed %d characters", IFNAMSIZ - 1);
 				strcpy(new_entry->in, optarg);
 				if (parse_iface(new_entry->in, "-i"))
 					return -1;
@@ -849,7 +837,7 @@ print_zero:
 					new_entry->invflags |= EBT_ILOGICALIN;
 
 				if (strlen(optarg) >= IFNAMSIZ)
-					ebt_print_error2("Interface name length must be less than %d", IFNAMSIZ);
+					goto big_iface_length;
 				strcpy(new_entry->logical_in, optarg);
 				if (parse_iface(new_entry->logical_in, "--logical-in"))
 					return -1;
@@ -862,20 +850,20 @@ print_zero:
 					new_entry->invflags |= EBT_IOUT;
 
 				if (strlen(optarg) >= IFNAMSIZ)
-					ebt_print_error2("Interface name length must be less than %d", IFNAMSIZ);
+					goto big_iface_length;
 				strcpy(new_entry->out, optarg);
 				if (parse_iface(new_entry->out, "-o"))
 					return -1;
 				break;
 			} else if (c == 3) {
 				ebt_check_option2(&(replace->flags), OPT_LOGICALOUT);
-				if (replace->selected_chain < 2)
+				if (replace->selected_chain < 2 || replace->selected_chain == NF_BR_BROUTING)
 					ebt_print_error2("Use --logical-out only in OUTPUT, FORWARD and POSTROUTING chains");
 				if (ebt_check_inverse2(optarg))
 					new_entry->invflags |= EBT_ILOGICALOUT;
 
 				if (strlen(optarg) >= IFNAMSIZ)
-					ebt_print_error2("Interface name length must be less than %d", IFNAMSIZ);
+					goto big_iface_length;
 				strcpy(new_entry->logical_out, optarg);
 				if (parse_iface(new_entry->logical_out, "--logical-out"))
 					return -1;    
@@ -906,7 +894,7 @@ print_zero:
 					t = ebt_find_target(optarg);
 					/* -j standard not allowed either */
 					if (!t || t == (struct ebt_u_target *)new_entry->t)
-						ebt_print_error2("Illegal target name");
+						ebt_print_error2("Illegal target name '%s'", optarg);
 					new_entry->t = (struct ebt_entry_target *)t;
 					ebt_find_target(EBT_STANDARD_TARGET)->used = 0;
 					t->used = 1;
@@ -918,7 +906,7 @@ print_zero:
 					new_entry->invflags |= EBT_ISOURCE;
 
 				if (ebt_get_mac_and_mask(optarg, new_entry->sourcemac, new_entry->sourcemsk))
-					ebt_print_error2("Problem with specified source mac");
+					ebt_print_error2("Problem with specified source mac '%s'", optarg);
 				new_entry->bitmask |= EBT_SOURCEMAC;
 				break;
 			} else if (c == 'd') {
@@ -927,14 +915,14 @@ print_zero:
 					new_entry->invflags |= EBT_IDEST;
 
 				if (ebt_get_mac_and_mask(optarg, new_entry->destmac, new_entry->destmsk))
-					ebt_print_error2("Problem with specified destination mac");
+					ebt_print_error2("Problem with specified destination mac '%s'", optarg);
 				new_entry->bitmask |= EBT_DESTMAC;
 				break;
 			} else if (c == 'c') {
 				ebt_check_option2(&(replace->flags), OPT_COUNT);
 				if (ebt_check_inverse2(optarg))
 					ebt_print_error2("Unexpected '!' after -c");
-				if (optind >= argc)
+				if (optind >= argc || optarg[0] == '-' || argv[optind][0] == '-')
 					ebt_print_error2("Option -c needs 2 arguments");
 
 				new_entry->cnt.pcnt = strtoull(optarg, &buffer, 10);
@@ -963,7 +951,7 @@ print_zero:
 				}
 				ent = getethertypebyname(optarg);
 				if (!ent)
-					ebt_print_error2("Problem with the specified Ethernet protocol (%s), perhaps "_PATH_ETHERTYPES " is missing", optarg)
+					ebt_print_error2("Problem with the specified Ethernet protocol '%s', perhaps "_PATH_ETHERTYPES " is missing", optarg)
 				new_entry->ethproto = ent->e_ethertype;
 			} else
 				new_entry->ethproto = i;
@@ -1076,7 +1064,7 @@ print_zero:
 			if (!strcmp(optarg, "!"))
 				ebt_check_inverse2(optarg);
 			else
-				ebt_print_error2("Bad argument : %s", optarg);
+				ebt_print_error2("Bad argument : '%s'", optarg);
 			/* ebt_check_inverse() did optind++ */
 			optind--;
 			continue;
@@ -1106,7 +1094,7 @@ print_zero:
 
 			/* Is it a watcher option? */
 			for (w = ebt_watchers; w; w = w->next)
-				if (w->parse(c-w->option_offset, argv, argc, new_entry, &w->flags, &w->w))
+				if (w->parse(c - w->option_offset, argv, argc, new_entry, &w->flags, &w->w))
 					break;
 
 			if (w == NULL)
@@ -1118,8 +1106,9 @@ print_zero:
 				w->used = 1;
 			}
 check_extension:
-			if (replace->command != 'A' && replace->command != 'I' && replace->command != 'D')
-				ebt_print_error2("Extensions only for -A, -I and -D");
+			if (replace->command != 'A' && replace->command != 'I' &&
+			    replace->command != 'D' && replace->command != 'C')
+				ebt_print_error2("Extensions only for -A, -I, -D and -C");
 		}
 		ebt_invert = 0;
 	}
@@ -1251,7 +1240,7 @@ delete_the_rule:
 		ebt_deliver_table(replace);
 
 		if (replace->counterchanges)
-			ebt_deliver_counters(replace, exec_style);
+			ebt_deliver_counters(replace, EXEC_STYLE_PRG);
 	}
 	return 0;
 }
