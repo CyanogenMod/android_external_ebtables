@@ -30,11 +30,19 @@ static void final_check(const struct ebt_u_entry *entry,
 {
 }
 
+struct ebt_u_entries *nr_to_chain(int nr);
 static void print(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target)
 {
 	int verdict = ((struct ebt_standard_target *)target)->verdict;
 
+	if (verdict >= 0) {
+		struct ebt_u_entries *entries;
+
+		entries = nr_to_chain(verdict + NF_BR_NUMHOOKS);
+		printf("%s", entries->name);
+		return;
+	}
 	if (verdict == EBT_CONTINUE)
 		printf("CONTINUE ");
 	else if (verdict == EBT_ACCEPT)
