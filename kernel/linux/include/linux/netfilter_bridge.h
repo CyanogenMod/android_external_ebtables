@@ -28,8 +28,7 @@ enum nf_br_hook_priorities {
         NF_BR_PRI_FILTER_OTHER = 200,
         NF_BR_PRI_NAT_DST_BRIDGED = -300,
         NF_BR_PRI_NAT_DST_OTHER = 100,
-        NF_BR_PRI_NAT_SRC_BRIDGED = -100,
-        NF_BR_PRI_NAT_SRC_OTHER = 300,
+        NF_BR_PRI_NAT_SRC = 300,
         NF_BR_PRI_LAST = INT_MAX,
 };
 
