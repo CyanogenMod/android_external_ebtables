@@ -172,8 +172,9 @@ void deliver_table(struct ebt_u_replace *u_repl)
 	// give the data to the kernel
 	optlen = sizeof(struct ebt_replace) + repl->entries_size;
 	if (setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_ENTRIES, repl, optlen))
-		print_error("Couldn't update kernel chains, you probably need "
-		   "to insmod an extension");	
+		print_error("The kernel doesn't support a certain ebtables"
+		  " extension, consider recompiling your kernel or insmod"
+		  " the extension");	
 }
 
 // gets executed after deliver_table
@@ -379,9 +380,9 @@ void get_table(struct ebt_u_replace *u_repl)
 	optlen = sizeof(struct ebt_replace);
 	strcpy(repl.name, u_repl->name);
 	if (getsockopt(sockfd, IPPROTO_IP, EBT_SO_GET_INFO, &repl, &optlen))
-		print_error("A kernel module needed by your command is probably"
-		            " not loaded. Try insmod ebtables or"
-		            " insmod ebtable_%s", repl.name);
+		print_error("The %s table is not supported by the kernel,"
+		  " consider recompiling your kernel or try insmod ebt_%s",
+		  repl.name, repl.name);
 
 	if ( !(repl.entries = (char *) malloc(repl.entries_size)) )
 		print_memory();
