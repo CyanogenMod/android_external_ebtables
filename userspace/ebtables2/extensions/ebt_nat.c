@@ -37,7 +37,7 @@ static void print_help_s()
 	printf(
 	"snat options:\n"
 	" --to-src address       : MAC address to map source to\n"
-	" --snat-target target   : ACCEPT, DROP or CONTINUE\n");
+	" --snat-target target   : ACCEPT, DROP, RETURN or CONTINUE\n");
 }
 
 static void print_help_d()
@@ -45,7 +45,7 @@ static void print_help_d()
 	printf(
 	"dnat options:\n"
 	" --to-dst address       : MAC address to map destination to\n"
-	" --dnat-target target   : ACCEPT, DROP or CONTINUE\n");
+	" --dnat-target target   : ACCEPT, DROP, RETURN or CONTINUE\n");
 }
 
 static void init_s(struct ebt_entry_target *target)
@@ -81,7 +81,7 @@ static int parse_s(int c, char **argv, int argc,
 		check_option(flags, OPT_SNAT);
 		to_source_supplied = 1;
 		if (!(addr = ether_aton(optarg)))
-			print_error("Problem with specified to-source mac");
+			print_error("Problem with specified --to-source mac");
 		memcpy(natinfo->mac, addr, ETH_ALEN);
 		break;
 	case NAT_S_TARGET:
@@ -116,7 +116,7 @@ static int parse_d(int c, char **argv, int argc,
 		to_dest_supplied = 1;
 		if (!(addr = ether_aton(optarg)))
 			print_error("Problem with specified "
-			            "to-destination mac");
+			            "--to-destination mac");
 		memcpy(natinfo->mac, addr, ETH_ALEN);
 		break;
 	case NAT_D_TARGET:
@@ -139,6 +139,11 @@ static void final_check_s(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target, const char *name,
    unsigned int hook_mask, unsigned int time)
 {
+	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
+
+	if ((hook_mask & (1 << NF_BR_NUMHOOKS)) && natinfo->target == EBT_RETURN)
+		print_error("--snat-target RETURN not allowed on base chain");
+	hook_mask &= ~(1 << NF_BR_NUMHOOKS);
 	if (!(hook_mask & (1 << NF_BR_POST_ROUTING)) || strcmp(name, "nat"))
 		print_error("Wrong chain for snat");
 	if (time == 0 && to_source_supplied == 0)
@@ -149,6 +154,11 @@ static void final_check_d(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target, const char *name,
    unsigned int hook_mask, unsigned int time)
 {
+	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
+
+	if ((hook_mask & (1 << NF_BR_NUMHOOKS)) && natinfo->target == EBT_RETURN)
+		print_error("--dnat-target RETURN not allowed on base chain");
+	hook_mask &= ~(1 << NF_BR_NUMHOOKS);
 	if (((hook_mask & ~((1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_LOCAL_OUT))) ||
 	   strcmp(name, "nat")) &&
 	   ((hook_mask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute")))

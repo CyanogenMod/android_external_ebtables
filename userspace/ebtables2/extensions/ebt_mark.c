@@ -9,6 +9,8 @@
 
 extern char *standard_targets[NUM_STANDARD_TARGETS];
 
+int mark_supplied;
+
 #define MARK_TARGET '1'
 #define MARK_SETMARK '2'
 static struct option opts[] =
@@ -23,7 +25,7 @@ static void print_help()
 	printf(
 	"mark target options:\n"
 	" --set-mark value   : Set nfmark value\n"
-	" --mark-target target   : ACCEPT, DROP or CONTINUE\n");
+	" --mark-target target   : ACCEPT, DROP, RETURN or CONTINUE\n");
 }
 
 static void init(struct ebt_entry_target *target)
@@ -33,6 +35,7 @@ static void init(struct ebt_entry_target *target)
 
 	markinfo->target = EBT_ACCEPT;
 	markinfo->mark = 0;
+	mark_supplied = 0;
 	return;
 }
 
@@ -62,7 +65,8 @@ static int parse(int c, char **argv, int argc,
 		check_option(flags, OPT_MARK_SETMARK);
 		markinfo->mark = strtoul(optarg, &end, 0);
 		if (*end != '\0' || end == optarg)
-			print_error("Bad MARK value `%s'", optarg);
+			print_error("Bad MARK value '%s'", optarg);
+		mark_supplied = 1;
                 break;
 	 default:
 		return 0;
@@ -74,6 +78,13 @@ static void final_check(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target, const char *name,
    unsigned int hook_mask, unsigned int time)
 {
+	struct ebt_mark_t_info *markinfo =
+	   (struct ebt_mark_t_info *)target->data;
+
+	if (time == 0 && mark_supplied == 0)
+		print_error("No mark value supplied");
+	if ((hook_mask & (1 << NF_BR_NUMHOOKS)) && markinfo->target == EBT_RETURN)
+		print_error("--mark-target RETURN not allowed on base chain");
 }
 
 static void print(const struct ebt_u_entry *entry,
@@ -97,8 +108,8 @@ static int compare(const struct ebt_entry_target *t1,
 	struct ebt_mark_t_info *markinfo2 =
 	   (struct ebt_mark_t_info *)t2->data;
 
-	return (markinfo1->target == markinfo2->target && 
-	   markinfo1->mark == markinfo2->mark);
+	return markinfo1->target == markinfo2->target &&
+	   markinfo1->mark == markinfo2->mark;
 }
 
 static struct ebt_u_target mark_target =

@@ -12,7 +12,7 @@ extern char *standard_targets[NUM_STANDARD_TARGETS];
 #define REDIRECT_TARGET '1'
 static struct option opts[] =
 {
-	{ "redirect-target"    , required_argument, 0, REDIRECT_TARGET },
+	{ "redirect-target", required_argument, 0, REDIRECT_TARGET },
 	{ 0 }
 };
 
@@ -20,7 +20,7 @@ static void print_help()
 {
 	printf(
 	"redirect option:\n"
-	" --redirect-target target   : ACCEPT, DROP or CONTINUE\n");
+	" --redirect-target target   : ACCEPT, DROP, RETURN or CONTINUE\n");
 }
 
 static void init(struct ebt_entry_target *target)
@@ -62,6 +62,13 @@ static void final_check(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target, const char *name,
    unsigned int hook_mask, unsigned int time)
 {
+	struct ebt_redirect_info *redirectinfo =
+	   (struct ebt_redirect_info *)target->data;
+
+	if ((hook_mask & (1 << NF_BR_NUMHOOKS)) &&
+	   redirectinfo->target == EBT_RETURN)
+		print_error("--redirect-target RETURN not allowed on base chain");
+	hook_mask &= ~(1 << NF_BR_NUMHOOKS);
 	if ( ((hook_mask & ~(1 << NF_BR_PRE_ROUTING)) || strcmp(name, "nat")) &&
 	   ((hook_mask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute")) )
 		print_error("Wrong chain for redirect");
