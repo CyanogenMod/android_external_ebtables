@@ -161,8 +161,6 @@ struct ebt_replace
 	char *entries;
 };
 
-#ifdef __KERNEL__
-
 // [gs]etsockopt numbers
 #define EBT_BASE_CTL            128
 
@@ -175,6 +173,8 @@ struct ebt_replace
 #define EBT_SO_GET_INIT_INFO    (EBT_SO_GET_ENTRIES+1)
 #define EBT_SO_GET_INIT_ENTRIES (EBT_SO_GET_INIT_INFO+1)
 #define EBT_SO_GET_MAX          (EBT_SO_GET_INIT_ENTRIES+1)
+
+#ifdef __KERNEL__
 
 // return values for match() functions
 #define EBT_MATCH 0
