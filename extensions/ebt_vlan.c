@@ -228,6 +228,16 @@ final_check (const struct ebt_u_entry *entry,
 		print_error
 		    ("For use 802.1Q extension the protocol must be specified as 802_1Q");
 	/*
+	 * Check if specified vlan-encap=0x8100 (802.1Q Frame) 
+	 * when vlan-encap specified.
+	 */
+	if (GET_BITMASK (EBT_VLAN_ENCAP)) {
+		if (vlaninfo->encap==htons(0x8100))
+			print_error
+			    ("Encapsulated frame type can not be 802.1Q (0x8100)");
+	}
+
+	/*
 	 * Check if specified vlan-id=0 (priority-tagged frame condition) 
 	 * when vlan-prio was specified.
 	 */
