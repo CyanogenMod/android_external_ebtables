@@ -115,6 +115,7 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 	   cpu_number_map(smp_processor_id()) * table->private->nentries
 	counter_base = cb_base + table->private->hook_entry[hook]->counter_offset;
 	#define FWINV(bool,invflg) ((bool) ^ !!(point->invflags & invflg))
+	// base for chain jumps
 	base = (char *)chaininfo;
 	i = 0;
  	while (i < nentries) {
@@ -186,6 +187,7 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 letsreturn:
 				if (sp == 0) {
 					BUGPRINT("return target on base chain\n");
+					read_unlock_bh(&table->lock);
 					// No oopsen, hopefully
 					return NF_DROP;
 				}
@@ -313,7 +315,7 @@ find_target_lock(const char *name, int *error, struct semaphore *mutex)
 
 static inline int
 ebt_check_match(struct ebt_entry_match *m, struct ebt_entry *e,
-   const char *name, unsigned int hook, unsigned int *cnt)
+   const char *name, unsigned int hookmask, unsigned int *cnt)
 {
 	struct ebt_match *match;
 	int ret;
@@ -327,7 +329,7 @@ ebt_check_match(struct ebt_entry_match *m, struct ebt_entry *e,
 		__MOD_INC_USE_COUNT(match->me);
 	up(&ebt_mutex);
 	if (match->check &&
-	   match->check(name, hook, e, m->data, m->match_size) != 0) {
+	   match->check(name, hookmask, e, m->data, m->match_size) != 0) {
 		BUGPRINT("match->check failed\n");
 		if (match->me)
 			__MOD_DEC_USE_COUNT(match->me);
@@ -339,7 +341,7 @@ ebt_check_match(struct ebt_entry_match *m, struct ebt_entry *e,
 
 static inline int
 ebt_check_watcher(struct ebt_entry_watcher *w, struct ebt_entry *e,
-   const char *name, unsigned int hook, unsigned int *cnt)
+   const char *name, unsigned int hookmask, unsigned int *cnt)
 {
 	struct ebt_watcher *watcher;
 	int ret;
@@ -353,7 +355,7 @@ ebt_check_watcher(struct ebt_entry_watcher *w, struct ebt_entry *e,
 		__MOD_INC_USE_COUNT(watcher->me);
 	up(&ebt_mutex);
 	if (watcher->check &&
-	   watcher->check(name, hook, e, w->data, w->watcher_size) != 0) {
+	   watcher->check(name, hookmask, e, w->data, w->watcher_size) != 0) {
 		BUGPRINT("watcher->check failed\n");
 		if (watcher->me)
 			__MOD_DEC_USE_COUNT(watcher->me);
@@ -548,13 +550,13 @@ ebt_check_entry(struct ebt_entry *e, struct ebt_table_info *newinfo,
 	if (i < NF_BR_NUMHOOKS)
 		hookmask = (1 << hook);
 	else {
-		for (i = 0; i < udc_cnt; i++) {
-			if ((char *)(cl_s[i].cs.chaininfo) < (char *)e)
-				hook = i;
-			else
+		for (i = 0; i < udc_cnt; i++)
+			if ((char *)(cl_s[i].cs.chaininfo) > (char *)e)
 				break;
-		}
-		hookmask = cl_s[i].hookmask;
+		if (i == 0)
+			hookmask = (1 << hook);
+		else
+			hookmask = cl_s[i - 1].hookmask;
 	}
 	i = 0;
 	ret = EBT_MATCH_ITERATE(e, ebt_check_match, e, name, hookmask, &i);
@@ -961,6 +963,8 @@ static int do_replace(void *user, unsigned int len)
 	vfree(table->entries);
 	if (table->counters)
 		vfree(table->counters);
+	if (table->chainstack)
+		vfree(table->chainstack);
 	vfree(table);
 
 	if (counterstmp)
@@ -1159,6 +1163,8 @@ void ebt_unregister_table(struct ebt_table *table)
 		vfree(table->private->counters);
 	if (table->private->entries)
 		vfree(table->private->entries);
+	if (table->private->chainstack)
+		vfree(table->private->chainstack);
 	vfree(table->private);
 	MOD_DEC_USE_COUNT;
 }
