@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <linux/netfilter_bridge/ebtables.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_arp.h>
@@ -178,7 +177,7 @@ static int parse(int c, char **argv, int argc,
 }
 
 static void final_check(const struct ebt_u_entry *entry,
-const struct ebt_entry_match *match, const char *name, unsigned int hook)
+const struct ebt_entry_match *match, const char *name, unsigned int hook_mask)
 {
 	if (entry->bitmask & EBT_NOPROTO || entry->bitmask & EBT_802_3 ||
 	   (entry->ethproto != ETH_P_ARP && entry->ethproto != ETH_P_RARP))
@@ -195,40 +194,40 @@ static void print(const struct ebt_u_entry *entry,
 	int i;
 
 	if (arpinfo->bitmask & EBT_ARP_OPCODE) {
-		printf("arp opcode: ");
+		printf("--arp-op ");
 		if (arpinfo->invflags & EBT_ARP_OPCODE)
 			printf("! ");
 		printf("%d ", ntohs(arpinfo->opcode));
 	}
 	if (arpinfo->bitmask & EBT_ARP_HTYPE) {
-		printf("arp htype: ");
+		printf("--arp-htype ");
 		if (arpinfo->invflags & EBT_ARP_HTYPE)
 			printf("! ");
 		printf("%d ", ntohs(arpinfo->htype));
 	}
 	if (arpinfo->bitmask & EBT_ARP_PTYPE) {
-		printf("arp ptype: ");
+		printf("--arp-ptype ");
 		if (arpinfo->invflags & EBT_ARP_PTYPE)
 			printf("! ");
 		printf("0x%x ", ntohs(arpinfo->ptype));
 	}
 	if (arpinfo->bitmask & EBT_ARP_SRC_IP) {
-		printf("arp src IP ");
+		printf("--arp-ip-src ");
 		if (arpinfo->invflags & EBT_ARP_SRC_IP)
 			printf("! ");
 		for (i = 0; i < 4; i++)
 			printf("%d%s", ((unsigned char *)&arpinfo->saddr)[i],
 			   (i == 3) ? "" : ".");
-		printf("%s, ", mask_to_dotted(arpinfo->smsk));
+		printf("%s ", mask_to_dotted(arpinfo->smsk));
 	}
 	if (arpinfo->bitmask & EBT_ARP_DST_IP) {
-		printf("arp dst IP ");
+		printf("--arp-ip-dst ");
 		if (arpinfo->invflags & EBT_ARP_DST_IP)
 			printf("! ");
 		for (i = 0; i < 4; i++)
 			printf("%d%s", ((unsigned char *)&arpinfo->daddr)[i],
 			   (i == 3) ? "" : ".");
-		printf("%s, ", mask_to_dotted(arpinfo->dmsk));
+		printf("%s ", mask_to_dotted(arpinfo->dmsk));
 	}
 }
 

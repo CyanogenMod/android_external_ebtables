@@ -1,6 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/socket.h>
-#include <linux/netfilter_bridge/ebtables.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 
@@ -26,21 +26,25 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 }
 
 static void final_check(const struct ebt_u_entry *entry,
-   const struct ebt_entry_target *target, const char *name, unsigned int hook)
+   const struct ebt_entry_target *target, const char *name, unsigned int hook_mask)
 {
 }
 
 static void print(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target)
 {
-	__u8 verdict = ((struct ebt_standard_target *)target)->verdict;
+	int verdict = ((struct ebt_standard_target *)target)->verdict;
 
 	if (verdict == EBT_CONTINUE)
-		printf("Continue ");
-	else if (verdict ==  EBT_ACCEPT)
-		printf("Accept ");
+		printf("CONTINUE ");
+	else if (verdict == EBT_ACCEPT)
+		printf("ACCEPT ");
+	else if (verdict == EBT_DROP)
+		printf("DROP ");
+	else if (verdict == EBT_RETURN)
+		printf("RETURN ");
 	else
-		printf("Drop ");
+		print_error("BUG: Bad standard target"); // this is a bug
 }
 
 static int compare(const struct ebt_entry_target *t1,

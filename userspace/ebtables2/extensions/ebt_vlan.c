@@ -19,7 +19,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
-#include <linux/netfilter_bridge/ebtables.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_vlan.h>
@@ -194,7 +193,7 @@ parse (int c, char **argv, int argc,
 static void
 final_check (const struct ebt_u_entry *entry,
 	     const struct ebt_entry_match *match,
-	     const char *name, unsigned int hook)
+	     const char *name, unsigned int hook_mask)
 {
 	/*
 	 * Is any proto supplied there? Or specified proto isn't 802.1Q?
@@ -218,7 +217,7 @@ print (const struct ebt_u_entry *entry,
 	 * Print VLAN ID if they are specified 
 	 */
 	if (vlaninfo->bitmask & EBT_VLAN_ID) {
-		printf ("vlan id: %s%d, ",
+		printf ("--vlan-id %s %d, ",
 			vlaninfo->invflags & EBT_VLAN_ID ? "!" : "",
 			vlaninfo->id);
 	}
@@ -226,7 +225,7 @@ print (const struct ebt_u_entry *entry,
 	 * Print VLAN priority if they are specified 
 	 */
 	if (vlaninfo->bitmask & EBT_VLAN_PRIO) {
-		printf ("vlan prio: %s%d, ",
+		printf ("--vlan-prio %s %d, ",
 			vlaninfo->invflags & EBT_VLAN_PRIO ? "!" : "",
 			vlaninfo->prio);
 	}
@@ -234,7 +233,7 @@ print (const struct ebt_u_entry *entry,
 	 * Print VLAN encapsulated protocol if they are specified 
 	 */
 	if (vlaninfo->bitmask & EBT_VLAN_ENCAP) {
-		printf ("vlan encap: %s%2.4X, ",
+		printf ("--vlan-encap %s %2.4X, ",
 			vlaninfo->invflags & EBT_VLAN_ENCAP ? "!" : "",
 			ntohs (vlaninfo->encap));
 	}

@@ -3,7 +3,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
-#include <linux/netfilter_bridge/ebtables.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_ip.h>
@@ -219,7 +218,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 }
 
 static void final_check(const struct ebt_u_entry *entry,
-   const struct ebt_entry_match *match, const char *name, unsigned int hook)
+   const struct ebt_entry_match *match, const char *name, unsigned int hook_mask)
 {
 	if (entry->bitmask & EBT_NOPROTO || entry->bitmask & EBT_802_3 ||
 	   entry->ethproto != ETH_P_IP)
@@ -234,34 +233,34 @@ static void print(const struct ebt_u_entry *entry,
 	int j;
 
 	if (ipinfo->bitmask & EBT_IP_SOURCE) {
-		printf("source ip: ");
+		printf("--ip-src ");
 		if (ipinfo->invflags & EBT_IP_SOURCE)
 			printf("! ");
 		for (j = 0; j < 4; j++)
 			printf("%d%s",((unsigned char *)&ipinfo->saddr)[j],
 			   (j == 3) ? "" : ".");
-		printf("%s, ", mask_to_dotted(ipinfo->smsk));
+		printf("%s ", mask_to_dotted(ipinfo->smsk));
 	}
 	if (ipinfo->bitmask & EBT_IP_DEST) {
-		printf("dest ip: ");
+		printf("--ip-dst ");
 		if (ipinfo->invflags & EBT_IP_DEST)
 			printf("! ");
 		for (j = 0; j < 4; j++)
 			printf("%d%s", ((unsigned char *)&ipinfo->daddr)[j],
 			   (j == 3) ? "" : ".");
-		printf("%s, ", mask_to_dotted(ipinfo->dmsk));
+		printf("%s ", mask_to_dotted(ipinfo->dmsk));
 	}
 	if (ipinfo->bitmask & EBT_IP_TOS) {
-		printf("ip TOS: ");
+		printf("--ip-tos ");
 		if (ipinfo->invflags & EBT_IP_TOS)
 			printf("! ");
-		printf("0x%02X, ", ipinfo->tos);
+		printf("0x%02X ", ipinfo->tos);
 	}
 	if (ipinfo->bitmask & EBT_IP_PROTO) {
-		printf("ip proto: ");
+		printf("--ip-proto ");
 		if (ipinfo->invflags & EBT_IP_DEST)
 			printf("! ");
-		printf("%d, ", ipinfo->protocol);
+		printf("%d ", ipinfo->protocol);
 	}
 }
 

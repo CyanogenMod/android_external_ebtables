@@ -1,3 +1,12 @@
+20020621
+	* some unlogged changes (due to lazyness)
+	* change the output for -L to make it look like it would look when
+	  the user inputs the command.
+	* try to autoload modules
+	* some minor bugfixes
+	* add user defined chains support (without new commands yet,
+	  deliberately)
+	* comparing rules didn't take the logical devices into account
 20020520
 	* update help for -s and -d
 	* add VLAN in ethertypes
