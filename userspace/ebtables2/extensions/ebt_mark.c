@@ -32,7 +32,6 @@ static void init(struct ebt_entry_target *target)
 	markinfo->target = EBT_ACCEPT;
 	markinfo->mark = 0;
 	mark_supplied = 0;
-	target->version = VERSIONIZE(1,0);
 }
 
 #define OPT_MARK_TARGET   0x01

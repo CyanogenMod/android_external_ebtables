@@ -25,7 +25,7 @@ static void init(struct ebt_entry_target *target)
 	   (struct ebt_redirect_info *)target->data;
 
 	redirectinfo->target = EBT_ACCEPT;
-	target->version = VERSIONIZE(1,0);
+	return;
 }
 
 #define OPT_REDIRECT_TARGET  0x01
