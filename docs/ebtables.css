@@ -9,17 +9,17 @@ PRE { FONT: 14pt Courier, monospace;
  color: black;
  }
 
-:link { color: #ccff66 }  
-:visited { color: #9933ff } 
+:link { color: #993399 }  
+:visited { color: #6633cc } 
 :active { color: #0000FF;  } 
-:hover { color: #003366; }
+:hover { color: #3300ff;  }
 
 A {
  text-decoration: none;
 }
 
 .navbar { FONT: 12pt Courier, monospace; font-weight: bolder;  
-background-color: #ffcc99 }
+ }
 
 .statement { TEXT-DECORATION: underline }
 .section { FONT: bold 22pt Times }
@@ -44,7 +44,7 @@ background-color: #ffcc99 }
 DIV {
  border: solid;
  border-width: thin;
- background-color: #ffff99;
+ background-color: #ffcc99
 }
 
 BODY {
@@ -61,7 +61,7 @@ DT {
  margin-bottom: 5pt;
 }
 DD {
- color: #003399;
+ color: black;
  font-size: 12pt;
  font-style: normal;
  font-family: Helvetica;

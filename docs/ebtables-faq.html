@@ -165,7 +165,7 @@
           to do with the frame. So, if a BROUTING chain rule decided the frame should be routed, then
           the ebtables PREROUTING chain won't see it. See the
           <A href="http://users.pandora.be/bart.de.schuymer/ebtables/br_fw_ia/br_fw_ia.html">
-          br_fw_ia</A> page for the details.</DD>
+          "ebtables/iptables interaction on a Linux-based bridge"</A> page for the details.</DD>
           <DT>I'm using a 2.5.x or higher kernel and my iptables rules won't match on the bridge port
           devices, what's wrong?</DT>
           <DD>
@@ -177,7 +177,7 @@
           corresponding userspace module is available in the iptables userspace tool. See the iptables
           man pages and
 <PRE>
-#iptables -m physdev -h
+# iptables -m physdev -h
 </PRE>
           The kernel module has to be compiled in the kernel, the option ``physdev match support'' will
           appear under the ``IP netfilter configuration'' when the bridge is already enabled in the
@@ -189,14 +189,14 @@
         The most recent code is available at the <A href="http://sourceforge.net/projects/ebtables">
         sourceforge ebtables</A> CVS repository. To get a copy of the repository, do the following:
 <PRE>
-#cvs -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/ebtables login
-#cvs -z3 -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/ebtables co ebtables2
+# cvs -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/ebtables login
+# cvs -z3 -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/ebtables co ebtables2
 </PRE>
         The current userspace code is in the ebtables2/userspace/ebtables2 directory. To compile the
         CVS userspace tool you'll need to do the following:
 <PRE>
-#make NONSTANDARD=y KERNEL_INCLUDES=/usr/src/linux/include/
-#make install
+# make NONSTANDARD=y KERNEL_INCLUDES=/usr/src/linux/include/
+# make install
 </PRE>
         Obviously you'll need to use the right kernel directory. Why is compiling the CVS different?
         Because the kernel include files are not maintained in the userspace directory of the CVS.
