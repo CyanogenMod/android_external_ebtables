@@ -1,3 +1,14 @@
+20030601
+	* added --Lmac2
+	* <csv_at_bluetail.com> Chris Vitale: basic 802.3/802.2 filtering
+	  (experimental, kernel files are in the CVS)
+
+20030503
+	* added negative rule counter support
+	* bugfix: bcnt was not updated correctly
+	* <blancher_at_cartel-securite.fr> Cedric Blancher: add ARP MAC
+	  matching support
+	* added pkttype match
 20030402
 	* fixed check bug in ebt_ip.c (report from
 	  joe_judge_at_guardium.com).
