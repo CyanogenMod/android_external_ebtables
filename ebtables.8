@@ -490,7 +490,7 @@ knows what to do.
 The default target is ACCEPT. Making it CONTINUE could let you use
 multiple target extensions on the same frame. Making it DROP doesn't
 make sense, but you could do that too. RETURN is also allowed. Note
-that using RETURN in a base chain will result in the CONTINUE behaviour.
+that using RETURN in a base chain is not allowed.
 .TP
 .B dnat
 The
@@ -516,7 +516,7 @@ The default target is ACCEPT. Making it CONTINUE could let you use
 multiple target extensions on the same frame. Making it DROP only makes
 sense in the BROUTING chain but using the redirect target is more logical
 there. RETURN is also allowed. Note
-that using RETURN in a base chain will result in the CONTINUE behaviour.
+that using RETURN in a base chain is not allowed.
 .TP
 .B redirect
 The
@@ -535,7 +535,7 @@ knows what to do.
 The default target is ACCEPT. Making it CONTINUE could let you use 
 multiple target extensions on the same frame. Making it DROP in the
 BROUTING chain will let the frames be routed. RETURN is also allowed. Note
-that using RETURN in a base chain will result in the CONTINUE behaviour.
+that using RETURN in a base chain is not allowed.
 .TP
 .B mark
 The mark target can be used in every chain of every table. It is possible
