@@ -5,6 +5,18 @@ config BRIDGE_NF_EBTABLES
 	tristate "Bridge: ebtables"
 	depends on NETFILTER && BRIDGE
 
+config BRIDGE_EBT_BROUTE
+	tristate "ebt: broute table support"
+	depends on BRIDGE_NF_EBTABLES
+	help
+	  The ebtables broute table is used to define rules that decide between
+	  bridging and routing frames, giving Linux the functionality of a
+	  brouter. See the man page for ebtables(8) and examples on the ebtables
+	  website.
+
+	  If you want to compile it as a module, say M here and read
+	  <file:Documentation/modules.txt>.  If unsure, say `N'.
+
 config BRIDGE_EBT_T_FILTER
 	tristate "ebt: filter table support"
 	depends on BRIDGE_NF_EBTABLES
@@ -27,34 +39,11 @@ config BRIDGE_EBT_T_NAT
 	  If you want to compile it as a module, say M here and read
 	  <file:Documentation/modules.txt>.  If unsure, say `N'.
 
-config BRIDGE_EBT_BROUTE
-	tristate "ebt: broute table support"
+config BRIDGE_EBT_802_3
+	tristate "ebt: 802.3 filter support"
 	depends on BRIDGE_NF_EBTABLES
 	help
-	  The ebtables broute table is used to define rules that decide between
-	  bridging and routing frames, giving Linux the functionality of a
-	  brouter. See the man page for ebtables(8) and examples on the ebtables
-	  website.
-
-	  If you want to compile it as a module, say M here and read
-	  <file:Documentation/modules.txt>.  If unsure, say `N'.
-
-config BRIDGE_EBT_LOG
-	tristate "ebt: log support"
-	depends on BRIDGE_NF_EBTABLES
-	help
-	  This option adds the log target, that you can use in any rule in
-	  any ebtables table. It records the frame header to the syslog.
-
-	  If you want to compile it as a module, say M here and read
-	  <file:Documentation/modules.txt>.  If unsure, say `N'.
-
-config BRIDGE_EBT_IP
-	tristate "ebt: IP filter support"
-	depends on BRIDGE_NF_EBTABLES
-	help
-	  This option adds the IP match, which allows basic IP header field
-	  filtering.
+	  This option adds matching support for 802.3 Ethernet frames.
 
 	  If you want to compile it as a module, say M here and read
 	  <file:Documentation/modules.txt>.  If unsure, say `N'.
@@ -69,12 +58,22 @@ config BRIDGE_EBT_ARP
 	  If you want to compile it as a module, say M here and read
 	  <file:Documentation/modules.txt>.  If unsure, say `N'.
 
-config BRIDGE_EBT_VLAN
-	tristate "ebt: 802.1Q VLAN filter support"
+config BRIDGE_EBT_IP
+	tristate "ebt: IP filter support"
 	depends on BRIDGE_NF_EBTABLES
 	help
-	  This option adds the 802.1Q vlan match, which allows the filtering of
-	  802.1Q vlan fields.
+	  This option adds the IP match, which allows basic IP header field
+	  filtering.
+
+	  If you want to compile it as a module, say M here and read
+	  <file:Documentation/modules.txt>.  If unsure, say `N'.
+
+config BRIDGE_EBT_LOG
+	tristate "ebt: log support"
+	depends on BRIDGE_NF_EBTABLES
+	help
+	  This option adds the log target, that you can use in any rule in
+	  any ebtables table. It records the frame header to the syslog.
 
 	  If you want to compile it as a module, say M here and read
 	  <file:Documentation/modules.txt>.  If unsure, say `N'.
@@ -103,12 +102,12 @@ config BRIDGE_EBT_PKTTYPE
 	  If you want to compile it as a module, say M here and read
 	  <file:Documentation/modules.txt>.  If unsure, say `N'.
 
-config BRIDGE_EBT_SNAT
-	tristate "ebt: snat target support"
+config BRIDGE_EBT_VLAN
+	tristate "ebt: 802.1Q VLAN filter support"
 	depends on BRIDGE_NF_EBTABLES
 	help
-	  This option adds the MAC SNAT target, which allows altering the MAC
-	  source address of frames.
+	  This option adds the 802.1Q vlan match, which allows the filtering of
+	  802.1Q vlan fields.
 
 	  If you want to compile it as a module, say M here and read
 	  <file:Documentation/modules.txt>.  If unsure, say `N'.
@@ -119,16 +118,6 @@ config BRIDGE_EBT_DNAT
 	help
 	  This option adds the MAC DNAT target, which allows altering the MAC
 	  destination address of frames.
-
-	  If you want to compile it as a module, say M here and read
-	  <file:Documentation/modules.txt>.  If unsure, say `N'.
-
-config BRIDGE_EBT_REDIRECT
-	tristate "ebt: redirect target support"
-	depends on BRIDGE_NF_EBTABLES
-	help
-	  This option adds the MAC redirect target, which allows altering the MAC
-	  destination address of a frame to that of the device it arrived on.
 
 	  If you want to compile it as a module, say M here and read
 	  <file:Documentation/modules.txt>.  If unsure, say `N'.
@@ -145,3 +134,22 @@ config BRIDGE_EBT_MARK_T
 	  If you want to compile it as a module, say M here and read
 	  <file:Documentation/modules.txt>.  If unsure, say `N'.
 
+config BRIDGE_EBT_REDIRECT
+	tristate "ebt: redirect target support"
+	depends on BRIDGE_NF_EBTABLES
+	help
+	  This option adds the MAC redirect target, which allows altering the MAC
+	  destination address of a frame to that of the device it arrived on.
+
+	  If you want to compile it as a module, say M here and read
+	  <file:Documentation/modules.txt>.  If unsure, say `N'.
+
+config BRIDGE_EBT_SNAT
+	tristate "ebt: snat target support"
+	depends on BRIDGE_NF_EBTABLES
+	help
+	  This option adds the MAC SNAT target, which allows altering the MAC
+	  source address of frames.
+
+	  If you want to compile it as a module, say M here and read
+	  <file:Documentation/modules.txt>.  If unsure, say `N'.
