@@ -35,6 +35,7 @@
 #include <string.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
+#include "../include/ethernetdb.h"
 #include <linux/netfilter_bridge/ebt_vlan.h>
 
 #define GET_BITMASK(_MASK_) vlaninfo->bitmask & _MASK_
@@ -189,17 +190,22 @@ parse (int c,
 		if (*end == '\0' && (encap < ETH_ZLEN || encap > 0xFFFF))
 			print_error
 			    ("Specified encapsulated frame type is out of range");
-		if (*end != '\0')
-			if (name_to_number (argv[optind - 1], &encap) == -1)
+		if (*end != '\0') {
+			struct ethertypeent *ent;
+
+			ent = getethertypebyname(argv[optind - 1]);
+			if (!ent)
 				print_error
 				    ("Problem with the specified encapsulated"
 				     "protocol");
+			encap = ent->e_ethertype;
+		}
 		/*
 		 * Set up parameter value (network notation)
 		 */
 		vlaninfo->encap = htons (encap);
 		/*
-		 * Set up parameter presence flag 
+		 * Set up parameter presence flag
 		 */
 		SET_BITMASK (EBT_VLAN_ENCAP);
 		break;
@@ -258,7 +264,6 @@ print (const struct ebt_u_entry *entry,
 	struct ebt_vlan_info *vlaninfo =
 	    (struct ebt_vlan_info *) match->data;
 
-	char ethertype_name[21];
 	/*
 	 * Print VLAN ID if they are specified 
 	 */
@@ -279,15 +284,15 @@ print (const struct ebt_u_entry *entry,
 	 * Print encapsulated frame type if they are specified 
 	 */
 	if (GET_BITMASK (EBT_VLAN_ENCAP)) {
+		struct ethertypeent *ent;
+
 		printf ("--%s %s",
 			opts[VLAN_ENCAP].name, INV_FLAG (EBT_VLAN_ENCAP));
-		bzero (ethertype_name, 21);
-		if (!number_to_name
-		    (ntohs (vlaninfo->encap), ethertype_name)) {
-			printf ("%s ", ethertype_name);
-		} else {
+		ent = getethertypebynumber(ntohs(vlaninfo->encap));
+		if (!ent)
 			printf ("%2.4X ", ntohs (vlaninfo->encap));
-		}
+		else
+			printf ("%s ", ent->e_name);
 	}
 }
 
