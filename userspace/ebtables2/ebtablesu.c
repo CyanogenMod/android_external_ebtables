@@ -13,18 +13,20 @@ int main(int argc, char *argv[])
 	int i, writefd, len = 0;
 
 	if ((writefd = open(EBTD_PIPE, O_WRONLY, 0)) == -1) {
-		perror("open");
+		fprintf(stderr, "Could not open the pipe, perhaps ebtablesd is "
+		        "not running or you don't have write permission (try "
+		        "running as root).\n");
 		return -1;
 	}
 
 	if (argc > EBTD_ARGC_MAX) {
-		printf("ebtablesd accepts at most %d arguments, %d arguments "
-		       "were specified. If you need this many arguments, "
-		       "recompile this tool with a higher value for "
-		       "EBTD_ARGC_MAX.\n", EBTD_ARGC_MAX - 1, argc - 1);
+		fprintf(stderr, "ebtablesd accepts at most %d arguments, %d "
+		        "arguments were specified. If you need this many "
+		        "arguments, recompile this tool with a higher value for"
+		        " EBTD_ARGC_MAX.\n", EBTD_ARGC_MAX - 1, argc - 1);
 		return -1;
 	} else if (argc == 1) {
-		printf("At least one argument is needed.\n");
+		fprintf(stderr, "At least one argument is needed.\n");
 		return -1;
 	}
 
@@ -33,16 +35,16 @@ int main(int argc, char *argv[])
 	/* Don't forget '\0' */
 	len += argc;
 	if (len > EBTD_CMDLINE_MAXLN) {
-		printf("ebtablesd has a maximum command line argument length "
-		       "of %d, an argument length of %d was received. If a "
-		       "smaller length is unfeasible, recompile this tool "
+		fprintf(stderr, "ebtablesd has a maximum command line argument "
+		       "length of %d, an argument length of %d was received. "
+		       "If a smaller length is unfeasible, recompile this tool "
 		       "with a higher value for EBTD_CMDLINE_MAXLN.\n",
 		       EBTD_CMDLINE_MAXLN, len);
 		return -1;
 	}
 
 	if (!(arguments = (char *)malloc(len))) {
-		printf("ebtablesu: out of memory.\n");
+		fprintf(stderr, "ebtablesu: out of memory.\n");
 		return -1;
 	}
 
