@@ -722,7 +722,7 @@ int ebt_check_rule_exists(struct ebt_u_replace *replace,
 		if (!t->compare(t->t, u_e->t))
 			continue;
 		return i;
-letscontinue:
+letscontinue:;
 	}
 	return -1;
 }
