@@ -217,7 +217,7 @@ print (const struct ebt_u_entry *entry,
 	 * Print VLAN ID if they are specified 
 	 */
 	if (vlaninfo->bitmask & EBT_VLAN_ID) {
-		printf ("--vlan-id %s %d, ",
+		printf ("--vlan-id %s %d ",
 			vlaninfo->invflags & EBT_VLAN_ID ? "!" : "",
 			vlaninfo->id);
 	}
@@ -225,7 +225,7 @@ print (const struct ebt_u_entry *entry,
 	 * Print VLAN priority if they are specified 
 	 */
 	if (vlaninfo->bitmask & EBT_VLAN_PRIO) {
-		printf ("--vlan-prio %s %d, ",
+		printf ("--vlan-prio %s %d ",
 			vlaninfo->invflags & EBT_VLAN_PRIO ? "!" : "",
 			vlaninfo->prio);
 	}
@@ -233,7 +233,7 @@ print (const struct ebt_u_entry *entry,
 	 * Print VLAN encapsulated protocol if they are specified 
 	 */
 	if (vlaninfo->bitmask & EBT_VLAN_ENCAP) {
-		printf ("--vlan-encap %s %2.4X, ",
+		printf ("--vlan-encap %s %2.4X ",
 			vlaninfo->invflags & EBT_VLAN_ENCAP ? "!" : "",
 			ntohs (vlaninfo->encap));
 	}
