@@ -14,7 +14,7 @@
 		<H1>Bridge-netfilter Frequently (and less frequently) Asked Questions</H1>
 	</DIV>
 	<A name="top"></A>
-	<P>Last modified: December 30, 2003</P>
+	<P>Last modified: January 02, 2004</P>
 	<H2>Questions</H2>
 	<OL>
 		<LI class="question"><A href="#quiz0">Connection tracking</A></LI>
@@ -122,8 +122,28 @@ bridge?
 				</DT>
 				<DD>
 Yes. Kernel versions 2.6.0-test7 and above have this
-functionality. Patch ebtables-brnf-3-vs-2.4.22 and later patches
-(for 2.4) have this functionality too.
+functionality. For disabling this, see the above question.
+				</DD>
+				<DT>
+How do I let vlan-tagged traffic go through a vlan bridge port
+and the other traffic through a non-vlan bridge port?
+				</DT>
+				<DD>
+Suppose eth0 and eth0.15 are ports of br0. Without countermeasures
+all traffic, including traffic vlan-tagged with tag 15, entering
+the physical device eth0 will go through the bridge port eth0. To
+make the 15-tagged traffic go through the eth0.15 bridge port, use
+the following ebtables rule:
+<PRE>
+ebtables -t broute -A BROUTING -i eth0 --vlan-id 15 -j DROP
+</PRE>
+With the above rule, 15-tagged traffic will enter the bridge on
+the physical device eth0, will then be brouted and enter the
+bridge port eth0.15 after which it is bridged. The packet thus
+enters the BROUTING chain twice, the first time with input
+device eth0 and the second time with input device eth0.15. The
+other chains are only traversed once. All other traffic will
+be bridged with input device eth0.
 				</DD>
 				<DT>
 Do {ip,arp}tables see encapsulated 802.2/802.3 IP/ARP traffic?
