@@ -12,7 +12,10 @@ static int mark_supplied;
 static struct option opts[] =
 {
 	{ "mark-target" , required_argument, 0, MARK_TARGET },
+	/* an oldtime messup, we should have always used the scheme
+	 * <extension-name>-<option> */
 	{ "set-mark"    , required_argument, 0, MARK_SETMARK },
+	{ "mark-set"    , required_argument, 0, MARK_SETMARK },
 	{ 0 }
 };
 
@@ -20,7 +23,7 @@ static void print_help()
 {
 	printf(
 	"mark target options:\n"
-	" --set-mark value     : Set nfmark value\n"
+	" --mark-set value     : Set nfmark value\n"
 	" --mark-target target : ACCEPT, DROP, RETURN or CONTINUE\n");
 }
 
@@ -83,7 +86,7 @@ static void print(const struct ebt_u_entry *entry,
 	struct ebt_mark_t_info *markinfo =
 	   (struct ebt_mark_t_info *)target->data;
 
-	printf("--set-mark 0x%lx", markinfo->mark);
+	printf("--mark-set 0x%lx", markinfo->mark);
 	if (markinfo->target == EBT_ACCEPT)
 		return;
 	printf(" --mark-target %s", TARGET_NAME(markinfo->target));
