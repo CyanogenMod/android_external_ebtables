@@ -2,7 +2,7 @@
 
 KERNEL_DIR?=/usr/src/linux
 PROGNAME:=ebtables
-PROGVERSION:="2.0pre6 (May 2002)"
+PROGVERSION:="2.0pre8 (June 2002)"
 
 MANDIR?=/usr/local/man
 CFLAGS:=-Wall -Wunused

@@ -7,7 +7,7 @@
 # programs using this file should not be case sensitive
 # that's all :-))
 IPV4 	0800	put your comments behind, on the same line, after a tab
-X25	0800    or whitespace
+X25	0805    or whitespace
 ARP	0806
 802_1Q	8100	802.1Q Virtual LAN tagged frame
 IPX	8137
@@ -30,5 +30,4 @@ PPP_DISC	8863	PPPoE discovery messages
 PPP_SES	8864	PPPoE session messages
 ATMMPOA	884C	MultiProtocol over ATM
 ATMFATE	8884	Frame-based ATM Transport over Ethernet
-
-
+LOOP	9000
