@@ -171,6 +171,11 @@ int main(int argc, char **argv)
 		if (!(msg = ulog_get_packet()))
 			continue;
 
+		if (msg->version != EBT_ULOG_VERSION) {
+			printf("WRONG VERSION: %d INSTEAD OF %d\n",
+			       msg->version, EBT_ULOG_VERSION);
+			continue;
+		}
 		printf("PACKET NR: %d\n", ++pktcnt);
 		iph = NULL;
 		curr_len = ETH_HLEN;
