@@ -190,7 +190,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 				   (struct ebt_standard_target *)p;
 				// translate the jump to a udc
 				if (st->verdict >= 0)
-					st->verdict = chain_offsets[st->verdict];
+					st->verdict = chain_offsets[st->verdict + NF_BR_NUMHOOKS];
 			}
 			p += e->t->target_size +
 			   sizeof(struct ebt_entry_target);
