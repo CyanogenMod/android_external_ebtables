@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <linux/netfilter_bridge/ebtables.h>
@@ -36,6 +37,19 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 
+// Don't use this function, use print_bug()
+void __print_bug(char *file, int line, char *format, ...)
+{
+	va_list l;
+
+	va_start(l, format);
+	printf(PROGNAME" v"PROGVERSION":%s:%d:--BUG--: \n", file, line);
+	vprintf(format, l);
+	printf("\n");
+	va_end(l);
+	exit (-1);
+}
+
 // here are the number-name correspondences kept for the Ethernet
 // frame type field
 #define PROTOCOLFILE "/etc/ethertypes"
@@ -44,8 +58,6 @@
 #define PROC_SYS_MODPROBE "/proc/sys/kernel/modprobe"
 #endif
 
-static char *prog_name = PROGNAME;
-static char *prog_version = PROGVERSION;
 char *hooknames[NF_BR_NUMHOOKS] =
 {
 	[NF_BR_PRE_ROUTING]"PREROUTING",
@@ -189,7 +201,7 @@ static void initialize_entry(struct ebt_u_entry *e)
 	// on CONTINUE
 	e->t = (struct ebt_entry_target *)find_target(EBT_STANDARD_TARGET);
 	if (!e->t)
-		print_bug("Couldn't load standard target\n");
+		print_bug("Couldn't load standard target");
 }
 
 // this doesn't free e, becoz the calling function might need e->next
@@ -776,8 +788,7 @@ static void print_help()
 	struct ebt_u_match_list *m_l;
 	struct ebt_u_watcher_list *w_l;
 
-	printf(
-"%s v%s\n"
+	printf(PROGNAME" v"PROGVERSION" ("PROGDATE")\n"
 "Usage:\n"
 "ebtables -[ADI] chain rule-specification [options]\n"
 "ebtables -P chain target\n"
@@ -810,9 +821,7 @@ static void print_help()
 "--logical-out [!] name        : logical bridge output interface name\n"
 "--modprobe -M program         : try to insert modules using this program\n"
 "--version -V                  : print package version\n"
-"\n" ,
-	prog_name,
-	prog_version);
+"\n");
 
 	m_l = new_entry->m_list;
 	while (m_l) {
@@ -1669,7 +1678,7 @@ int main(int argc, char *argv[])
 			replace.command = 'V';
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
-			printf("%s, %s\n", prog_name, prog_version);
+			printf(PROGNAME" v"PROGVERSION" ("PROGDATE")\n");
 			exit(0);
 
 		case 'M': // modprobe
