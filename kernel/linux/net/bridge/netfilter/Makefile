@@ -9,7 +9,7 @@
 
 O_TARGET	:= netfilter.o
 
-export-objs = ebtables.o
+export-objs := ebtables.o
 
 obj-$(CONFIG_BRIDGE_EBT) += ebtables.o
 obj-$(CONFIG_BRIDGE_EBT_T_FILTER) += ebtable_filter.o
@@ -19,8 +19,10 @@ obj-$(CONFIG_BRIDGE_DB) += br_db.o
 obj-$(CONFIG_BRIDGE_EBT_IPF) += ebt_ip.o
 obj-$(CONFIG_BRIDGE_EBT_ARPF) += ebt_arp.o
 obj-$(CONFIG_BRIDGE_EBT_VLANF) += ebt_vlan.o
+obj-$(CONFIG_BRIDGE_EBT_MARKF) += ebt_mark_m.o
 obj-$(CONFIG_BRIDGE_EBT_LOG) += ebt_log.o
 obj-$(CONFIG_BRIDGE_EBT_SNAT) += ebt_snat.o
 obj-$(CONFIG_BRIDGE_EBT_DNAT) += ebt_dnat.o
 obj-$(CONFIG_BRIDGE_EBT_REDIRECT) += ebt_redirect.o
+obj-$(CONFIG_BRIDGE_EBT_MARK_T) += ebt_mark.o
 include $(TOPDIR)/Rules.make
