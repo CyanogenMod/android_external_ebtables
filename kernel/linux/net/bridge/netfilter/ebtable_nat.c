@@ -42,16 +42,6 @@ static struct ebt_table frame_nat =
   RW_LOCK_UNLOCKED, check, NULL
 };
 
-// used for snat to know if the frame comes from FORWARD or LOCAL_OUT.
-// needed because of the bridge-nf patch (that allows use of iptables
-// on bridged traffic)
-// if the packet is routed, we want the ebtables stuff on POSTROUTING
-// to be executed _after_ the iptables stuff. when it's bridged, it's
-// the way around
-static struct net_device __fake_net_device = {
-        hard_header_len:        ETH_HLEN
-};
-
 static unsigned int
 ebt_nat_dst (unsigned int hook, struct sk_buff **pskb,
    const struct net_device *in, const struct net_device *out,
@@ -60,50 +50,11 @@ ebt_nat_dst (unsigned int hook, struct sk_buff **pskb,
 	return ebt_do_table(hook, pskb, in, out, &frame_nat);
 }
 
-// let snat know this frame is routed
-static unsigned int ebt_clear_physin (unsigned int hook, struct sk_buff **pskb,
-   const struct net_device *in, const struct net_device *out,
-   int (*okfn)(struct sk_buff *))
-{
-	(*pskb)->physindev = NULL;
-	return NF_ACCEPT;
-}
-
-// let snat know this frame is bridged
-static unsigned int ebt_set_physin (unsigned int hook, struct sk_buff **pskb,
-   const struct net_device *in, const struct net_device *out,
-   int (*okfn)(struct sk_buff *))
-{
-	(*pskb)->physindev = &__fake_net_device;
-	return NF_ACCEPT;
-}
-
 static unsigned int ebt_nat_src (unsigned int hook, struct sk_buff **pskb,
 			const struct net_device *in,
 			const struct net_device *out,
 			int (*okfn)(struct sk_buff *))
 {
-	// this is a routed packet
-	if ((*pskb)->physindev == NULL)
-		return NF_ACCEPT;
-	if ((*pskb)->physindev != &__fake_net_device)
-		printk("ebtables (br_nat_src): physindev hack "
-		       "doesn't work - BUG\n");
-
-	return ebt_do_table(hook, pskb, in, out, &frame_nat);
-}
-
-static unsigned int ebt_nat_src_route (unsigned int hook, struct sk_buff **pskb,
-   const struct net_device *in, const struct net_device *out,
-   int (*okfn)(struct sk_buff *))
-{
-	// this is a bridged packet
-	if ((*pskb)->physindev == &__fake_net_device)
-		return NF_ACCEPT;
-	if ((*pskb)->physindev)
-		printk("ebtables (br_nat_src_route): physindev hack "
-		       "doesn't work - BUG\n");
-
 	return ebt_do_table(hook, pskb, in, out, &frame_nat);
 }
 
@@ -111,15 +62,9 @@ static struct nf_hook_ops ebt_ops_nat[] = {
 	{ { NULL, NULL }, ebt_nat_dst, PF_BRIDGE, NF_BR_LOCAL_OUT,
 	   NF_BR_PRI_NAT_DST_OTHER},
 	{ { NULL, NULL }, ebt_nat_src, PF_BRIDGE, NF_BR_POST_ROUTING,
-	   NF_BR_PRI_NAT_SRC_BRIDGED},
-	{ { NULL, NULL }, ebt_nat_src_route, PF_BRIDGE, NF_BR_POST_ROUTING,
-	   NF_BR_PRI_NAT_SRC_OTHER},
+	   NF_BR_PRI_NAT_SRC},
 	{ { NULL, NULL }, ebt_nat_dst, PF_BRIDGE, NF_BR_PRE_ROUTING,
 	   NF_BR_PRI_NAT_DST_BRIDGED},
-	{ { NULL, NULL }, ebt_clear_physin, PF_BRIDGE, NF_BR_LOCAL_OUT,
-	   NF_BR_PRI_FILTER_OTHER + 1},
-	{ { NULL, NULL }, ebt_set_physin, PF_BRIDGE, NF_BR_FORWARD,
-	   NF_BR_PRI_FILTER_OTHER + 1}
 };
 
 static int __init init(void)
