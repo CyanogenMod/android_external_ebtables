@@ -1,5 +1,5 @@
 /*
- * communication.c, v2.0 April 2002
+ * communication.c, v2.0 July 2002
  *
  * Author: Bart De Schuymer
  *
@@ -18,9 +18,8 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <linux/netfilter_bridge/ebtables.h>
-#include <linux/br_db.h> // the database
+#include <linux/br_db.h>
 #include <netinet/in.h> // IPPROTO_IP
-#include <asm/types.h>
 #include "include/ebtables_u.h"
 
 extern char* hooknames[NF_BR_NUMHOOKS];
@@ -32,7 +31,8 @@ static void get_sockfd()
 	if (sockfd == -1) {
 		sockfd = socket(AF_INET, SOCK_RAW, PF_INET);
 		if (sockfd < 0)
-			print_error("Problem getting a socket");
+			print_error("Problem getting a socket, "
+			   "do you have the right permissions?");
 	}
 }
 
@@ -52,7 +52,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	if (!new)
 		print_memory();
 	new->valid_hooks = u_repl->valid_hooks;
-	memcpy(new->name, u_repl->name, sizeof(new->name));
+	strcpy(new->name, u_repl->name);
 	new->nentries = u_repl->nentries;
 	new->num_counters = u_repl->num_counters;
 	new->counters = u_repl->counters;
@@ -150,12 +150,10 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 			tmp->bitmask = e->bitmask | EBT_ENTRY_OR_ENTRIES;
 			tmp->invflags = e->invflags;
 			tmp->ethproto = e->ethproto;
-			memcpy(tmp->in, e->in, sizeof(tmp->in));
-			memcpy(tmp->out, e->out, sizeof(tmp->out));
-			memcpy(tmp->logical_in, e->logical_in,
-			   sizeof(tmp->logical_in));
-			memcpy(tmp->logical_out, e->logical_out,
-			   sizeof(tmp->logical_out));
+			strcpy(tmp->in, e->in);
+			strcpy(tmp->out, e->out);
+			strcpy(tmp->logical_in, e->logical_in);
+			strcpy(tmp->logical_out, e->logical_out);
 			memcpy(tmp->sourcemac, e->sourcemac,
 			   sizeof(tmp->sourcemac));
 			memcpy(tmp->sourcemsk, e->sourcemsk,
@@ -190,7 +188,8 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 				   (struct ebt_standard_target *)p;
 				// translate the jump to a udc
 				if (st->verdict >= 0)
-					st->verdict = chain_offsets[st->verdict + NF_BR_NUMHOOKS];
+					st->verdict = chain_offsets
+					   [st->verdict + NF_BR_NUMHOOKS];
 			}
 			p += e->t->target_size +
 			   sizeof(struct ebt_entry_target);
@@ -257,23 +256,23 @@ void deliver_table(struct ebt_u_replace *u_repl)
 
 	// translate the struct ebt_u_replace to a struct ebt_replace
 	repl = translate_user2kernel(u_repl);
-	// give the data to the kernel
-	optlen = sizeof(struct ebt_replace) + repl->entries_size;
 	if (u_repl->filename != NULL) {
 		store_table_in_file(u_repl->filename, repl);
 		return;
 	}
+	// give the data to the kernel
+	optlen = sizeof(struct ebt_replace) + repl->entries_size;
 	get_sockfd();
 	if (setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_ENTRIES, repl, optlen))
 		print_error("The kernel doesn't support a certain ebtables"
 		  " extension, consider recompiling your kernel or insmod"
-		  " the extension");	
+		  " the extension");
 }
 
 static void store_counters_in_file(char *filename, struct ebt_u_replace *repl)
 {
 	int size = repl->nentries * sizeof(struct ebt_counter);
-	int entries_size;
+	unsigned int entries_size;
 	struct ebt_replace hlp;
 	FILE *file;
 
@@ -324,16 +323,14 @@ deliver_counters(struct ebt_u_replace *u_repl)
 			old++;
 			// we've set a new counter
 			new++;
-		} else
-		if (*point == CNT_DEL) {
+		} else if (*point == CNT_DEL) {
 			// don't use this old counter
 			old++;
 		} else if (*point == CNT_ADD) {
 			// new counter, let it stay 0
 			new++;
 		} else {
-			// zero it
-			new->pcnt = 0;
+			// zero it (let it stay 0)
 			old++;
 			new++;
 		}
@@ -356,7 +353,7 @@ deliver_counters(struct ebt_u_replace *u_repl)
 
 	get_sockfd();
 	if (setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_COUNTERS, &repl, optlen))
-		print_bug("couldn't update kernel counters");
+		print_bug("Couldn't update kernel counters");
 }
 
 static int
@@ -426,12 +423,10 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 		new->bitmask &= ~EBT_ENTRY_OR_ENTRIES;
 		new->invflags = e->invflags;
 		new->ethproto = e->ethproto;
-		memcpy(new->in, e->in, sizeof(new->in));
-		memcpy(new->out, e->out, sizeof(new->out));
-		memcpy(new->logical_in, e->logical_in,
-		   sizeof(new->logical_in));
-		memcpy(new->logical_out, e->logical_out,
-		   sizeof(new->logical_out));
+		strcmp(new->in, e->in);
+		strcmp(new->out, e->out);
+		strcmp(new->logical_in, e->logical_in);
+		strcmp(new->logical_out, e->logical_out);
 		memcpy(new->sourcemac, e->sourcemac, sizeof(new->sourcemac));
 		memcpy(new->sourcemsk, e->sourcemsk, sizeof(new->sourcemsk));
 		memcpy(new->destmac, e->destmac, sizeof(new->destmac));
@@ -501,9 +496,8 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 			while (i-- > 0)
 				cl = cl->next;
 			*u_e = &(cl->udc->entries);
-		} else {
+		} else
 			*u_e = &(u_repl->hook_entry[*hook]->entries);
-		}
 		return 0;
 	}
 }
@@ -569,7 +563,7 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 		print_error("Could not open file %s", filename);
 	// make sure table name is right if command isn't -L or --atomic-commit
 	if (command != 'L' && command != 8) {
-		hlp = (char *)malloc(strlen(repl->name));
+		hlp = (char *)malloc(strlen(repl->name) + 1);
 		if (!hlp)
 			print_memory();
 		strcpy(hlp, repl->name);
@@ -581,12 +575,11 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 		fclose(file);
 		print_error("File %s contains wrong table name or is corrupt",
 		   filename);
-	} else
-		if (!find_table(repl->name)) {
-			fclose(file);
-			print_error("File %s contains invalid table name",
-			   filename);
-		}
+		free(hlp);
+	} else if (!find_table(repl->name)) {
+		fclose(file);
+		print_error("File %s contains invalid table name", filename);
+	}
 
 	size = sizeof(struct ebt_replace) +
 	   repl->nentries * sizeof(struct ebt_counter) + repl->entries_size;
@@ -634,7 +627,7 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 	if (getsockopt(sockfd, IPPROTO_IP, optname, repl, &optlen))
 		return -1;
 
-	if ( !(repl->entries = (char *) malloc(repl->entries_size)) )
+	if ( !(repl->entries = (char *)malloc(repl->entries_size)) )
 		print_memory();
 	if (repl->nentries) {
 		if (!(repl->counters = (struct ebt_counter *)
@@ -658,7 +651,6 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 	return 0;
 }
 
-// talk with kernel to receive the kernel's table
 int get_table(struct ebt_u_replace *u_repl)
 {
 	int i, j, k, hook;
@@ -668,12 +660,10 @@ int get_table(struct ebt_u_replace *u_repl)
 	strcpy(repl.name, u_repl->name);
 	if (u_repl->filename != NULL)
 		retrieve_from_file(u_repl->filename, &repl, u_repl->command);
-	else
-		if (retrieve_from_kernel(&repl, u_repl->command) == -1)
-			return -1;
+	else if (retrieve_from_kernel(&repl, u_repl->command) == -1)
+		return -1;
 
 	// translate the struct ebt_replace to a struct ebt_u_replace
-	memcpy(u_repl->name, repl.name, sizeof(u_repl->name));
 	u_repl->valid_hooks = repl.valid_hooks;
 	u_repl->nentries = repl.nentries;
 	u_repl->num_counters = repl.num_counters;
