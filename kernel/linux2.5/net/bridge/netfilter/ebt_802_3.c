@@ -33,8 +33,6 @@ static int ebt_filter_802_3(const struct sk_buff *skb, const struct net_device *
 			return EBT_NOMATCH;
 	}
 
-	/* Other matches will go here, when I get around to it */
-
 	return EBT_MATCH;
 }
 
