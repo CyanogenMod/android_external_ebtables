@@ -36,7 +36,9 @@ ebtables (v.2.0) \- Ethernet bridge frame table administration
 .br
 .BR "ebtables " [ "-t table" ] " -L " [ -Z "] [" " chain" "] [ [ [" --Ln "] [" --Lc "] ] | [" --Lx "] ] [" --Lmac2 "]"
 .br
-.BR "ebtables " [ "-t table" ] " -" [ NX ] " chain"
+.BR "ebtables " [ "-t table" ] " -N chain"
+.br
+.BR "ebtables " [ "-t table" ] " -X " [ chain ]
 .br
 .BR "ebtables " [ "-t table" ] " -E old-chain-name new-chain-name"
 .br
@@ -268,9 +270,10 @@ length of 31 characters.
 .TP
 .B "-X, --delete-chain"
 Delete the specified user-defined chain. There must be no remaining references
-to the to be deleted chain.  Otherwise,
+to the specified chain, otherwise
 .B ebtables
-will complain if there are.
+will refuse to delete it. If no chain is specified, all user-defined
+chains that aren't referenced will be removed.
 .TP
 .B "-E, --rename-chain"
 Rename the specified chain to a new name.  Besides renaming a user-defined
