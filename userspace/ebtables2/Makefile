@@ -1,12 +1,13 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGVERSION:=2.0.1
-PROGDATE:=October\ 2002
+PROGVERSION:=2.0.2
+PROGDATE:=December\ 2002
 
 MANDIR?=/usr/local/man
 CFLAGS:=-Wall -Wunused
 CC:=gcc
+
 include extensions/Makefile
 
 OBJECTS:=getethertype.o ebtables.o communication.o $(EXT_OBJS)
@@ -21,11 +22,10 @@ else
 KERNEL_INCLUDES:=include/
 endif
 
-ifneq ($(ETHERTYPESPATH),)
-ETHERTYPESFILE:=$(ETHERTYPESPATH)ethertypes
-else
-ETHERTYPESFILE:=/usr/local/etc/ethertypes
+ifeq ($(ETHERTYPESPATH),)
+ETHERTYPESPATH:=/etc/
 endif
+ETHERTYPESFILE:=$(ETHERTYPESPATH)ethertypes
 
 PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DPROGNAME=\"$(PROGNAME)\" \
