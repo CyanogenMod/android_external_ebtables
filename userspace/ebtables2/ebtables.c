@@ -79,6 +79,7 @@ static struct option ebt_original_options[] =
 	{ "Lc"            , no_argument      , 0, 4   },
 	{ "Ln"            , no_argument      , 0, 5   },
 	{ "Lx"            , no_argument      , 0, 6   },
+	{ "Lmac2"         , no_argument      , 0, 12  },
 	{ "zero"          , optional_argument, 0, 'Z' },
 	{ "flush"         , optional_argument, 0, 'F' },
 	{ "policy"        , required_argument, 0, 'P' },
@@ -465,9 +466,33 @@ static void list_extensions()
  * we use replace.flags, so we can't use the following values:
  * 0x01 == OPT_COMMAND, 0x02 == OPT_TABLE, 0x100 == OPT_ZERO
  */
-#define LIST_N 0x04
-#define LIST_C 0x08
-#define LIST_X 0x10
+#define LIST_N    0x04
+#define LIST_C    0x08
+#define LIST_X    0x10
+#define LIST_MAC2 0x20
+
+void print_mac(const char *mac)
+{
+	if (replace.flags & LIST_MAC2) {
+		int j;
+		for (j = 0; j < ETH_ALEN; j++)
+			printf("%02x%s", (unsigned char)mac[j],
+				(j==ETH_ALEN-1) ? "" : ":");
+	} else
+		printf("%s", ether_ntoa((struct ether_addr *) mac));
+}
+
+void print_mac_and_mask(const char *mac, const char *mask)
+{
+	char hlpmsk[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+
+	print_mac(mac);
+	if (memcmp(mask, hlpmsk, 6)) {
+		printf("/");
+		print_mac(mask);
+	}
+}
+
 /*
  * helper function for list_rules()
  */
@@ -535,8 +560,6 @@ static void list_em(struct ebt_u_entries *entries)
 			}
 		}
 		if (hlp->bitmask & EBT_SOURCEMAC) {
-			char hlpmsk[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-
 			printf("-s ");
 			if (hlp->invflags & EBT_ISOURCE)
 				printf("! ");
@@ -555,19 +578,11 @@ static void list_em(struct ebt_u_entries *entries)
 				printf("Broadcast");
 				goto endsrc;
 			}
-			printf("%s", ether_ntoa((struct ether_addr *)
-			   hlp->sourcemac));
-			if (memcmp(hlp->sourcemsk, hlpmsk, 6)) {
-				printf("/");
-				printf("%s", ether_ntoa((struct ether_addr *)
-				   hlp->sourcemsk));
-			}
+			print_mac_and_mask(hlp->sourcemac, hlp->sourcemsk);
 endsrc:
 			printf(" ");
 		}
 		if (hlp->bitmask & EBT_DESTMAC) {
-			char hlpmsk[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-
 			printf("-d ");
 			if (hlp->invflags & EBT_IDEST)
 				printf("! ");
@@ -586,13 +601,7 @@ endsrc:
 				printf("Broadcast");
 				goto enddst;
 			}
-			printf("%s", ether_ntoa((struct ether_addr *)
-			   hlp->destmac));
-			if (memcmp(hlp->destmsk, hlpmsk, 6)) {
-				printf("/");
-				printf("%s", ether_ntoa((struct ether_addr *)
-				   hlp->destmsk));
-			}
+			print_mac_and_mask(hlp->destmac, hlp->destmsk);
 enddst:
 			printf(" ");
 		}
@@ -2117,6 +2126,12 @@ int main(int argc, char *argv[])
 			if (replace.flags & LIST_N)
 				print_error("--Lx not compatible with --Ln");
 			replace.flags |= LIST_X;
+			break;
+		case 12 : /* Lmac2 */
+			check_option(&replace.flags, LIST_MAC2);
+			if (replace.command != 'L')
+				print_error("Use --Lmac2 with -L");
+			replace.flags |= LIST_MAC2;
 			break;
 		case 8 : /* atomic-commit */
 			replace.command = c;

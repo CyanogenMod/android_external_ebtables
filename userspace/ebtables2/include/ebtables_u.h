@@ -208,6 +208,8 @@ void deliver_counters(struct ebt_u_replace *repl);
 void deliver_table(struct ebt_u_replace *repl);
 void check_option(unsigned int *flags, unsigned int mask);
 int check_inverse(const char option[]);
+void print_mac(const char *mac);
+void print_mac_and_mask(const char *mac, const char *mask);
 void __print_bug(char *file, int line, char *format, ...);
 #define print_bug(format, args...) \
    __print_bug(__FILE__, __LINE__, format, ##args)
