@@ -1292,16 +1292,13 @@ static void delete_rule(int begin, int end)
 	struct ebt_u_entry **u_e, *u_e2;
 	struct ebt_u_entries *entries = to_chain(), *entries2;
 
-	if (begin < 0) {
-		if (begin < entries->nentries)
-			goto rule_error;
+	if (begin < 0)
 		begin += entries->nentries + 1;
-	}
 	if (end < 0)
 		end += entries->nentries + 1;
-	if (begin > end)
-rule_error:
+	if (begin <= 0 || begin > end || end > entries->nentries)
 		print_error("Sorry, wrong rule numbers");
+
 	if ((begin = check_rule_exists(begin)) == -1 ||
 	    (end = check_rule_exists(end)) == -1)
 		print_error("Sorry, rule does not exist");
