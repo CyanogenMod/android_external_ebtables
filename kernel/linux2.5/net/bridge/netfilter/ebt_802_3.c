@@ -54,8 +54,10 @@ static int ebt_802_3_check(const char *tablename, unsigned int hookmask,
 
 static struct ebt_match filter_802_3 =
 {
-	{NULL, NULL}, EBT_802_3_MATCH, ebt_filter_802_3, ebt_802_3_check, NULL,
-	THIS_MODULE
+	.name		= EBT_802_3_MATCH,
+	.match		= ebt_filter_802_3,
+	.check		= ebt_802_3_check,
+	.me		= THIS_MODULE,
 };
 
 static int __init init(void)
