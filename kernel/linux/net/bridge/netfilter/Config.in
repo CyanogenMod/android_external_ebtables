@@ -8,6 +8,8 @@ dep_tristate '    ebt: broute table support' CONFIG_BRIDGE_EBT_BROUTE $CONFIG_BR
 dep_tristate '    ebt: log support' CONFIG_BRIDGE_EBT_LOG $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: IP filter support' CONFIG_BRIDGE_EBT_IPF $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: ARP filter support' CONFIG_BRIDGE_EBT_ARPF $CONFIG_BRIDGE_NF_EBTABLES
+dep_tristate '    ebt: among filter support' CONFIG_BRIDGE_EBT_AMONG $CONFIG_BRIDGE_NF_EBTABLES
+dep_tristate '    ebt: limit filter support' CONFIG_BRIDGE_EBT_LIMIT $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: 802.1Q VLAN filter support' CONFIG_BRIDGE_EBT_VLANF $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: 802.3 filter support' CONFIG_BRIDGE_EBT_802_3 $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: packet type filter support' CONFIG_BRIDGE_EBT_PKTTYPE $CONFIG_BRIDGE_NF_EBTABLES
