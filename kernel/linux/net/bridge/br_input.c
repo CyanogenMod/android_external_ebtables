@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_input.c,v 1.4 2002/08/29 21:27:53 bdschuym Exp $
+ *	$Id: br_input.c,v 1.5 2002/09/10 17:33:26 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -28,6 +28,9 @@ unsigned char bridge_ula[6] = { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x00 };
 
 static int br_pass_frame_up_finish(struct sk_buff *skb)
 {
+#ifdef CONFIG_NETFILTER_DEBUG
+	skb->nf_debug = 0;
+#endif
 	netif_rx(skb);
 
 	return 0;
