@@ -6,10 +6,10 @@
 # 6 June 2002: added ebt_snat.c, ebt_dnat.c files, removed ebt_nat.c file
 
 export FROM=linux
-export TO=ebt2.0pre7
-export FILE=ebtables-v2.0pre7_vs_2.4.18.diff
+export TO=ebt2.0pre8
+export FILE=ebtables-v2.0pre8_vs_2.4.18.diff
 
-echo "ebtables-v2.0pre7 - 30 May" >$FILE
+echo "ebtables-v2.0pre8 - 06 June" >$FILE
 echo >>$FILE
 echo "*** modifications for brouter support ***" >>$FILE
 echo >>$FILE
