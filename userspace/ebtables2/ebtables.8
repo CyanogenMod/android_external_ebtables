@@ -1,4 +1,4 @@
-.TH EBTABLES 8  "05 December 2004"
+.TH EBTABLES 8  "December 21, 2004"
 .\"
 .\" Man page written by Bart De Schuymer <bdschuym@pandora.be>
 .\" It is based on the iptables man page.
@@ -24,9 +24,9 @@
 .\"     
 .\"
 .SH NAME
-ebtables (v.2.0) \- Ethernet bridge frame table administration
+ebtables (v.2.0.7) \- Ethernet bridge frame table administration
 .SH SYNOPSIS
-.BR "ebtables " [ "-t table" ] " -" [ ADI ] " chain rule-specification " [ match-extensions "] [" watcher-extensions ] " TARGET"
+.BR "ebtables " [ "-t table" ] " -" [ ADI ] " chain rule specification " [ "match extensions" "] [" "watcher extensions" ] " target"
 .br
 .BR "ebtables " [ "-t table" ] " -P chain ACCEPT " | " DROP " | " RETURN"
 .br
@@ -52,122 +52,124 @@ ebtables (v.2.0) \- Ethernet bridge frame table administration
 .br
 .SH DESCRIPTION
 .B ebtables
-is a user space tool, it is used to set up and maintain the
-tables of Ethernet frame rules in the Linux kernel. These rules inspect
-the Ethernet frames which they see.
-.B ebtables
-is analogous to the
+is an application program used to set up and maintain the
+tables of rules (inside the Linux kernel) that inspect
+Ethernet frames.
+It is analogous to the
 .B iptables
-user space tool, but
-.B ebtables
-is less complicated.
-
+application, but less complicated, due to the fact that the Ethernet protocol
+is much simpler than the IP protocol.
 .SS CHAINS
-There are three Ethernet frame tables with built-in chains in the
-Linux kernel. The kernel tables are used to divide functionality into
+There are three ebtables tables with built-in chains in the
+Linux kernel. These tables are used to divide functionality into
 different sets of rules. Each set of rules is called a chain.
 Each chain is an ordered list of rules that can match Ethernet frames. If a
 rule matches an Ethernet frame, then a processing specification tells
 what to do with that matching frame. The processing specification is
 called a 'target'. However, if the frame does not match the current
 rule in the chain, then the next rule in the chain is examined and so forth.
-The user can create new (user-defined) chains which can be used as the 'target'
+The user can create new (user-defined) chains that can be used as the 'target'
 of a rule. User-defined chains are very useful to get better performance
-over the linear traversal of the rules.
-
+over the linear traversal of the rules and are also essential for structuring
+the filtering rules into well-organized and maintainable sets of rules.
 .SS TARGETS
 A firewall rule specifies criteria for an Ethernet frame and a frame
 processing specification called a target.  When a frame matches a rule,
 then the next action performed by the kernel is specified by the target.
 The target can be one of these values:
-.IR ACCEPT ,
-.IR DROP ,
-.IR CONTINUE ,
-.IR RETURN ,
-an 'extension' (see below) or a user-defined chain.
+.BR ACCEPT ,
+.BR DROP ,
+.BR CONTINUE ,
+.BR RETURN ,
+an 'extension' (see below) or a jump to a user-defined chain.
 .PP
-.I ACCEPT
+.B ACCEPT
 means to let the frame through.
-.I DROP
+.B DROP
 means the frame has to be dropped.
-.I CONTINUE
-means the next rule has to be checked. This can be handy to know how many
-frames pass a certain point in the chain or to log those frames.
-.I RETURN
+.B CONTINUE
+means the next rule has to be checked. This can be handy, f.e., to know how many
+frames pass a certain point in the chain, to log those frames or to apply multiple
+targets on a frame.
+.B RETURN
 means stop traversing this chain and resume at the next rule in the
 previous (calling) chain.
-For the extension targets please see the
+For the extension targets please refer to the
 .B "TARGET EXTENSIONS"
 section of this man page.
 .SS TABLES
-As stated earlier, there are three Ethernet frame tables in the Linux
-kernel.  The tables are
+As stated earlier, there are three ebtables tables in the Linux
+kernel.  The table names are
 .BR filter ", " nat " and " broute .
 Of these three tables,
-the filter table is the default table that the
-.B ebtables
-command operates on.
+the filter table is the default table that the command operates on.
 If you are working with the filter table, then you can drop the '-t filter'
 argument to the ebtables command.  However, you will need to provide
-the -t argument for the other two tables.  The -t argument must be the
+the -t argument for the other two tables.  Moreover, the -t argument must be the
 first argument on the ebtables command line, if used. 
 .TP
 .B "-t, --table"
 .br
-.BR filter ,
+.B filter
 is the default table and contains three built-in chains:
 .B INPUT 
-(for frames destined for the bridge itself), 
+(for frames destined for the bridge itself, on the level of the MAC destination address), 
 .B OUTPUT 
-(for locally-generated frames) and
+(for locally-generated or (b)routed frames) and
 .B FORWARD 
-(for frames being bridged).
+(for frames being forwarded by the bridge).
 .br
 .br
-.BR nat ,
-is used to change the mac addresses and contains three built-in chains:
+.B nat
+is mostly used to change the mac addresses and contains three built-in chains:
 .B PREROUTING 
 (for altering frames as soon as they come in), 
 .B OUTPUT 
-(for altering locally generated frames before they are bridged) and 
+(for altering locally generated or (b)routed frames before they are bridged) and 
 .B POSTROUTING
 (for altering frames as they are about to go out). A small note on the naming
-of chains POSTROUTING and PREROUTING: it would be more accurate to call them
+of chains PREROUTING and POSTROUTING: it would be more accurate to call them
 PREFORWARDING and POSTFORWARDING, but for all those who come from the
-.BR iptables " world to " ebtables
-it is easier to have the same names.
+iptables world to ebtables it is easier to have the same names. Note that you
+can change the name
+.BR "" ( -E )
+if you don't like the default.
 .br
 .br
-.BR broute ,
+.B broute
 is used to make a brouter, it has one built-in chain:
 .BR BROUTING .
 The targets
 .BR DROP " and " ACCEPT
-have special meaning in the broute table.
+have a special meaning in the broute table (these names are used instead of
+more descriptive names to keep the implementation generic).
 .B DROP
 actually means the frame has to be routed, while
 .B ACCEPT
 means the frame has to be bridged. The
 .B BROUTING
-chain is traversed very early. It is only traversed by frames entering on
-a bridge enslaved NIC that is in forwarding state. Normally those frames
+chain is traversed very early. However, it is only traversed by frames entering on
+a bridge port that is in forwarding state. Normally those frames
 would be bridged, but you can decide otherwise here. The
 .B redirect
 target is very handy here.
 .SH EBTABLES COMMAND LINE ARGUMENTS
-After the initial ebtables -t, table command line argument, the remaining
-arguments can be divided into several different groups.  These groups
-are commands, miscellaneous commands, rule-specifications, match-extensions,
-and watcher-extensions.
+After the initial ebtables '-t table' command line argument, the remaining
+arguments can be divided into several groups.  These groups
+are commands, miscellaneous commands, rule specifications, match extensions,
+watcher extensions and target extensions.
 .SS COMMANDS
 The ebtables command arguments specify the actions to perform on the table
 defined with the -t argument.  If you do not use the -t argument to name
 a table, the commands apply to the default filter table.
-With the exception of both the
-.B "-Z"
-and
-.B "--atomic-file"
-commands, only one command may be used on the command line at a time.
+Only one command may be used on the command line at a time, except when
+the commands
+.BR -L " and " -Z
+are combined, the commands
+.BR -N " and " -P
+are combined, or when
+.B --atomic-file
+is used.
 .TP
 .B "-A, --append"
 Append a rule to the end of the selected chain.
@@ -175,17 +177,36 @@ Append a rule to the end of the selected chain.
 .B "-D, --delete"
 Delete the specified rule from the selected chain. There are two ways to
 use this command. The first is by specifying an interval of rule numbers
-to delete, syntax: start_nr[:end_nr]. Using negative numbers is allowed, for more
-details about using negative numbers, see the -I command. The second usage is by
-specifying the complete rule as it would have been specified when it was added.
+to delete (directly after
+.BR -D ).
+Syntax: \fIstart_nr\fP[\fI:end_nr\fP] (use
+.B -L --Ln
+to list the rules with their rule number). When \fI:end_nr\fP is omitted, all rules starting
+from \fIstart_nr\fP are deleted. Using negative numbers is allowed, for more
+details about using negative numbers, see the
+.B -I
+command. The second usage is by
+specifying the complete rule as it would have been specified when it was added. Only
+the first encountered rule that is the same as this specified rule, in other
+words the matching rule with the lowest rule number, is deleted.
 .TP
 .B "-I, --insert"
 Insert the specified rule into the selected chain at the specified rule number.
-If the current number of rules equals N, then the specified number can be
-between -N and N+1. For a positive number i, it holds that i and i-N-1 specify the
-same place in the chain where the rule should be inserted. The number 0 specifies
-the place past the last rule in the chain and using this number is therefore
-equivalent with using the -A command.
+If the current number of rules equals
+.IR N ,
+then the specified number can be
+between
+.IR -N " and " N+1 .
+For a positive number
+.IR i ,
+it holds that
+.IR i " and " i-N-1
+specify the same place in the chain where the rule should be inserted. The rule number
+0 specifies the place past the last rule in the chain and using this number is therefore
+equivalent to using the
+.BR -A " command."
+Rule numbers structly smaller than 0 can be useful when more than one rule needs to be inserted
+in a chain.
 .TP
 .B "-P, --policy"
 Set the policy for the chain to the given target. The policy can be
@@ -193,7 +214,7 @@ Set the policy for the chain to the given target. The policy can be
 .TP
 .B "-F, --flush"
 Flush the selected chain. If no chain is selected, then every chain will be
-flushed. Flushing the chain does not change the policy of the
+flushed. Flushing a chain does not change the policy of the
 chain, however.
 .TP
 .B "-Z, --zero"
@@ -214,9 +235,9 @@ before they are set to zero.
 List all rules in the selected chain. If no chain is selected, all chains
 are listed.
 .br
-The following three options change the output of the
+The following options change the output of the
 .B "-L"
-list command:
+command.
 .br
 .B "--Ln"
 .br
@@ -227,78 +248,59 @@ Places the rule number in front of every rule.
 Shows the counters at the end of each rule displayed by the
 .B "-L"
 command. Both a frame counter (pcnt) and a byte counter (bcnt) are displayed.
+The frame counter shows how many frames have matched the specific rule, the byte
+counter shows the sum of the frame sizes of these matching frames.
 .br
 .B "--Lx"
 .br
-The output of the 
-.B "--Lx"
-option may be used to create a set of
-.B ebtables
-commands.  You may use this set of commands in an
-.B ebtables
-boot or reload
+Changes the output so that it produces a set of ebtables commands that construct
+the contents of the chain, when specified.
+If no chain is specified, ebtables commands to construct the contents of the
+table are given, including commands for creating the user-defined chains (if any).
+You can use this set of commands in an ebtables boot or reload
 script.  For example the output could be used at system startup.
 The 
 .B "--Lx"
-option is incompatible with both of the other
+option is incompatible with both the
 .B "--Ln"
 and
 .B "--Lc"
-chain listing options.
+listing options.
 .br
 .B "--Lmac2"
 .br
 Shows all MAC addresses with the same length, adding leading zeroes
-if necessary. The default representation omits zeroes in the addresses
-when they are not needed.
-.br
-All necessary
-.B ebtables
-commands for making the current list of
-user-defined chains in the kernel and any commands issued by the user to
-rename the standard
-.B ebtables
-chains will be listed, when no chain name is
-supplied for the
-.B "-L"
-command while using the
-.B "--Lx"
-option.
+if necessary. The default representation omits leading zeroes in the addresses.
 .TP
 .B "-N, --new-chain"
 Create a new user-defined chain with the given name. The number of
-user-defined chains is unlimited. A user-defined chain name has maximum
+user-defined chains is limited only by the number of possible chain names.
+A user-defined chain name has a maximum
 length of 31 characters. The standard policy of the user-defined chain is
-ACCEPT. You can initialize the new chain with another policy by using the
+ACCEPT. The policy of the new chain can be initialized to a different standard
+target by using the
 .B -P
-option. Unlike the
+command together with the
+.B -N
+command. In this case, the chain name does not have to be specified for the
 .B -P
-command, you only need to specify the policy, not the chain name.
+command.
 .TP
 .B "-X, --delete-chain"
-Delete the specified user-defined chain. There must be no remaining references
-to the specified chain, otherwise
-.B ebtables
-will refuse to delete it. If no chain is specified, all user-defined
-chains that aren't referenced will be removed.
+Delete the specified user-defined chain. There must be no remaining references (jumps)
+to the specified chain, otherwise ebtables will refuse to delete it. If no chain is
+specified, all user-defined chains that aren't referenced will be removed.
 .TP
 .B "-E, --rename-chain"
 Rename the specified chain to a new name.  Besides renaming a user-defined
-chain, you may rename a standard chain name to a name that suits your
-taste. For example, if you like PREBRIDGING more than PREROUTING,
+chain, you can rename a standard chain to a name that suits your
+taste. For example, if you like PREFORWARDING more than PREROUTING,
 then you can use the -E command to rename the PREROUTING chain. If you do
-rename one of the standard
-.B ebtables
-chain names, please be sure to mention
-this fact should you post a question on the
-.B ebtables
-mailing lists.
+rename one of the standard ebtables chain names, please be sure to mention
+this fact should you post a question on the ebtables mailing lists.
 It would be wise to use the standard name in your post. Renaming a standard
-.B ebtables
-chain in this fashion has no effect on the structure or function
-of the
-.B ebtables
-kernel table.
+ebtables chain in this fashion has no effect on the structure or functioning
+of the ebtables kernel table.
 .TP
 .B "--init-table"
 Replace the current table data by the initial table data.
@@ -333,26 +335,18 @@ command to generate a starting file. After that, using the
 command when constructing rules or setting the
 .IR EBTABLES_ATOMIC_FILE " environment variable"
 allows you to extend the file and build the complete table before
-committing it to the kernel.
-.TP
-.B "--atomic-file -Z"
-The counters stored in a file with, say,
-.B "--atomic-init"
-can be optionally zeroed by supplying the
-.B "-Z"
-command. You may also zero the counters by setting the
-.IR EBTABLES_ATOMIC_FILE " environment variable."
-
+committing it to the kernel. This command can be very useful in boot scripts
+to populate the ebtables tables in a fast way.
 .SS MISCELLANOUS COMMANDS
 .TP
 .B "-V, --version"
 Show the version of the ebtables userspace program.
 .TP
-.B "-h, --help"
+.BR "-h, --help " "[\fIlist of module names\fP]"
 Give a brief description of the command syntax. Here you can also specify
-names of extensions and
-.B ebtables
-will try to write help about those extensions. E.g. ebtables -h snat log ip arp.
+names of extensions and ebtables will try to write help about those
+extensions. E.g.
+.IR "ebtables -h snat log ip arp" .
 Specify
 .I list_extensions
 to list all extensions supported by the userspace
@@ -368,28 +362,31 @@ a target extension (see
 .BR "TARGET EXTENSIONS" ")"
 or a user-defined chain name.
 .TP
-.B --atomic-file file
-Let the command operate on the specified file. The data of the table to
+.B --atomic-file "\fIfile\fP"
+Let the command operate on the specified
+.IR file .
+The data of the table to
 operate on will be extracted from the file and the result of the operation
 will be saved back into the file. If specified, this option should come
 before the command specification. An alternative that should be preferred,
 is setting the
 .IR EBTABLES_ATOMIC_FILE " environment variable."
 .TP
-.B -M, --modprobe program
-When talking to the kernel, use this program to try to automatically load
-missing kernel modules.
+.B -M, --modprobe "\fIprogram\fP"
+When talking to the kernel, use this
+.I program
+to try to automatically load missing kernel modules.
 
 .SS
-RULE-SPECIFICATIONS
+RULE SPECIFICATIONS
 The following command line arguments make up a rule specification (as used 
 in the add and delete commands). A "!" option before the specification 
 inverts the test for that specification. Apart from these standard rule 
 specifications there are some other command line arguments of interest.
 See both the 
-.BR "MATCH-EXTENSIONS" 
+.BR "MATCH EXTENSIONS" 
 and the
-.BR "WATCHER-EXTENSION(S)" 
+.BR "WATCHER EXTENSIONS" 
 below.
 .TP
 .BR "-p, --protocol " "[!] \fIprotocol\fP"
@@ -402,14 +399,12 @@ a name (e.g.
 .BR LENGTH .
 The protocol field of the Ethernet frame can be used to denote the
 length of the header (802.2/802.3 networks). When the value of that field is
-below (or equals)
+below or equals
 .IR 0x0600 ,
 the value equals the size of the header and shouldn't be used as a
 protocol number. Instead, all frames where the protocol field is used as
 the length field are assumed to be of the same 'protocol'. The protocol
-name used in
-.B ebtables
-for these frames is
+name used in ebtables for these frames is
 .BR LENGTH .
 .br
 The file
@@ -425,77 +420,78 @@ See that file for more information. The flag
 is an alias for this option.
 .TP 
 .BR "-i, --in-interface " "[!] \fIname\fP"
-The interface via which a frame is received (for the
+The interface (bridge port) via which a frame is received (this option is useful in the
 .BR INPUT ,
 .BR FORWARD ,
 .BR PREROUTING " and " BROUTING
-chains). The flag
+chains). If the interface name ends with '+', then
+any interface name that begins with this name (disregarding '+') will match.
+The flag
 .B --in-if
 is an alias for this option.
-If the interface name ends with '+', then
-any interface name that begins with this name will match.
 .TP
 .BR "--logical-in " "[!] \fIname\fP"
-The (logical) bridge interface via which a frame is received (for the
+The (logical) bridge interface via which a frame is received (this option is useful in the
 .BR INPUT ,
 .BR FORWARD ,
 .BR PREROUTING " and " BROUTING
 chains).
 If the interface name ends with '+', then
-any interface name that begins with this name will match.
+any interface name that begins with this name (disregarding '+') will match.
 .TP
 .BR "-o, --out-interface " "[!] \fIname\fP"
-The interface via which a frame is going to be sent (for the
+The interface (bridge port) via which a frame is going to be sent (this option is useful in the
 .BR OUTPUT ,
 .B FORWARD
 and
 .B POSTROUTING
-chains). The flag
+chains). If the interface name ends with '+', then
+any interface name that begins with this name (disregarding '+') will match.
+The flag
 .B --out-if
 is an alias for this option.
-If the interface name ends with '+', then
-any interface name that begins with this name will match.
 .TP
 .BR "--logical-out " "[!] \fIname\fP"
-The (logical) bridge interface via which a frame is going to be sent (for
-the
+The (logical) bridge interface via which a frame is going to be sent (this option
+is useful in the
 .BR OUTPUT ,
 .B FORWARD
 and
 .B POSTROUTING
 chains).
 If the interface name ends with '+', then
-any interface name that begins with this name will match.
+any interface name that begins with this name (disregarding '+') will match.
 .TP
 .BR "-s, --source " "[!] \fIaddress\fP[/\fImask\fP]"
-The source mac address. Both mask and address are written as 6 hexadecimal
+The source MAC address. Both mask and address are written as 6 hexadecimal
 numbers separated by colons. Alternatively one can specify Unicast,
-Multicast, Broadcast or BGA (Bridge Group Address).
+Multicast, Broadcast or BGA (Bridge Group Address):
 .br
-.BR "Unicast " "= 00:00:00:00:00:00/01:00:00:00:00:00,"
-.BR "Multicast " "= 01:00:00:00:00:00/01:00:00:00:00:00,"
-.BR "Broadcast " "= ff:ff:ff:ff:ff:ff/ff:ff:ff:ff:ff:ff or"
-.BR "BGA " "= 01:80:c2:00:00:00/ff:ff:ff:ff:ff:ff."
+.IR "Unicast" "=00:00:00:00:00:00/01:00:00:00:00:00,"
+.IR "Multicast" "=01:00:00:00:00:00/01:00:00:00:00:00,"
+.IR "Broadcast" "=ff:ff:ff:ff:ff:ff/ff:ff:ff:ff:ff:ff or"
+.IR "BGA" "=01:80:c2:00:00:00/ff:ff:ff:ff:ff:ff."
 Note that a broadcast
 address will also match the multicast specification. The flag
 .B --src
 is an alias for this option.
 .TP
 .BR "-d, --destination " "[!] \fIaddress\fP[/\fImask\fP]"
-The destination mac address. See -s (above) for more details. The flag
+The destination MAC address. See
+.B -s
+(above) for more details on MAC addresses. The flag
 .B --dst
 is an alias for this option.
 
-.SS MATCH-EXTENSIONS
-.B ebtables
-extensions are precompiled into the userspace tool. So there is no need
-to explicitly load them with a -m option like in
-.BR iptables .
-However, these
-extensions deal with functionality supported by supplemental kernel modules.
-.SS 802.3
+.SS MATCH EXTENSIONS
+Ebtables extensions are dynamically loaded into the userspace tool,
+there is therefore no need to explicitly load them with a
+-m option like is done in iptables.
+These extensions deal with functionality supported by kernel modules supplemental to
+the core ebtables code.
+.SS 802_3
 Specify 802.3 DSAP/SSAP fields or SNAP type.  The protocol must be specified as
-.BR "LENGTH " (see " protocol " above).
+.IR "LENGTH " "(see the option " " -p " above).
 .TP
 .BR "--802_3-sap " "[!] \fIsap\fP"
 DSAP and SSAP are two one byte 802.3 fields.  The bytes are always
@@ -506,111 +502,108 @@ If the 802.3 DSAP and SSAP values are 0xaa then the SNAP type field must
 be consulted to determine the payload protocol.  This is a two byte
 (hexadecimal) argument.  Only 802.3 frames with DSAP/SSAP 0xaa are
 checked for type.
-.SS among 	 
+.SS among
 Match a MAC address or MAC/IP address pair versus a list of MAC addresses
 and MAC/IP address pairs.
-A list entry has the following format: xx:xx:xx:xx:xx:xx[=ip.ip.ip.ip][,]. Multiple
+A list entry has the following format:
+.IR xx:xx:xx:xx:xx:xx[=ip.ip.ip.ip][,] ". Multiple"
 list entries are separated by a comma, specifying an IP address corresponding to
 the MAC address is optional. Multiple MAC/IP address pairs with the same MAC address
 but different IP address (and vice versa) can be specified. If the MAC address doesn't
-match any entry from the list, the frame doesn't match the rule (unless '!' was used).
+match any entry from the list, the frame doesn't match the rule (unless "!" was used).
 .TP
 .BR "--among-dst " "[!] \fIlist\fP"
 Compare the MAC destination to the given list. If the Ethernet frame has type
-.BR IPv4 " or " ARP ,
+.IR IPv4 " or " ARP ,
 then comparison with MAC/IP destination address pairs from the
 list is possible.
 .TP
 .BR "--among-src " "[!] \fIlist\fP"
 Compare the MAC source to the given list. If the Ethernet frame has type
-.BR IPv4 " or " ARP ,
+.IR IPv4 " or " ARP ,
 then comparison with MAC/IP source address pairs from the list
 is possible.
 .SS arp
-Specify arp fields. The protocol must be specified as
-.BR ARP " or " RARP .
+Specify (R)ARP fields. The protocol must be specified as
+.IR ARP " or " RARP .
 .TP
 .BR "--arp-opcode " "[!] \fIopcode\fP"
-The (r)arp opcode (decimal or a string, for more details see
+The (R)ARP opcode (decimal or a string, for more details see
 .BR "ebtables -h arp" ).
 .TP
 .BR "--arp-htype " "[!] \fIhardware type\fP"
-The hardware type, this can be a decimal or the string "Ethernet". This
-is normally Ethernet (value 1).
+The hardware type, this can be a decimal or the string
+.I Ethernet
+(which sets
+.I type
+to 1). Most (R)ARP packets have Eternet as hardware type.
 .TP
 .BR "--arp-ptype " "[!] \fIprotocol type\fP"
-The protocol type for which the (r)arp is used (hexadecimal or the string "IPv4").
-This is normally IPv4 (0x0800).
+The protocol type for which the (r)arp is used (hexadecimal or the string
+.IR IPv4 ,
+denoting 0x0800).
+Most (R)ARP packets have protocol type IPv4.
 .TP
 .BR "--arp-ip-src " "[!] \fIaddress\fP[/\fImask\fP]"
-The ARP IP source address specification.
+The (R)ARP IP source address specification.
 .TP
 .BR "--arp-ip-dst " "[!] \fIaddress\fP[/\fImask\fP]"
-The ARP IP destination address specification.
+The (R)ARP IP destination address specification.
 .TP
 .BR "--arp-mac-src " "[!] \fIaddress\fP[/\fImask\fP]"
-The ARP MAC source address specification.
+The (R)ARP MAC source address specification.
 .TP
 .BR "--arp-mac-dst " "[!] \fIaddress\fP[/\fImask\fP]"
-The ARP MAC destination address specification.
+The (R)ARP MAC destination address specification.
 .SS ip
-Specify ip fields. The protocol must be specified as
-.BR IPv4 .
+Specify IPv4 fields. The protocol must be specified as
+.IR IPv4 .
 .TP
 .BR "--ip-source " "[!] \fIaddress\fP[/\fImask\fP]"
-The source ip address.
+The source IP address.
 The flag
 .B --ip-src
 is an alias for this option.
 .TP
 .BR "--ip-destination " "[!] \fIaddress\fP[/\fImask\fP]"
-The destination ip address.
+The destination IP address.
 The flag
 .B --ip-dst
 is an alias for this option.
 .TP
 .BR "--ip-tos " "[!] \fItos\fP"
-The ip type of service, in hexadecimal numbers.
+The IP type of service, in hexadecimal numbers.
 .BR IPv4 .
 .TP
 .BR "--ip-protocol " "[!] \fIprotocol\fP"
-The ip protocol.
+The IP protocol.
 The flag
 .B --ip-proto
 is an alias for this option.
 .TP
-.BR "--ip-source-port " "[!] \fIport\fP[:\fIport\fP]"
-The source port or port range for the ip protocols 6 (TCP) and 17
-(UDP). If the first port is omitted, "0" is assumed; if the last
-is omitted, "65535" is assumed. The flag
+.BR "--ip-source-port " "[!] \fIport1\fP[:\fIport2\fP]"
+The source port or port range for the IP protocols 6 (TCP) and 17
+(UDP). The
+.B --ip-protocol
+option must be specified as
+.IR TCP " or " UDP .
+If
+.IR port1 " is omitted, " 0:port2 " is used; if " port2 " is omitted but a colon is specified, " port1:65535 " is used."
+The flag
 .B --ip-sport
 is an alias for this option.
 .TP
-.BR "--ip-destination-port " "[!] \fIport\fP[:\fIport\fP]"
+.BR "--ip-destination-port " "[!] \fIport1\fP[:\fIport2\fP]"
 The destination port or port range for ip protocols 6 (TCP) and
-17 (UDP). The flag
+17 (UDP). The
+.B --ip-protocol
+option must be specified as
+.IR TCP " or " UDP .
+If
+.IR port1 " is omitted, " 0:port2 " is used; if " port2 " is omitted but a colon is specified, " port1:65535 " is used."
+The flag
 .B --ip-dport
 is an alias for this option.
-<<<<<<< ebtables.8
-.SS limit
-This module matches at a limited rate using a token bucket filter.
-A rule using this extension will match until this limit is reached.
-It can be used with the
-.B --log
-watcher
-to give limited logging, for example. Its use is the same as the limit
-match of iptables.
-.TP
-.BR "--limit " "[\fIvalue\fP]"
-Maximum average matching rate: specified as a number, with an optional
-`/second', `/minute', `/hour', or `/day' suffix; the default is 3/hour.
-.TP
-.BR "--limit-burst " "[\fInumber\fP]"
-Maximum initial number of packets to match: this number gets recharged by
-one every time the limit specified above is not reached, up to this
-number; the default is 5.
-.SS pkttype
-=======
 .SS limit
 This module matches at a limited rate using a token bucket filter.
 A rule using this extension will match until this limit is reached.
@@ -621,48 +614,60 @@ as the limit match of iptables.
 .TP
 .BR "--limit " "[\fIvalue\fP]"
 Maximum average matching rate: specified as a number, with an optional
-`/second', `/minute', `/hour', or `/day' suffix; the default is 3/hour.
+.IR /second ", " /minute ", " /hour ", or " /day " suffix; the default is " 3/hour .
 .TP
 .BR "--limit-burst " "[\fInumber\fP]"
 Maximum initial number of packets to match: this number gets recharged by
 one every time the limit specified above is not reached, up to this
-number; the default is 5.
-.SS pkttype
->>>>>>> 1.39
+number; the default is
+.IR 5 .
 .SS mark_m
 .TP
 .BR "--mark " "[!] [\fIvalue\fP][/\fImask\fP]"
-Matches frames with the given unsigned mark value. If a mark value and
-mask is specified, the logical AND of the mark value of the frame and
-the user-specified mark mask is taken before comparing it with the
-user-specified mark value. When only a mark value is specified, the packet
+Matches frames with the given unsigned mark value. If a
+.IR value " and " mask " are specified, the logical AND of the mark value of the frame and"
+the user-specified
+.IR mask " is taken before comparing it with the"
+user-specified mark
+.IR value ". When only a mark "
+.IR value " is specified, the packet"
 only matches when the mark value of the frame equals the user-specified
-mark value. If only a mark mask is specified (start with '/') the logical
-AND of the mark value of the frame and the user-specified mark mask is
-taken and the frame matches when the result of this logical AND is
-non-zero. Only specifying a mark mask is useful to match multiple mark
-values.
+mark
+.IR value .
+If only a
+.IR mask " is specified, the logical"
+AND of the mark value of the frame and the user-specified
+.IR mask " is taken and the frame matches when the result of this logical AND is"
+non-zero. Only specifying a
+.IR mask " is useful to match multiple mark values."
 .SS pkttype
 .TP
 .BR "--pkttype-type " "[!] \fItype\fP"
 Matches on the Ethernet "class" of the frame, which is determined by the
-generic networking code. Possible values: broadcast (MAC destination is
-broadcast address), multicast (MAC destination is multicast address),
-host (MAC destination is the receiving network device) or otherhost
-(none of the above).
+generic networking code. Possible values:
+.IR broadcast " (MAC destination is the broadcast address),"
+.IR multicast " (MAC destination is a multicast address),"
+.IR host " (MAC destination is the receiving network device), or "
+.IR otherhost " (none of the above)."
 .SS stp
 Specify stp BPDU (bridge protocol data unit) fields. The destination
-address must be specified as the bridge group address (BGA).
+address
+.BR "" ( -d ") must be specified as the bridge group address"
+.IR "" ( BGA ).
+For all options for which a range of values can be specified, it holds that
+if the lower bound is omitted (but the colon is not), then the lowest possible lower bound
+for that option is used, while if the upper bound is omitted (but the colon again is not), the
+highest possible upper bound for that option is used.
 .TP
 .BR "--stp-type " "[!] \fItype\fP"
-The BPDU type (0-255), special recognized types:
-.BR config ": configuration BPDU (=0) and"
-.BR tcn ": topology change notification BPDU (=128)."
+The BPDU type (0-255), recognized non-numerical types are
+.IR config ", denoting a configuration BPDU (=0), and"
+.IR tcn ", denothing a topology change notification BPDU (=128)."
 .TP
 .BR "--stp-flags " "[!] \fIflag\fP"
-The BPDU flag (0-255), special recognized flags:
-.BR topology-change ": the topology change flag (=1)"
-.BR topology-change-ack ": the topology change acknowledgement flag (=128)."
+The BPDU flag (0-255), recognized non-numerical flags are
+.IR topology-change ", denoting the topology change flag (=1), and"
+.IR topology-change-ack ", denoting the topology change acknowledgement flag (=128)."
 .TP
 .BR "--stp-root-prio " "[!] [\fIprio\fP][:\fIprio\fP]"
 The root priority (0-65535) range.
@@ -698,45 +703,49 @@ The forward delay timer (0-65535) range.
 .SS vlan
 Specify 802.1Q Tag Control Information fields.
 The protocol must be specified as
-.BR 802_1Q " (0x8100)."
+.IR 802_1Q " (0x8100)."
 .TP
 .BR "--vlan-id " "[!] \fIid\fP"
 The VLAN identifier field (VID). Decimal number from 0 to 4095.
 .TP
 .BR "--vlan-prio " "[!] \fIprio\fP"
-The user_priority field. Decimal number from 0 to 7.
+The user priority field, a decimal number from 0 to 7.
 The VID should be set to 0 ("null VID") or unspecified
-(for this case the VID is deliberately set to 0).
+(in the latter case the VID is deliberately set to 0).
 .TP
 .BR "--vlan-encap " "[!] \fItype\fP"
 The encapsulated Ethernet frame type/length.
-Specified as hexadecimal
+Specified as a hexadecimal
 number from 0x0000 to 0xFFFF or as a symbolic name
 from
 .BR /etc/ethertypes .
 
-.SS WATCHER-EXTENSION(S)
-Watchers are things that only look at frames passing by. These watchers only
-see the frame if the frame matches the rule. Watchers see the packet before the
+.SS WATCHER EXTENSIONS
+Watchers only look at frames passing by, they don't modify them nor decide
+to accept the frames or not. These watchers only
+see the frame if the frame matches the rule, and they see it before the
 target is executed.
 .SS log
-The fact that the log module is a watcher lets us log stuff while giving a target
-by choice. Note that the log module therefore is not a target.
+The log watcher writes descriptive data about a frame to the syslog.
 .TP
 .B "--log"
 .br
-Use this if you won't specify any other log options, so if you want to use the default
-settings: log-prefix="", no arp logging, no ip logging, log-level=info.
+Log with the default loggin options: log-level=
+.IR info ,
+log-prefix="", no ip logging, no arp logging.
 .TP
 .B --log-level "\fIlevel\fP"
 .br
-Defines the logging level. For the possible values: ebtables -h log.
+Defines the logging level. For the possible values, see
+.BR "ebtables -h log" .
 The default level is 
 .IR info .
 .TP
 .BR --log-prefix " \fItext\fP"
 .br
-Defines the prefix to be printed before the logging information.
+Defines the prefix
+.I text
+to be printed at the beginning of the line with the logging information.
 .TP
 .B --log-ip 
 .br
@@ -759,7 +768,9 @@ The ulog watcher module accepts 2 parameters when the module is loaded
 into the kernel (e.g. with modprobe):
 .B nlbufsiz
 specifies how big the buffer for each netlink multicast
-group is. E.g. If you say nlbufsiz=8192, up to eight kB of packets will
+group is. If you say
+.IR nlbufsiz=8192 ,
+for example, up to eight kB of packets will
 get accumulated in the kernel until they are sent to userspace. It is
 not possible to allocate more than 128kB. Please also keep in mind that
 this buffer size is allocated for each nlgroup you are using, so the
@@ -797,11 +808,13 @@ size limit of 128*1024.
 .TP
 .BR --ulog-qthreshold " \fIthreshold\fP"
 .br
-Queue at most threshold number of packets before sending them to
+Queue at most
+.I threshold
+number of packets before sending them to
 userspace with a netlink socket. Note that packets can be sent to
 userspace before the queue is full, this happens when the ulog
 kernel timer goes off (the frequency of this timer depends on
-.BR flushtimeout .
+.BR flushtimeout ).
 .SS TARGET EXTENSIONS
 .SS
 .B arpreply
@@ -809,19 +822,25 @@ The
 .B arpreply
 target can be used in the
 .BR PREROUTING " chain of the " nat " table."
-If this target sees an arp request it will automatically reply
-with an arp reply. The used MAC address for the reply can be specified.
-When the arp message is not an arp request, it is ignored by this target.
+If this target sees an ARP request it will automatically reply
+with an ARP reply. The used MAC address for the reply can be specified.
+The protocol must be specified as
+.IR ARP .
+When the ARP message is not an ARP request or when the ARP request isn't
+for an IP address on an Ethernet network, it is ignored by this target
+.BR "" ( CONTINUE ).
+When the ARP request is malformed, it is dropped
+.BR "" ( DROP ).
 .TP
 .BR "--arpreply-mac " "\fIaddress\fP"
 Specifies the MAC address to reply with: the Ethernet source MAC and the
 ARP payload source MAC will be filled in with this address.
 .TP
 .BR "--arpreply-target " "\fItarget\fP"
-Specifies the standard target. After sending the arp reply, the rule still
-has to give a standard target so
-.B ebtables
-knows what to do. The default target is DROP.
+Specifies the standard target. After sending the ARP reply, the rule still
+has to give a standard target so ebtables knows what to do with the ARP request.
+The default target
+.BR "" "is " DROP .
 .SS
 .B dnat
 The
@@ -829,10 +848,12 @@ The
 target can only be used in the
 .BR BROUTING " chain of the " broute " table and the "
 .BR PREROUTING " and " OUTPUT " chains of the " nat " table."
-It specifies that the destination mac address has to be changed.
+It specifies that the destination MAC address has to be changed.
 .TP
 .BR "--to-destination " "\fIaddress\fP"
 .br
+Change the destination MAC address to the specified
+.IR address .
 The flag
 .B --to-dst
 is an alias for this option.
@@ -840,34 +861,35 @@ is an alias for this option.
 .BR "--dnat-target " "\fItarget\fP"
 .br
 Specifies the standard target. After doing the dnat, the rule still has to
-give a standard target so
-.B ebtables
-knows what to do.
-The default target is ACCEPT. Making it CONTINUE could let you use
-multiple target extensions on the same frame. Making it DROP only makes
-sense in the BROUTING chain but using the redirect target is more logical
-there. RETURN is also allowed. Note
-that using RETURN in a base chain is not allowed.
+give a standard target so ebtables knows what to do with the dnated frame.
+The default target is
+.BR ACCEPT .
+Making it
+.BR CONTINUE " could let you use"
+multiple target extensions on the same frame. Making it
+.BR DROP " only makes"
+sense in the
+.BR BROUTING " chain but using the " redirect " target is more logical there. " RETURN " is also allowed. Note that using " RETURN
+in a base chain is not allowed (for obvious reasons).
 .SS
 .B mark
-The mark target can be used in every chain of every table. It is possible
+.BR "" "The " mark " target can be used in every chain of every table. It is possible"
 to use the marking of a frame/packet in both ebtables and iptables,
-if the br-nf code is compiled into the kernel. Both put the marking at the
-same place. So, you can consider this fact as a feature, or as something to
-watch out for.
+if the bridge-nf code is compiled into the kernel. Both put the marking at the
+same place. This allows for a form of communication between ebtables and iptables.
 .TP
 .BR "--mark-set " "\fIvalue\fP"
 .br
-Mark the frame with the specified unsigned value.
+Mark the frame with the specified non-negative
+.IR value .
 .TP
 .BR "--mark-target " "\fItarget\fP"
 .br
 Specifies the standard target. After marking the frame, the rule
-still has to give a standard target so
-.B ebtables
-knows what to do.
-The default target is ACCEPT. Making it CONTINUE can let you do other
-things with the frame in other rules of the chain.
+still has to give a standard target so ebtables knows what to do.
+The default target is
+.BR ACCEPT ". Making it " CONTINUE " can let you do other"
+things with the frame in subsequent rules of the chain.
 .SS
 .B redirect
 The
@@ -876,41 +898,42 @@ target will change the MAC target address to that of the bridge device the
 frame arrived on. This target can only be used in the
 .BR BROUTING " chain of the " broute " table and the "
 .BR PREROUTING " chain of the " nat " table."
+In the
+.BR BROUTING " chain, the MAC address of the bridge port is used as destination address,"
+.BR "" "in the " PREROUTING " chain, the MAC address of the bridge is used."
 .TP
 .BR "--redirect-target " "\fItarget\fP"
 .br
 Specifies the standard target. After doing the MAC redirect, the rule
-still has to give a standard target so
-.B ebtables
-knows what to do.
-The default target is ACCEPT. Making it CONTINUE could let you use
-multiple target extensions on the same frame. Making it DROP in the
-BROUTING chain will let the frames be routed. RETURN is also allowed. Note
-that using RETURN in a base chain is not allowed.
+still has to give a standard target so ebtables knows what to do.
+The default target is
+.BR ACCEPT ". Making it " CONTINUE " could let you use"
+multiple target extensions on the same frame. Making it
+.BR DROP " in the " BROUTING " chain will let the frames be routed. " RETURN " is also allowed. Note"
+.BR "" "that using " RETURN " in a base chain is not allowed."
 .SS
 .B snat
 The
 .B snat
 target can only be used in the
 .BR POSTROUTING " chain of the " nat " table."
-It specifies that the source mac address has to be changed.
+It specifies that the source MAC address has to be changed.
 .TP
 .BR "--to-source " "\fIaddress\fP"
 .br
-The flag
+Changes the source MAC address to the specified
+.IR address ". The flag"
 .B --to-src
 is an alias for this option.
 .TP
 .BR "--snat-target " "\fItarget\fP"
 .br
 Specifies the standard target. After doing the snat, the rule still has 
-to give a standard target so
-.B ebtables
-knows what to do.
-The default target is ACCEPT. Making it CONTINUE could let you use
-multiple target extensions on the same frame. Making it DROP doesn't
-make sense, but you could do that too. RETURN is also allowed. Note
-that using RETURN in a base chain is not allowed.
+to give a standard target so ebtables knows what to do.
+.BR "" "The default target is " ACCEPT ". Making it " CONTINUE " could let you use"
+.BR "" "multiple target extensions on the same frame. Making it " DROP " doesn't"
+.BR "" "make sense, but you could do that too. " RETURN " is also allowed. Note"
+.BR "" "that using " RETURN " in a base chain is not allowed."
 .br
 .SH FILES
 .I /etc/ethertypes
