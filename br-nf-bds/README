@@ -1,5 +1,5 @@
 ---
-These patches differ from Lennert's patches because I don't agree with 
+These patches differ from Lennert's patches because I don't agree with
 Lennert's. Don't worry, mine are better ;)
 
 Date of first branch: April 27, 2002
@@ -24,3 +24,11 @@ changed.
 
 August 31, 2002
 ---
+bridge-nf is in the 2.5.xx series now. The only 2.5 file maintained in
+this repository is br_netfilter.c. No more patch screw-ups!
+
+The bridge-nf patch for 2.4.xx is no longer my concern.
+
+So, just use the latest 2.5 kernel and don't bother with this repository.
+
+September 02, 2002
