@@ -112,18 +112,38 @@
     <P>
       There are five hooks defined in the Linux bridging code.
       The sixth hook (BROUTING) is added by the <EM>ebtables</EM> patch.
-      The hooks are specific places in the network
-      code on which software can attach itself to process the
-      packets/frames passing that hook.
     </P>
     <BR>
      <BR>
      <IMG SRC="bridge2b.png">
     <P>
-      <I><B>Figure 2b.</B> Ethernet Bridging hooks</I><BR>
+      <I><B>Figure 2b.</B> Ethernet bridging hooks</I><BR>
     </P>
-    <BR>
-     <BR>
+    </P>
+    <P>
+    <P>
+      The hooks are specific places in the network
+      code on which software can attach itself to process the
+      packets/frames passing that place. For example, the kernel module responsible for the <EM>ebtables</EM> FORWARD chain is attached onto the bridge FORWARD hook.
+      This is done when the module is loaded into the kernel or at bootup.
+    </P>
+    <P>
+     Note that the <EM>ebtables</EM> BROUTING and PREROUTING chains are traversed before the bridging decision, therefore these chains will even see frames that will be
+     ignored by the bridge. You should take that into account when using this chain. Also note that the chains won't see frames entering on a non-forwarding bridge port.<br>
+     The bridge's decision for a frame (as seen on Figure 2b) can be one of these:
+      <ul>
+      <li>bridge it, if the destination MAC address is on
+      another side of the bridge;</li>
+      <li>flood it over all the forwarding bridge ports, if the
+      position of the box with the destination MAC is unknown
+      to the bridge;</li>
+      <li>pass it to the higher protocol code (the IP code),
+      if the destination MAC address is that of the bridge or of
+      one of its ports;</li>
+      <li>ignore it, if the destination MAC address is located
+      on the same side of the bridge.</li>
+      </ul>
+    </P>
      <IMG SRC="bridge2c.png">
     <P>
       <I><B>Figure 2c.</B> Bridging tables (ebtables) traversal
@@ -191,11 +211,6 @@
       the destination MAC address, it doesn't care about the
       Network Layer addresses (e.g. IP address).
     </P>
-    <DIV CLASS="note">
-      Incoming frames on non-forwarding ports of a bridge will
-      not be seen by <EM>ebtables</EM>, not even by the BROUTING
-      chain.
-    </DIV>
     <P>
       If the bridge decides the frame is destined for the local
       computer, the frame will go through the INPUT chain.
@@ -341,19 +356,6 @@
       Changing the destination address of the packet (IP address
       and MAC address) has to happen before the bridge code
       decides what to do with the frame/packet.
-      The decision of the bridge code can be one of these:
-      <ul>
-      <li>bridge it, if the destination MAC address is on
-      another side of the bridge;</li>
-      <li>flood it over all the forwarding bridge ports, if the
-      position of the box with the destination MAC is unknown
-      to the bridge;</li>
-      <li>pass it to the higher protocol code (the IP code),
-      if the destination MAC address is that of the bridge or of
-      one of its ports;</li>
-      <li>ignore it, if the destination MAC address is located
-      on the same side of the bridge.</li>
-      </ul>
     </P>
     <P>
       So, this IP DNAT has to happen very early in the bridge
@@ -626,7 +628,7 @@ Copyright (c) 2002 Bart De Schuymer &lt;bart.de.schuymer@pandora.be&gt;,
     "http://www.gnu.org/licenses/fdl.txt">"GNU Free Documentation License"</A>.</SMALL> <BR>
      <BR>
     <P>
-      Last updated August 06, 2002.
+      Last updated August 07, 2002.
     </P>
   </BODY>
 </HTML>
