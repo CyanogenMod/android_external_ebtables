@@ -6,7 +6,7 @@
  *	Lennert Buytenhek               <buytenh@gnu.org>
  *	Bart De Schuymer		<bart.de.schuymer@pandora.be>
  *
- *	$Id: br_netfilter.c,v 1.2 2002/08/24 08:44:40 bdschuym Exp $
+ *	$Id: br_netfilter.c,v 1.3 2002/09/11 17:41:38 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -116,9 +116,24 @@ static void __br_dnat_complain(void)
 static int br_nf_pre_routing_finish_bridge(struct sk_buff *skb)
 {
 	skb->dev = bridge_parent(skb->dev);
+#ifdef CONFIG_NETFILTER_DEBUG
+	skb->nf_debug |= (1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_FORWARD);
+#endif
 	skb->dst->output(skb);
 	return 0;
 }
+
+#ifdef CONFIG_NETFILTER_DEBUG
+#define __br_handle_frame_finish  br_nf_pre_routing_finish_route
+static inline int br_nf_pre_routing_finish_route(struct sk_buff *skb)
+{
+	skb->nf_debug = 0;
+	br_handle_frame_finish(skb);
+	return 0;
+}
+#else
+#define __br_handle_frame_finish br_handle_frame_finish
+#endif
 
 /* This requires some explaining.  If DNAT has taken place,
  * we will need to fix up the destination ethernet address,
@@ -151,7 +166,7 @@ static int br_nf_pre_routing_finish_bridge(struct sk_buff *skb)
  *
  * After a "echo '0' > /proc/sys/net/ipv4/ip_forward" ip_route_input() will
  * fail, while ip_route_output() will return success. The source address for
- * for ip_route_output() is set to zero, so ip_route_output()
+ * ip_route_output() is set to zero, so ip_route_output()
  * thinks we're handling a locally generated packet and won't care if
  * ip forwarding is allowed. We send a warning message to the users's log
  * telling her to put ip forwarding on.
@@ -172,6 +187,9 @@ static int br_nf_pre_routing_finish(struct sk_buff *skb)
 	struct net_device *dev = skb->dev;
 	struct iphdr *iph = skb->nh.iph;
 
+#ifdef CONFIG_NETFILTER_DEBUG
+	skb->nf_debug ^= (1 << NF_BR_PRE_ROUTING);
+#endif
 	if (dnat_took_place(skb)) {
 		if (ip_route_input(skb, iph->daddr, iph->saddr, iph->tos, dev)) {
 			struct rtable *rt;
@@ -206,10 +224,9 @@ bridged_dnat:
 		skb->dst = (struct dst_entry *)&__fake_rtable;
 		dst_hold(skb->dst);
 	}
-
 	skb->dev = skb->physindev;
 	NF_HOOK_THRESH(PF_BRIDGE, NF_BR_PRE_ROUTING, skb, skb->dev, NULL,
-			br_handle_frame_finish, 1);
+			__br_handle_frame_finish, 1);
 
 	return 0;
 }
@@ -261,6 +278,10 @@ static unsigned int br_nf_pre_routing(unsigned int hook, struct sk_buff **pskb, 
 	if (skb->pkt_type == PACKET_OTHERHOST)
 		skb->pkt_type = PACKET_HOST;
 	store_orig_dstaddr(skb);
+
+#ifdef CONFIG_NETFILTER_DEBUG
+	(*pskb)->nf_debug ^= (1 << NF_IP_PRE_ROUTING);
+#endif
 	NF_HOOK(PF_INET, NF_IP_PRE_ROUTING, skb, skb->dev, NULL,
 		br_nf_pre_routing_finish);
 
@@ -300,6 +321,9 @@ static unsigned int br_nf_local_in(unsigned int hook, struct sk_buff **pskb, con
 /* PF_BRIDGE/FORWARD *************************************************/
 static int br_nf_forward_finish(struct sk_buff *skb)
 {
+#ifdef CONFIG_NETFILTER_DEBUG
+	skb->nf_debug ^= (1 << NF_BR_FORWARD);
+#endif
 	NF_HOOK_THRESH(PF_BRIDGE, NF_BR_FORWARD, skb, skb->physindev,
 			skb->dev, br_forward_finish, 1);
 
@@ -324,6 +348,9 @@ static unsigned int br_nf_forward(unsigned int hook, struct sk_buff **pskb, cons
 		return NF_ACCEPT;
 
 	skb->physoutdev = skb->dev;
+#ifdef CONFIG_NETFILTER_DEBUG
+	skb->nf_debug ^= (1 << NF_IP_FORWARD);
+#endif
 	NF_HOOK(PF_INET, NF_IP_FORWARD, skb, bridge_parent(skb->physindev),
 			bridge_parent(skb->dev), br_nf_forward_finish);
 
@@ -331,7 +358,8 @@ static unsigned int br_nf_forward(unsigned int hook, struct sk_buff **pskb, cons
 }
 
 
-/* PF_BRIDGE/LOCAL_OUT ***********************************************/
+/* PF_BRIDGE/LOCAL_OUT
+***********************************************/
 static int br_nf_local_out_finish_forward(struct sk_buff *skb)
 {
 	struct net_device *dev;
@@ -339,6 +367,9 @@ static int br_nf_local_out_finish_forward(struct sk_buff *skb)
 	dev = skb->physindev;
 	// tell br_nf_forward to stay away
 	skb->physindev = NULL;
+#ifdef CONFIG_NETFILTER_DEBUG
+	skb->nf_debug &= ~(1 << NF_BR_FORWARD);
+#endif
 	NF_HOOK(PF_BRIDGE, NF_BR_FORWARD, skb, dev, skb->dev,
 		br_forward_finish);
 
@@ -347,6 +378,9 @@ static int br_nf_local_out_finish_forward(struct sk_buff *skb)
 
 static int br_nf_local_out_finish(struct sk_buff *skb)
 {
+#ifdef CONFIG_NETFILTER_DEBUG
+	skb->nf_debug &= ~(1 << NF_BR_LOCAL_OUT);
+#endif
 	NF_HOOK_THRESH(PF_BRIDGE, NF_BR_LOCAL_OUT, skb, NULL, skb->dev,
 			br_forward_finish, INT_MIN + 1);
 
@@ -414,6 +448,9 @@ static unsigned int br_nf_local_out(unsigned int hook, struct sk_buff **pskb, co
 
 	skb->physoutdev = skb->dev;
 
+#ifdef CONFIG_NETFILTER_DEBUG
+	skb->nf_debug ^= (1 << NF_BR_LOCAL_OUT);
+#endif
 	hookno = NF_IP_LOCAL_OUT;
 	prio = NF_IP_PRI_BRIDGE_SABOTAGE;
 	if ((realindev = skb->physindev) != NULL) {
@@ -436,6 +473,9 @@ static unsigned int br_nf_local_out(unsigned int hook, struct sk_buff **pskb, co
 static int br_nf_post_routing_finish(struct sk_buff *skb)
 {
 	__maybe_fixup_src_address(skb);
+#ifdef CONFIG_NETFILTER_DEBUG
+	skb->nf_debug ^= (1 << NF_BR_POST_ROUTING);
+#endif
 	NF_HOOK_THRESH(PF_BRIDGE, NF_BR_POST_ROUTING, skb, NULL,
 			bridge_parent(skb->dev), br_dev_queue_push_xmit, 1);
 
@@ -468,6 +508,9 @@ static unsigned int br_nf_post_routing(unsigned int hook, struct sk_buff **pskb,
 		return NF_ACCEPT;
 
 	store_orig_srcaddr(skb);
+#ifdef CONFIG_NETFILTER_DEBUG
+	skb->nf_debug ^= (1 << NF_IP_POST_ROUTING);
+#endif
 	NF_HOOK(PF_INET, NF_IP_POST_ROUTING, skb, NULL,
 		bridge_parent(skb->dev), br_nf_post_routing_finish);
 
