@@ -1,4 +1,4 @@
-.TH EBTABLES 8  "01 May 2002"
+.TH EBTABLES 8  "26 June 2002"
 .\"
 .\" Man page written by Bart De Schuymer <bart.de.schuymer@pandora.be>
 .\" It is based on the iptables man page.
@@ -23,11 +23,15 @@
 .SH NAME
 ebtables (v.2.0) \- ethernet bridge packet table administration
 .SH SYNOPSIS
-.BR "ebtables -[ADI] " "chain rule-specification [options]"
+.BR "ebtables -[ADI] " "chain rule-specification " [ options ]
 .br
 .BR "ebtables -P " "chain target"
 .br
 .BR "ebtables -[FLZ] [" "chain" "]"
+.br
+.BR "ebtables -[NX] " chain
+.br
+.BR "ebtables -E " "old-chain-name new-chain-name"
 .br
 .B "ebtables -L DB"
 .br
@@ -53,6 +57,7 @@ This target can be one of these values:
 .IR ACCEPT ,
 .IR DROP ,
 .IR CONTINUE ,
+.IR RETURN ,
 an extention.
 .PP
 .I ACCEPT
@@ -61,7 +66,11 @@ means to let the frame through.
 means the frame has to be dropped.
 .I CONTINUE
 means the next rule has to be checked. This can be handy to know how many
-frames pass a certain point in the chain or to log those frames. For the
+frames pass a certain point in the chain or to log those frames.
+.I RETURN
+means stop traversing this chain and resume at the next rule in the
+previous (calling) chain.
+For the
 other targets see the
 .B "TARGET EXTENSIONS"
 section.
@@ -70,7 +79,7 @@ There are three tables.
 .TP
 .B "-t, --table"
 This option specifies the frame matching table which the command should
-operate on. The tables are: 
+operate on. If specified it should be the first option. The tables are: 
 .BR filter ,
 this is the default table and contains three chains: 
 .B INPUT 
@@ -154,7 +163,23 @@ Set the policy for the chain to the given target. The policy is either
 .B ACCEPT
 , either
 .BR DROP .
-.SS PARAMETERS
+.TP
+.B "-N, --new-chain"
+Create a new user-defined chain by the given name.
+.TP
+.B "-X, --delete-chain"
+Delete the specified user-defined chain. There must be no references to the
+chain,
+.B ebtables
+will complain if there are.
+.TP
+.B "-E, --rename-chain"
+Rename the specified chain to the new name. This has no effect on the
+structure of the table. It is also allowed to rename a base chain, f.e.
+if you like PREBRIDGING more than PREROUTING. Be sure to talk about the
+standard chain names when you would ask a question on a mailing list.
+.SS
+PARAMETERS
 The following parameters make up a rule specification (as used in the add
 and delete commands). A "!" argument before the specification inverts the
 test for that specification. Apart from these standard parameters, there are others, see
@@ -391,7 +416,8 @@ to give a standard target so
 knows what to do.
 The default target is ACCEPT. Making it CONTINUE could let you use
 multiple target extensions on the same frame. Making it DROP doesn't
-make sense, but you could do that too.
+make sense, but you could do that too. RETURN is also allowed. Note
+that using RETURN in a base chain will result in the CONTINUE behaviour.
 .TP
 .B dnat
 The
@@ -416,7 +442,8 @@ knows what to do.
 The default target is ACCEPT. Making it CONTINUE could let you use 
 multiple target extensions on the same frame. Making it DROP only makes
 sense in the BROUTING chain but using the redirect target is more logical
-there.
+there. RETURN is also allowed. Note
+that using RETURN in a base chain will result in the CONTINUE behaviour.
 .TP
 .B redirect
 The
@@ -434,7 +461,8 @@ still has to give a standard target so
 knows what to do.
 The default target is ACCEPT. Making it CONTINUE could let you use 
 multiple target extensions on the same frame. Making it DROP in the
-BROUTING chain will let the frames be routed.
+BROUTING chain will let the frames be routed. RETURN is also allowed. Note
+that using RETURN in a base chain will result in the CONTINUE behaviour.
 .SH FILES
 .I /etc/ethertypes
 .SH BUGS
