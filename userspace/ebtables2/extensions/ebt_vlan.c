@@ -45,7 +45,7 @@
 #define SET_BITMASK(_MASK_) vlaninfo->bitmask |= _MASK_
 #define INV_FLAG(_inv_flag_) (vlaninfo->invflags & _inv_flag_) ? "! " : ""
 #define CHECK_IF_MISSING_VALUE if (optind > argc) print_error ("Missing %s value", opts[c].name);
-#define CHECK_INV_FLAG(_INDEX_) if (check_inverse (optarg)) vlaninfo->invflags |= _INDEX_;
+#define CHECK_INV_FLAG(_INDEX_) if (ebt_check_inverse (optarg)) vlaninfo->invflags |= _INDEX_;
 #define CHECK_RANGE(_RANGE_) if (_RANGE_) print_error ("Invalid %s range", opts[c].name);
 
 #define NAME_VLAN_ID    "id"
@@ -138,7 +138,7 @@ parse(int c,
 
 	switch (c) {
 	case VLAN_ID:
-		check_option(flags, OPT_VLAN_ID);
+		ebt_check_option(flags, OPT_VLAN_ID);
 		CHECK_INV_FLAG(EBT_VLAN_ID);
 		CHECK_IF_MISSING_VALUE;
 		(unsigned short) local.id =
@@ -149,7 +149,7 @@ parse(int c,
 		break;
 
 	case VLAN_PRIO:
-		check_option(flags, OPT_VLAN_PRIO);
+		ebt_check_option(flags, OPT_VLAN_PRIO);
 		CHECK_INV_FLAG(EBT_VLAN_PRIO);
 		CHECK_IF_MISSING_VALUE;
 		(unsigned char) local.prio =
@@ -160,7 +160,7 @@ parse(int c,
 		break;
 
 	case VLAN_ENCAP:
-		check_option(flags, OPT_VLAN_ENCAP);
+		ebt_check_option(flags, OPT_VLAN_ENCAP);
 		CHECK_INV_FLAG(EBT_VLAN_ENCAP);
 		CHECK_IF_MISSING_VALUE;
 		(unsigned short) local.encap =
@@ -321,5 +321,5 @@ static struct ebt_u_match vlan_match = {
 static void _init(void) __attribute__ ((constructor));
 static void _init(void)
 {
-	register_match(&vlan_match);
+	ebt_register_match(&vlan_match);
 }

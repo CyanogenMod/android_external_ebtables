@@ -255,7 +255,7 @@ static void store_table_in_file(char *filename, struct ebt_replace *repl)
 	free(data);
 }
 
-void deliver_table(struct ebt_u_replace *u_repl)
+void ebt_deliver_table(struct ebt_u_replace *u_repl)
 {
 	socklen_t optlen;
 	struct ebt_replace *repl;
@@ -311,14 +311,13 @@ static void store_counters_in_file(char *filename, struct ebt_u_replace *repl)
 	fclose(file);
 }
 
-/* gets executed after deliver_table */
-void deliver_counters(struct ebt_u_replace *u_repl)
+/* gets executed after ebt_deliver_table */
+void ebt_deliver_counters(struct ebt_u_replace *u_repl)
 {
-	unsigned short *point;
 	struct ebt_counter *old, *new, *newcounters;
 	socklen_t optlen;
 	struct ebt_replace repl;
-	unsigned short *counterchanges = u_repl->counterchanges;
+	struct ebt_cntchanges *cc = u_repl->counterchanges;
 
 	if (u_repl->nentries == 0)
 		return;
@@ -330,9 +329,8 @@ void deliver_counters(struct ebt_u_replace *u_repl)
 	memset(newcounters, 0, u_repl->nentries * sizeof(struct ebt_counter));
 	old = u_repl->counters;
 	new = newcounters;
-	point = counterchanges;
-	while (*point != CNT_END) {
-		if (*point == CNT_NORM) {
+	while (cc) {
+		if (cc->type == CNT_NORM) {
 			/*
 			 *'normal' rule, meaning we didn't do anything to it
 			 * So, we just copy
@@ -343,10 +341,10 @@ void deliver_counters(struct ebt_u_replace *u_repl)
 			old++;
 			/* we've set a new counter */
 			new++;
-		} else if (*point == CNT_DEL) {
+		} else if (cc->type == CNT_DEL) {
 			/* don't use this old counter */
 			old++;
-		} else if (*point == CNT_ADD) {
+		} else if (cc->type == CNT_ADD) {
 			/* new counter, let it stay 0 */
 			new++;
 		} else {
@@ -354,7 +352,7 @@ void deliver_counters(struct ebt_u_replace *u_repl)
 			old++;
 			new++;
 		}
-		point++;
+		cc = cc->next;
 	}
 
 	free(u_repl->counters);
@@ -393,7 +391,7 @@ ebt_translate_match(struct ebt_entry_match *m, struct ebt_u_match_list ***l)
 	new->next = NULL;
 	**l = new;
 	*l = &new->next;
-	if (find_match(new->m->u.name) == NULL)
+	if (ebt_find_match(new->m->u.name) == NULL)
 		print_error("Kernel match %s unsupported by userspace tool",
 		   new->m->u.name);
 	return 0;
@@ -417,7 +415,7 @@ ebt_translate_watcher(struct ebt_entry_watcher *w,
 	new->next = NULL;
 	**l = new;
 	*l = &new->next;
-	if (find_watcher(new->w->u.name) == NULL)
+	if (ebt_find_watcher(new->w->u.name) == NULL)
 		print_error("Kernel watcher %s unsupported by userspace tool",
 		   new->w->u.name);
 	return 0;
@@ -467,7 +465,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 		   malloc(t->target_size + sizeof(struct ebt_entry_target));
 		if (!new->t)
 			print_memory();
-		if (find_target(t->u.name) == NULL)
+		if (ebt_find_target(t->u.name) == NULL)
 			print_error("Kernel target %s unsupported by "
 			            "userspace tool", t->u.name);
 		memcpy(new->t, t, t->target_size +
@@ -604,7 +602,7 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 		print_error("File %s contains wrong table name or is corrupt",
 		   filename);
 		free(hlp);
-	} else if (!find_table(repl->name)) {
+	} else if (!ebt_find_table(repl->name)) {
 		fclose(file);
 		print_error("File %s contains invalid table name", filename);
 	}
@@ -686,11 +684,13 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 	return 0;
 }
 
-int get_table(struct ebt_u_replace *u_repl)
+int ebt_get_table(struct ebt_u_replace *u_repl)
 {
 	int i, j, k, hook;
 	struct ebt_replace repl;
 	struct ebt_u_entry **u_e;
+	struct ebt_cntchanges *new_cc;
+	struct ebt_cntchanges **prev_cc =  &(u_repl->counterchanges);
 
 	strcpy(repl.name, u_repl->name);
 	if (u_repl->filename != NULL) {
@@ -708,6 +708,17 @@ int get_table(struct ebt_u_replace *u_repl)
 	u_repl->num_counters = repl.num_counters;
 	u_repl->counters = (struct ebt_counter *)repl.counters;
 	u_repl->udc = NULL;
+	u_repl->counterchanges = NULL;
+	for (i = 0; i < repl.nentries; i++) {
+		new_cc = (struct ebt_cntchanges *)
+			 malloc(sizeof(struct ebt_cntchanges));
+		if (!new_cc)
+			print_memory();
+		new_cc->type = CNT_NORM;
+		new_cc->next = NULL;
+		*prev_cc = new_cc;
+		prev_cc = &(new_cc->next);
+	}
 	hook = -1;
 	EBT_ENTRY_ITERATE(repl.entries, repl.entries_size, ebt_translate_chains,
 	   &hook, u_repl, u_repl->valid_hooks);

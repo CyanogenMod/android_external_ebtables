@@ -73,14 +73,14 @@ static int parse_s(int c, char **argv, int argc,
 
 	switch (c) {
 	case NAT_S:
-		check_option(flags, OPT_SNAT);
+		ebt_check_option(flags, OPT_SNAT);
 		to_source_supplied = 1;
 		if (!(addr = ether_aton(optarg)))
 			print_error("Problem with specified --to-source mac");
 		memcpy(natinfo->mac, addr, ETH_ALEN);
 		break;
 	case NAT_S_TARGET:
-		check_option(flags, OPT_SNAT_TARGET);
+		ebt_check_option(flags, OPT_SNAT_TARGET);
 		if (FILL_TARGET(optarg, natinfo->target))
 			print_error("Illegal --snat-target target");
 		break;
@@ -101,7 +101,7 @@ static int parse_d(int c, char **argv, int argc,
 
 	switch (c) {
 	case NAT_D:
-		check_option(flags, OPT_DNAT);
+		ebt_check_option(flags, OPT_DNAT);
 		to_dest_supplied = 1;
 		if (!(addr = ether_aton(optarg)))
 			print_error("Problem with specified "
@@ -109,7 +109,7 @@ static int parse_d(int c, char **argv, int argc,
 		memcpy(natinfo->mac, addr, ETH_ALEN);
 		break;
 	case NAT_D_TARGET:
-		check_option(flags, OPT_DNAT_TARGET);
+		ebt_check_option(flags, OPT_DNAT_TARGET);
 		if (FILL_TARGET(optarg, natinfo->target))
 			print_error("Illegal --dnat-target target");
 		break;
@@ -157,7 +157,7 @@ static void print_s(const struct ebt_u_entry *entry,
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
 
 	printf("--to-src ");
-	print_mac(natinfo->mac);
+	ebt_print_mac(natinfo->mac);
 	printf(" --snat-target %s", TARGET_NAME(natinfo->target));
 }
 
@@ -167,7 +167,7 @@ static void print_d(const struct ebt_u_entry *entry,
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
 
 	printf("--to-dst ");
-	print_mac(natinfo->mac);
+	ebt_print_mac(natinfo->mac);
 	printf(" --dnat-target %s", TARGET_NAME(natinfo->target));
 }
 
@@ -210,6 +210,6 @@ static struct ebt_u_target dnat_target =
 static void _init(void) __attribute__ ((constructor));
 static void _init(void)
 {
-	register_target(&snat_target);
-	register_target(&dnat_target);
+	ebt_register_target(&snat_target);
+	ebt_register_target(&dnat_target);
 }

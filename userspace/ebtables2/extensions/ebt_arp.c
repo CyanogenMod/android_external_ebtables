@@ -71,11 +71,6 @@ static void init(struct ebt_entry_match *match)
 	arpinfo->bitmask = 0;
 }
 
-/* defined in ebt_ip.c */
-void parse_ip_address(char *address, uint32_t *addr, uint32_t *msk);
-
-/* defined in ebtables.c */
-int get_mac_and_mask(char *from, char *to, char *mask);
 
 #define OPT_OPCODE 0x01
 #define OPT_HTYPE  0x02
@@ -97,8 +92,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 
 	switch (c) {
 	case ARP_OPCODE:
-		check_option(flags, OPT_OPCODE);
-		if (check_inverse(optarg))
+		ebt_check_option(flags, OPT_OPCODE);
+		if (ebt_check_inverse(optarg))
 			arpinfo->invflags |= EBT_ARP_OPCODE;
 
 		if (optind > argc)
@@ -118,8 +113,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		break;
 
 	case ARP_HTYPE:
-		check_option(flags, OPT_HTYPE);
-		if (check_inverse(optarg))
+		ebt_check_option(flags, OPT_HTYPE);
+		if (ebt_check_inverse(optarg))
 			arpinfo->invflags |= EBT_ARP_HTYPE;
 
 		if (optind > argc)
@@ -140,8 +135,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 	{
 		uint16_t proto;
 
-		check_option(flags, OPT_PTYPE);
-		if (check_inverse(optarg))
+		ebt_check_option(flags, OPT_PTYPE);
+		if (ebt_check_inverse(optarg))
 			arpinfo->invflags |= EBT_ARP_PTYPE;
 
 		if (optind > argc)
@@ -166,17 +161,17 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 	case ARP_IP_S:
 	case ARP_IP_D:
 		if (c == ARP_IP_S) {
-			check_option(flags, OPT_IP_S);
+			ebt_check_option(flags, OPT_IP_S);
 			addr = &arpinfo->saddr;
 			mask = &arpinfo->smsk;
 			arpinfo->bitmask |= EBT_ARP_SRC_IP;
 		} else {
-			check_option(flags, OPT_IP_D);
+			ebt_check_option(flags, OPT_IP_D);
 			addr = &arpinfo->daddr;
 			mask = &arpinfo->dmsk;
 			arpinfo->bitmask |= EBT_ARP_DST_IP;
 		}
-		if (check_inverse(optarg)) {
+		if (ebt_check_inverse(optarg)) {
 			if (c == ARP_IP_S)
 				arpinfo->invflags |= EBT_ARP_SRC_IP;
 			else
@@ -184,23 +179,23 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		}
 		if (optind > argc)
 			print_error("Missing ARP IP address argument");
-		parse_ip_address(argv[optind - 1], addr, mask);
+		ebt_parse_ip_address(argv[optind - 1], addr, mask);
 		break;
 
 	case ARP_MAC_S:
 	case ARP_MAC_D:
 		if (c == ARP_MAC_S) {
-			check_option(flags, OPT_MAC_S);
+			ebt_check_option(flags, OPT_MAC_S);
 			maddr = arpinfo->smaddr;
 			mmask = arpinfo->smmsk;
 			arpinfo->bitmask |= EBT_ARP_SRC_MAC;
 		} else {
-			check_option(flags, OPT_MAC_D);
+			ebt_check_option(flags, OPT_MAC_D);
 			maddr = arpinfo->dmaddr;
 			mmask = arpinfo->dmmsk;
 			arpinfo->bitmask |= EBT_ARP_DST_MAC;
 		}
-		if (check_inverse(optarg)) {
+		if (ebt_check_inverse(optarg)) {
 			if (c == ARP_MAC_S)
 				arpinfo->invflags |= EBT_ARP_SRC_MAC;
 			else
@@ -208,7 +203,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		}
 		if (optind > argc)
 			print_error("Missing ARP MAC address argument");
-		if (get_mac_and_mask(argv[optind - 1], maddr, mmask))
+		if (ebt_get_mac_and_mask(argv[optind - 1], maddr, mmask))
 			print_error("Problem with ARP MAC address argument");
 		break;
 
@@ -227,9 +222,6 @@ static void final_check(const struct ebt_u_entry *entry,
 		print_error("For (R)ARP filtering the protocol must be "
 		            "specified as ARP or RARP");
 }
-
-/* defined in the ebt_ip.c */
-char *mask_to_dotted(uint32_t mask);
 
 static void print(const struct ebt_u_entry *entry,
    const struct ebt_entry_match *match)
@@ -272,7 +264,7 @@ static void print(const struct ebt_u_entry *entry,
 		for (i = 0; i < 4; i++)
 			printf("%d%s", ((unsigned char *)&arpinfo->saddr)[i],
 			   (i == 3) ? "" : ".");
-		printf("%s ", mask_to_dotted(arpinfo->smsk));
+		printf("%s ", ebt_mask_to_dotted(arpinfo->smsk));
 	}
 	if (arpinfo->bitmask & EBT_ARP_DST_IP) {
 		printf("--arp-ip-dst ");
@@ -281,20 +273,20 @@ static void print(const struct ebt_u_entry *entry,
 		for (i = 0; i < 4; i++)
 			printf("%d%s", ((unsigned char *)&arpinfo->daddr)[i],
 			   (i == 3) ? "" : ".");
-		printf("%s ", mask_to_dotted(arpinfo->dmsk));
+		printf("%s ", ebt_mask_to_dotted(arpinfo->dmsk));
 	}
 	if (arpinfo->bitmask & EBT_ARP_SRC_MAC) {
 		printf("--arp-mac-src ");
 		if (arpinfo->invflags & EBT_ARP_SRC_MAC)
 			printf("! ");
-		print_mac_and_mask(arpinfo->smaddr, arpinfo->smmsk);
+		ebt_print_mac_and_mask(arpinfo->smaddr, arpinfo->smmsk);
 		printf(" ");
 	}
 	if (arpinfo->bitmask & EBT_ARP_DST_MAC) {
 		printf("--arp-mac-dst ");
 		if (arpinfo->invflags & EBT_ARP_DST_MAC)
 			printf("! ");
-		print_mac_and_mask(arpinfo->dmaddr, arpinfo->dmmsk);
+		ebt_print_mac_and_mask(arpinfo->dmaddr, arpinfo->dmmsk);
 		printf(" ");
 	}
 }
@@ -364,5 +356,5 @@ static struct ebt_u_match arp_match =
 static void _init(void) __attribute__ ((constructor));
 static void _init(void)
 {
-	register_match(&arp_match);
+	ebt_register_match(&arp_match);
 }

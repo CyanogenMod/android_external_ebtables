@@ -78,10 +78,6 @@ static void init(struct ebt_entry_match *match)
 	stpinfo->bitmask = 0;
 }
 
-/* defined in ebtables.c */
-int get_mac_and_mask(char *from, char *to, char *mask);
-void print_mac_and_mask(const char *mac, const char *mask);
-
 #define determine_value(p,s)			 \
 {						 \
 	uint32_t _tmp2;				 \
@@ -135,8 +131,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 	if (c < 'a' || c > ('a' + STP_NUMOPS - 1))
 		return 0;
 	flag = 1 << (c - 'a');
-	check_option(flags, flag);
-	if (check_inverse(optarg))
+	ebt_check_option(flags, flag);
+	if (ebt_check_inverse(optarg))
 		stpinfo->invflags |= flag;
 	if (optind > argc)
 		print_error("Missing argument for --%s", opts[c-'a'].name);
@@ -211,12 +207,12 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			print_error("Bad STP config forward delay range");
 		break;
 	case EBT_STP_ROOTADDR:
-		if (get_mac_and_mask(argv[optind-1],
+		if (ebt_get_mac_and_mask(argv[optind-1],
 		    stpinfo->config.root_addr, stpinfo->config.root_addrmsk))
 			print_error("Bad STP config root address");
 		break;
 	case EBT_STP_SENDERADDR:
-		if (get_mac_and_mask(argv[optind-1], stpinfo->config.sender_addr,
+		if (ebt_get_mac_and_mask(argv[optind-1], stpinfo->config.sender_addr,
 		    stpinfo->config.sender_addrmsk))
 			print_error("Bad STP config sender address");
 		break;
@@ -269,13 +265,13 @@ static void print(const struct ebt_u_entry *entry,
 		} else if (EBT_STP_ROOTPRIO == (1 << i))
 			print_range(c->root_priol, c->root_priou);
 		else if (EBT_STP_ROOTADDR == (1 << i))
-			print_mac_and_mask(c->root_addr, c->root_addrmsk);
+			ebt_print_mac_and_mask(c->root_addr, c->root_addrmsk);
 		else if (EBT_STP_ROOTCOST == (1 << i))
 			print_range(c->root_costl, c->root_costu);
 		else if (EBT_STP_SENDERPRIO == (1 << i))
 			print_range(c->sender_priol, c->sender_priou);
 		else if (EBT_STP_SENDERADDR == (1 << i))
-			print_mac_and_mask(c->sender_addr, c->sender_addrmsk);
+			ebt_print_mac_and_mask(c->sender_addr, c->sender_addrmsk);
 		else if (EBT_STP_PORT == (1 << i))
 			print_range(c->portl, c->portu);
 		else if (EBT_STP_MSGAGE == (1 << i))
@@ -312,5 +308,5 @@ static struct ebt_u_match stp_match =
 static void _init(void) __attribute__ ((constructor));
 static void _init(void)
 {
-	register_match(&stp_match);
+	ebt_register_match(&stp_match);
 }

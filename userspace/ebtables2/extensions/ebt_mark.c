@@ -46,12 +46,12 @@ static int parse(int c, char **argv, int argc,
 
 	switch (c) {
 	case MARK_TARGET:
-		check_option(flags, OPT_MARK_TARGET);
+		ebt_check_option(flags, OPT_MARK_TARGET);
 		if (FILL_TARGET(optarg, markinfo->target))
 			print_error("Illegal --mark-target target");
 		break;
 	case MARK_SETMARK:
-		check_option(flags, OPT_MARK_SETMARK);
+		ebt_check_option(flags, OPT_MARK_SETMARK);
 		markinfo->mark = strtoul(optarg, &end, 0);
 		if (*end != '\0' || end == optarg)
 			print_error("Bad MARK value '%s'", optarg);
@@ -116,5 +116,5 @@ static struct ebt_u_target mark_target =
 static void _init(void) __attribute__ ((constructor));
 static void _init(void)
 {
-	register_target(&mark_target);
+	ebt_register_target(&mark_target);
 }

@@ -120,16 +120,16 @@ static int parse(int c, char **argv, int argc,
 
 	switch(c) {
 	case ARG_LIMIT:
-		check_option(flags, FLAG_LIMIT);
-		if (check_inverse(optarg))
+		ebt_check_option(flags, FLAG_LIMIT);
+		if (ebt_check_inverse(optarg))
 			print_error("Unexpected `!' after --limit");
 		if (!parse_rate(optarg, &r->avg))
 			print_error("bad rate `%s'", optarg);
 		break;
 
 	case ARG_LIMIT_BURST:
-		check_option(flags, FLAG_LIMIT_BURST);
-		if (check_inverse(optarg))
+		ebt_check_option(flags, FLAG_LIMIT_BURST);
+		if (ebt_check_inverse(optarg))
 			print_error("Unexpected `!' after --limit-burst");
 
 		if (string_to_number(optarg, 0, 10000, &num) == -1)
@@ -217,5 +217,5 @@ static struct ebt_u_match limit_match =
 static void _init(void) __attribute((constructor));
 static void _init(void)
 {
-	register_match(&limit_match);
+	ebt_register_match(&limit_match);
 }

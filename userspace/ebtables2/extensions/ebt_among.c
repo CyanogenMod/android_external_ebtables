@@ -41,8 +41,8 @@ static void print_help()
 {
 	printf(
 "`among' options:\n"
-"--among-dst [!] list          : matches if ether dst is in list\n"
-"--among-src [!] list          : matches if ether src is in list\n"
+"--among-dst [!] list           : matches if ether dst is in list\n"
+"--among-src [!] list           : matches if ether src is in list\n"
 "list has form:\n"
 " xx:xx:xx:xx:xx:xx[=ip.ip.ip.ip],yy:yy:yy:yy:yy:yy[=ip.ip.ip.ip]"
 ",...,zz:zz:zz:zz:zz:zz[=ip.ip.ip.ip][,]\n"
@@ -295,7 +295,7 @@ static int parse(int c, char **argv, int argc,
 	switch (c) {
 	case AMONG_DST:
 	case AMONG_SRC:
-		if (check_inverse(optarg)) {
+		if (ebt_check_inverse(optarg)) {
 			if (c == AMONG_DST)
 				info->bitmask |= EBT_AMONG_DST_NEG;
 			else
@@ -314,11 +314,11 @@ static int parse(int c, char **argv, int argc,
 		h->match_size = new_size - sizeof(struct ebt_entry_match);
 		info = (struct ebt_among_info *) h->data;
 		if (c == AMONG_DST) {
-			check_option(flags, OPT_DST);
+			ebt_check_option(flags, OPT_DST);
 			info->wh_dst_ofs =
 			    old_size - sizeof(struct ebt_entry_match);
 		} else {
-			check_option(flags, OPT_SRC);
+			ebt_check_option(flags, OPT_SRC);
 			info->wh_src_ofs =
 			    old_size - sizeof(struct ebt_entry_match);
 		}
@@ -364,7 +364,7 @@ static void wormhash_printout(const struct ebt_mac_wormhash *wh)
 		const struct ebt_mac_wormhash_tuple *p;
 
 		p = (const struct ebt_mac_wormhash_tuple *)(&wh->pool[i]);
-		print_mac(((const char *) &p->cmp[0]) + 2);
+		ebt_print_mac(((const char *) &p->cmp[0]) + 2);
 		if (p->ip) {
 			ip = (unsigned char *) &p->ip;
 			printf("=%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
@@ -439,5 +439,5 @@ static struct ebt_u_match among_match = {
 static void _init(void) __attribute__ ((constructor));
 static void _init(void)
 {
-	register_match(&among_match);
+	ebt_register_match(&among_match);
 }

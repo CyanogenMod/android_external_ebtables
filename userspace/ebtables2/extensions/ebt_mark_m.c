@@ -40,8 +40,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 
 	switch (c) {
 	case MARK:
-		check_option(flags, MARK);
-		if (check_inverse(optarg))
+		ebt_check_option(flags, MARK);
+		if (ebt_check_inverse(optarg))
 			markinfo->invert = 1;
 		if (optind > argc)
 			print_error("No mark specified");
@@ -118,5 +118,5 @@ static struct ebt_u_match mark_match =
 static void _init(void) __attribute((constructor));
 static void _init(void)
 {
-	register_match(&mark_match);
+	ebt_register_match(&mark_match);
 }

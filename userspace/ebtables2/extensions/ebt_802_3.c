@@ -43,8 +43,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 
 	switch (c) {
 		case _802_3_SAP:
-			check_option(flags, _802_3_SAP);
-			if (check_inverse(optarg))
+			ebt_check_option(flags, _802_3_SAP);
+			if (ebt_check_inverse(optarg))
 				info->invflags |= EBT_802_3_SAP;
 
 			if (optind > argc)
@@ -57,8 +57,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			info->bitmask |= EBT_802_3_SAP;
 			break;
 		case _802_3_TYPE:
-			check_option(flags, _802_3_TYPE);
-			if (check_inverse(optarg))
+			ebt_check_option(flags, _802_3_TYPE);
+			if (ebt_check_inverse(optarg))
 				info->invflags |= EBT_802_3_TYPE;
 			if (optind > argc)
 				print_error("Missing 802.3-type argument");
@@ -141,5 +141,5 @@ static struct ebt_u_match _802_3_match =
 static void _init(void) __attribute__ ((constructor));
 static void _init(void)
 {
-	        register_match(&_802_3_match);
+	ebt_register_match(&_802_3_match);
 }
