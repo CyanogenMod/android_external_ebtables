@@ -4,7 +4,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: if_bridge.h,v 1.2 2002/08/22 17:50:19 bdschuym Exp $
+ *	$Id: if_bridge.h,v 1.3 2002/09/16 21:50:18 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -103,12 +103,8 @@ struct net_bridge_port;
 
 extern int (*br_ioctl_hook)(unsigned long arg);
 extern int (*br_handle_frame_hook)(struct sk_buff *skb);
-#if defined(CONFIG_BRIDGE_EBT_BROUTE) || \
-    defined(CONFIG_BRIDGE_EBT_BROUTE_MODULE)
-extern unsigned int (*broute_decision) (unsigned int hook, struct sk_buff **pskb,
-   const struct net_device *in, const struct net_device *out,
-   int (*okfn)(struct sk_buff *));
-#endif
+extern int (*br_should_route_hook)(struct sk_buff **pskb);
+
 #endif
 
 #endif
