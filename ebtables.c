@@ -413,86 +413,26 @@ int ebtables_insmod(const char *modname, const char *modprobe)
 	return 0;
 }
 
-
-// used to parse /etc/ethertypes
-static int disregard_whitespace(char *buffer, FILE *ifp)
-{
-	int hlp;
-
-	buffer[0] = '\t';
-	while (buffer[0] == '\t' || buffer[0] == '\n' || buffer[0] == ' ') {
-		hlp = fscanf(ifp, "%c", buffer);
-		if (hlp == EOF || hlp == 0) return -1;
-	}
-	return 0;
-}
-
-// used to parse /etc/ethertypes
-static int disregard_tabspace(char *buffer, FILE *ifp)
-{
-	int hlp;
-
-	buffer[0] = '\t';
-	while (buffer[0] == '\t' || buffer[0] == ' ') {
-		hlp = fscanf(ifp, "%c", buffer);
-		if (hlp == EOF || hlp == 0) return -1;
-	}
-	return 0;
-}
-
 // helper function: processes a line of data from the file /etc/ethertypes
 static int get_a_line(char *buffer, char *value, FILE *ifp)
 {
-	int i, hlp;
-	char anotherhlp;
+	char line[80], *p;
+	const char delim[] = " \t\n";
 
-	// discard comment lines and whitespace
-	while (1) {
-		if (disregard_whitespace(buffer, ifp))
-			return -1;
-		if (buffer[0] == '#')
-			while (1) {
-				hlp = fscanf(ifp, "%c", &anotherhlp);
-				if (!hlp || hlp == EOF)
-					return -1;
-				if (anotherhlp == '\n')
-					break;
-			}
-		else
-			break;
+	while (fgets(line, sizeof(line), ifp)) {
+		p = strtok(line, delim);
+		if (!p || p[0] == '#')
+			continue;
+		if (strlen(p) > 20)
+			continue;
+		strcpy(buffer, p);
+		p = strtok(NULL, delim);
+		if (!p || strlen(p) > 10)
+			continue;
+		strcpy(value, p);
+		return 0;
 	}
-
-	// buffer[0] already contains the first letter
-	for (i = 1; i < 21; i++) {
-		hlp = fscanf(ifp, "%c", buffer + i);
-		if (hlp == EOF || hlp == 0)
-			return -1;
-		if (buffer[i] == '\t' || buffer[i] == ' ')
-			break;
-	}
-	if (i == 21)
-		return -1;
-	buffer[i] = '\0';
-	if (disregard_tabspace(value, ifp))
-		return -1;
-	// maybe I should allow 0x0800 instead of 0800, but I'm feeling lazy
-	// buffer[0] already contains the first letter
-	for (i = 1; i < 5; i++) {
-		hlp = fscanf(ifp, "%c", value+i);
-		if (value[i] == '\n' || value[i] == '\t' ||
-		   value[i] == ' ' || hlp == EOF)
-			break;
-	}
-	if (i == 5) return -1;
-	// discard comments at the end of a line
-	if (value[i] == '\t' || value[i] == ' ')
-		while (1) {
-			hlp = fscanf(ifp, "%c", &anotherhlp);
-			if (!hlp || hlp == EOF || anotherhlp == '\n')
-				break;
-		}
-	value[i] = '\0';
-	return 0;
+	return -1;
 }
 
 // translate a hexadecimal number to a protocol name, parsing /etc/ethertypes
@@ -500,7 +440,7 @@ static int get_a_line(char *buffer, char *value, FILE *ifp)
 int number_to_name(unsigned short proto, char *name)
 {
 	FILE *ifp;
-	char buffer[21], value[5], *bfr;
+	char buffer[21], value[11], *bfr;
 	unsigned short i;
 
 	if ( !(ifp = fopen(PROTOCOLFILE, "r")) )
@@ -1450,7 +1390,7 @@ static void allowdb(char yorn)
 int name_to_number(char *name, __u16 *proto)
 {
 	FILE *ifp;
-	char buffer[21], value[5], *bfr;
+	char buffer[21], value[11], *bfr;
 	unsigned short i;
 
 	if (!strcasecmp("LENGTH", name)) {
@@ -1465,8 +1405,10 @@ int name_to_number(char *name, __u16 *proto)
 		if (strcasecmp(buffer, name))
 			continue;
 		i = (unsigned short) strtol(value, &bfr, 16);
-		if (*bfr != '\0')
+		if (*bfr != '\0') {
+			fclose(ifp);
 			return -1;
+		}
 		*proto = i;
 		fclose(ifp);
 		return 0;
