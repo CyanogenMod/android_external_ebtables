@@ -66,6 +66,8 @@ struct ebt_u_replace
 	char command;
 	// here we stick the hook to do our thing on (can be -1 if unspecified)
 	int selected_hook;
+	// used for the atomic option
+	char *filename;
 };
 
 struct ebt_u_table
@@ -191,6 +193,7 @@ int get_table(struct ebt_u_replace *repl);
 struct ebt_u_target *find_target(const char *name);
 struct ebt_u_match *find_match(const char *name);
 struct ebt_u_watcher *find_watcher(const char *name);
+struct ebt_u_table *find_table(char *name);
 void deliver_counters(struct ebt_u_replace *repl,
    unsigned short * counterchanges);
 void deliver_table(struct ebt_u_replace *repl);
