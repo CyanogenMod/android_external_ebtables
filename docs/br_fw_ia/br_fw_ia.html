@@ -54,6 +54,9 @@
         <A HREF="#section9">Using the MAC module extension for
         <EM>iptables</EM></A>
       </LI>
+      <LI>
+        <A HREF="#section10">Using the <EM>iptables</EM> physdev match module for kernel 2.5</A>
+      </LI>
     </OL>
     <A NAME="section1"></A>
     <P CLASS="section">
@@ -608,6 +611,16 @@ echo '1' &gt; /proc/sys/net/ipv4/ip_forward
       pressured enough I could hack something up to make this
       unpleasant side effect go away.
     </P>
+    <A NAME="section10"></A>
+    <P CLASS="section">
+      10. Using the <EM>iptables</EM> physdev match module for kernel 2.5
+    </P>
+      The 2.5 standard kernel contains an <EM>iptables</EM> match module
+      called <EM>physdev</EM> which has to be used to match the bridge's
+      physical in and out ports. Its usage is simple:
+      <PRE>iptables -m physdev --physdev-in &lt;bridge-port&gt;</PRE>
+      and
+      <PRE>iptables -m physdev --physdev-out &lt;bridge-port&gt;</PRE>
     <HR>
 <PRE>
 Released under the GNU Free Documentation License.
