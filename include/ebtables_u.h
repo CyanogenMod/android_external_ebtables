@@ -212,8 +212,8 @@ void __print_bug(char *file, int line, char *format, ...);
 #define print_bug(format, args...) \
    __print_bug(__FILE__, __LINE__, format, ##args)
 #define print_error(format,args...) {printf(format".\n",##args); exit(-1);}
-#define print_memory() {printf("Ebtables: " __FILE__ " " __FUNCTION__ \
-   " %d :Out of memory.\n", __LINE__); exit(-1);}
+#define print_memory() {printf("Ebtables: " __FILE__ \
+   " %s %d :Out of memory.\n", __FUNCTION__, __LINE__); exit(-1);}
 
 /* used for keeping the rule counters right during rule adds or deletes */
 #define CNT_NORM 0
