@@ -1296,7 +1296,8 @@ static void delete_rule(int begin, int end)
 		begin += entries->nentries + 1;
 	if (end < 0)
 		end += entries->nentries + 1;
-	if (begin <= 0 || begin > end || end > entries->nentries)
+
+	if (begin < 0 || begin > end || end > entries->nentries)
 		print_error("Sorry, wrong rule numbers");
 
 	if ((begin = check_rule_exists(begin)) == -1 ||

@@ -57,7 +57,7 @@ static void print_help()
 "--arp-mac-dst [!] address[/mask]: ARP MAC target specification\n"
 " opcode strings: \n");
 	for (i = 0; i < NUMOPCODES; i++)
-		printf("%d = %s\n", i + 1, opcodes[i]);
+		printf(" %d = %s\n", i + 1, opcodes[i]);
 	printf(
 " hardware type string: 1 = Ethernet\n"
 " protocol type string: see "_PATH_ETHERTYPES"\n");
@@ -288,12 +288,14 @@ static void print(const struct ebt_u_entry *entry,
 		if (arpinfo->invflags & EBT_ARP_SRC_MAC)
 			printf("! ");
 		print_mac_and_mask(arpinfo->smaddr, arpinfo->smmsk);
+		printf(" ");
 	}
 	if (arpinfo->bitmask & EBT_ARP_DST_MAC) {
 		printf("--arp-mac-dst ");
 		if (arpinfo->invflags & EBT_ARP_DST_MAC)
 			printf("! ");
 		print_mac_and_mask(arpinfo->dmaddr, arpinfo->dmmsk);
+		printf(" ");
 	}
 }
 
