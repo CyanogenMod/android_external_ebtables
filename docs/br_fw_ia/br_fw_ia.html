@@ -57,6 +57,9 @@
       <LI>
         <A HREF="#section10">Using the <EM>iptables</EM> physdev match module for kernel 2.5</A>
       </LI>
+      <LI>
+        <A HREF="#section11">Detailed IP packet flow</A>
+      </LI>
     </OL>
     <A NAME="section1"></A>
     <P CLASS="section">
@@ -603,6 +606,14 @@ echo '1' &gt; /proc/sys/net/ipv4/ip_forward
       and</P>
       <PRE>iptables -m physdev --physdev-out &lt;bridge-port&gt;</PRE>
     </P>
+    <A NAME="section11"></A>
+    <P CLASS="section">
+      11. Detailed IP packet flow
+    </P>
+    <P>
+      Joshua Snyder (&lt;josh_at_imagestream.com&gt;) made a <A HREF="PacketFlow.png" TARGET="_blank">detailed picture</A> about
+      the IP packet flow on a Linux bridging firewall.
+    </P>
     <HR>
 <PRE>
 Released under the GNU Free Documentation License.
@@ -617,11 +628,10 @@ Copyright (c) 2002 Bart De Schuymer &lt;bdschuym@pandora.be&gt;,
     Documentation License, Version 1.1 or any later version
     published by the Free Software Foundation, with no Invariant Sections,
     with no Front-Cover Texts, and with no Back-Cover Texts. For a copy of the
-    license, see <A HREF=
-    "http://www.gnu.org/licenses/fdl.txt">"GNU Free Documentation License"</A>.</SMALL> <BR>
+    license, see <A HREF= "http://www.gnu.org/licenses/fdl.txt">"GNU Free Documentation License"</A>.</SMALL> <BR>
      <BR>
     <P>
-      Last updated December 23, 2002.
+      Last updated August 13, 2003.
     </P>
   </BODY>
 </HTML>
