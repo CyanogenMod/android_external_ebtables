@@ -78,46 +78,72 @@ static void init(struct ebt_entry_match *match)
 	stpinfo->bitmask = 0;
 }
 
-#define determine_value(p,s)			 \
-{						 \
-	uint32_t _tmp2;				 \
-	char *_tmp;				 \
-	_tmp2 = strtoul(s, &_tmp, 0);		 \
-	if (*_tmp != '\0')			 \
-		return -1;			 \
-	if (size == 2) {			 \
-		if (_tmp2 >= (1 << 16))		 \
-			return -1;		 \
-		*(uint16_t *)p = (uint16_t)_tmp2;\
-	} else					 \
-		*(uint32_t *)p = _tmp2;		 \
-}
-
-static int parse_range(char *rangestring, void *lower, void *upper,
-	int size)
+static int parse_range(const char *portstring, void *lower, void *upper,
+   int bits, uint32_t min, uint32_t max)
 {
-	char *buffer, *cp;
+	char *buffer;
+	char *cp, *end;
+	uint32_t low_nr, upp_nr;
+	int ret = 0;
 
-	buffer = strdup(rangestring);
+	buffer = strdup(portstring);
 	if ((cp = strchr(buffer, ':')) == NULL) {
-		determine_value(lower, buffer);
-		determine_value(upper, buffer);
-		return 0;
+		low_nr = strtoul(buffer, &end, 10);
+		if (*end || low_nr < min || low_nr > max) {
+			ret = -1;
+			goto out;
+		}
+		if (bits == 2) {
+			*(uint16_t *)lower =  low_nr;
+			*(uint16_t *)upper =  low_nr;
+		} else {
+			*(uint32_t *)lower =  low_nr;
+			*(uint32_t *)upper =  low_nr;
+		}
+	} else {
+		*cp = '\0';
+		cp++;
+		if (!*buffer)
+			low_nr = min;
+		else {
+			low_nr = strtoul(buffer, &end, 10);
+			if (*end || low_nr < min) {
+				ret = -1;
+				goto out;
+			}
+		}
+		if (!*cp)
+			upp_nr = max;
+		else {
+			upp_nr = strtoul(cp, &end, 10);
+			if (*end || upp_nr > max) {
+				ret = -1;
+				goto out;
+			}
+		}
+		if (upp_nr < low_nr) {
+			ret = -1;
+			goto out;
+		}
+		if (bits == 2) {
+			*(uint16_t *)lower = low_nr;
+			*(uint16_t *)upper = upp_nr;
+		} else {
+			*(uint32_t *)lower = low_nr;
+			*(uint32_t *)upper = upp_nr;
+		}
 	}
-	*cp = '\0';
-	determine_value(lower, buffer);
-	determine_value(upper, cp + 1);
-	if (lower > upper)
-		return -1;
-	return 0;
+out:
+	free(buffer);
+	return ret;
 }
 
-static void print_range(uint32_t l, uint32_t u)
+static void print_range(unsigned int l, unsigned int u)
 {
 	if (l == u)
-		printf("%d ", l);
+		printf("%u ", l);
 	else
-		printf("%d:%d ", l, u);
+		printf("%u:%u ", l, u);
 }
 
 static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
@@ -148,7 +174,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			           BPDU_TYPE_TCN_STRING))
 				stpinfo->type = BPDU_TYPE_TCN;
 			else
-				ebt_print_error("Bad STP type argument");
+				ebt_print_error("Bad --stp-type argument");
 		} else
 			stpinfo->type = i;
 		break;
@@ -162,60 +188,59 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			           FLAG_TC_ACK_STRING))
 				stpinfo->config.flags = FLAG_TC_ACK;
 			else
-				ebt_print_error("Bad STP config flags "
-						"argument");
+				ebt_print_error("Bad --stp-flags argument");
 		} else
 			stpinfo->config.flags = i;
 		break;
 	case EBT_STP_ROOTPRIO:
 		if (parse_range(argv[optind-1], &(stpinfo->config.root_priol),
-		    &(stpinfo->config.root_priou), 2))
-			ebt_print_error("Bad STP config root priority range");
+		    &(stpinfo->config.root_priou), 2, 0, 0xffff))
+			ebt_print_error("Bad --stp-root-prio range");
 		break;
 	case EBT_STP_ROOTCOST:
 		if (parse_range(argv[optind-1], &(stpinfo->config.root_costl),
-		    &(stpinfo->config.root_costu), 4))
-			ebt_print_error("Bad STP config root cost range");
+		    &(stpinfo->config.root_costu), 4, 0, 0xffffffff))
+			ebt_print_error("Bad --stp-root-cost range");
 		break;
 	case EBT_STP_SENDERPRIO:
 		if (parse_range(argv[optind-1], &(stpinfo->config.sender_priol),
-		    &(stpinfo->config.sender_priou), 2))
-			ebt_print_error("Bad STP config sender priority range");
+		    &(stpinfo->config.sender_priou), 2, 0, 0xffff))
+			ebt_print_error("Bad --stp-sender-prio range");
 		break;
 	case EBT_STP_PORT:
 		if (parse_range(argv[optind-1], &(stpinfo->config.portl),
-		    &(stpinfo->config.portu), 2))
-			ebt_print_error("Bad STP config port range");
+		    &(stpinfo->config.portu), 2, 0, 0xffff))
+			ebt_print_error("Bad --stp-port range");
 		break;
 	case EBT_STP_MSGAGE:
 		if (parse_range(argv[optind-1], &(stpinfo->config.msg_agel),
-		    &(stpinfo->config.msg_ageu), 2))
-			ebt_print_error("Bad STP config message age range");
+		    &(stpinfo->config.msg_ageu), 2, 0, 0xffff))
+			ebt_print_error("Bad --stp-msg-age range");
 		break;
 	case EBT_STP_MAXAGE:
 		if (parse_range(argv[optind-1], &(stpinfo->config.max_agel),
-		    &(stpinfo->config.max_ageu), 2))
-			ebt_print_error("Bad STP config maximum age range");
+		    &(stpinfo->config.max_ageu), 2, 0, 0xffff))
+			ebt_print_error("Bad --stp-max-age range");
 		break;
 	case EBT_STP_HELLOTIME:
 		if (parse_range(argv[optind-1], &(stpinfo->config.hello_timel),
-		    &(stpinfo->config.hello_timeu), 2))
-			ebt_print_error("Bad STP config hello time range");
+		    &(stpinfo->config.hello_timeu), 2, 0, 0xffff))
+			ebt_print_error("Bad --stp-hello-time range");
 		break;
 	case EBT_STP_FWDD:
 		if (parse_range(argv[optind-1], &(stpinfo->config.forward_delayl),
-		    &(stpinfo->config.forward_delayu), 2))
-			ebt_print_error("Bad STP config forward delay range");
+		    &(stpinfo->config.forward_delayu), 2, 0, 0xffff))
+			ebt_print_error("Bad --stp-forward-delay range");
 		break;
 	case EBT_STP_ROOTADDR:
 		if (ebt_get_mac_and_mask(argv[optind-1],
 		    stpinfo->config.root_addr, stpinfo->config.root_addrmsk))
-			ebt_print_error("Bad STP config root address");
+			ebt_print_error("Bad --stp-root-addr address");
 		break;
 	case EBT_STP_SENDERADDR:
 		if (ebt_get_mac_and_mask(argv[optind-1], stpinfo->config.sender_addr,
 		    stpinfo->config.sender_addrmsk))
-			ebt_print_error("Bad STP config sender address");
+			ebt_print_error("Bad --stp-sender-addr address");
 		break;
 	default:
 		ebt_print_error("stp match: this shouldn't happen");
