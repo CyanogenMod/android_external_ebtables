@@ -1,4 +1,4 @@
-.TH EBTABLES 8  "26 June 2002"
+.TH EBTABLES 8  "23 July 2002"
 .\"
 .\" Man page written by Bart De Schuymer <bart.de.schuymer@pandora.be>
 .\" It is based on the iptables man page.
@@ -21,7 +21,7 @@
 .\"     
 .\"
 .SH NAME
-ebtables (v.2.0) \- ethernet bridge packet table administration
+ebtables (v.2.0) \- Ethernet bridge packet table administration
 .SH SYNOPSIS
 .BR "ebtables -[ADI] " "chain rule-specification " [ options ]
 .br
@@ -390,7 +390,8 @@ Specify arp specific fields. These will only work if the protocol equals
 .BR ARP " or " RARP .
 .TP
 .BR "--arp-opcode " "[!] \fIopcode\fP"
-The (r)arp opcode (decimal or a string, for more details see ebtables -h arp).
+The (r)arp opcode (decimal or a string, for more details see
+.BR "ebtables -h arp" ).
 .TP
 .BR "--arp-htype " "[!] \fIhardware type\fP"
 The hardware type, this can be a decimal or the string "Ethernet". This
@@ -419,7 +420,8 @@ The user_priority field, this can be a decimal number from 0 to 7.
 Required VID to be 0 (null VID) or not specified vlan-id parameter (in this case VID deliberately be set to 0).
 .TP
 .BR "--vlan-encap " "[!] \fItype\fP"
-The encapsulated ethernet frame type/length, this can be a hexadecimal number from 0x0000 to 0xFFFF.
+The encapsulated Ethernet frame type/length, this can be a hexadecimal
+number from 0x0000 to 0xFFFF.
 Usually it's 0x0800 (IPv4). See also 
 .B /etc/ethertypes 
 file.
@@ -434,8 +436,8 @@ of the mark value of the frame and the user specified mark is taken and
 the result is compared with zero.
 
 .SH WATCHER EXTENSION(S)
-Watchers are things that only look at frames passing by. These watchers only see the
-frame if the frame passes all the matches of the rule.
+Watchers are things that only look at frames passing by. These watchers only
+see the frame if the frame passes all the matches of the rule.
 .SS log
 The fact that the log module is a watcher lets us log stuff while giving a target
 by choice. Note that the log module therefore is not a target.
