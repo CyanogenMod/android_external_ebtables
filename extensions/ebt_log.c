@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <linux/netfilter_bridge/ebtables.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_log.h>
@@ -143,7 +142,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 }
 
 static void final_check(const struct ebt_u_entry *entry,
-   const struct ebt_entry_watcher *watcher, const char *name, unsigned int hook)
+   const struct ebt_entry_watcher *watcher, const char *name, unsigned int hook_mask)
 {
 	return;
 }
@@ -153,13 +152,13 @@ static void print(const struct ebt_u_entry *entry,
 {
 	struct ebt_log_info *loginfo = (struct ebt_log_info *)watcher->data;
 
-	printf("log: log-level = %s - log-prefix = \"%s\"",
+	printf("--log-level %s --log-prefix \"%s\"",
 		eight_priority[loginfo->loglevel].c_name,
 		loginfo->prefix);
 	if (loginfo->bitmask & EBT_LOG_IP)
-		printf(" - log-ip");
+		printf(" --log-ip");
 	if (loginfo->bitmask & EBT_LOG_ARP)
-		printf(" - log-arp");
+		printf(" --log-arp");
 	printf(" ");
 }
 

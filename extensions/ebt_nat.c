@@ -4,7 +4,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ether.h>
-#include <linux/netfilter_bridge/ebtables.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_nat.h>
@@ -137,20 +136,20 @@ static int parse_d(int c, char **argv, int argc,
 }
 
 static void final_check_s(const struct ebt_u_entry *entry,
-   const struct ebt_entry_target *target, const char *name, unsigned int hook)
+   const struct ebt_entry_target *target, const char *name, unsigned int hook_mask)
 {
-	if (hook != NF_BR_POST_ROUTING || strcmp(name, "nat"))
+	if (!(hook_mask & (1 << NF_BR_POST_ROUTING)) || strcmp(name, "nat"))
 		print_error("Wrong chain for snat");
 	if (to_source_supplied == 0)
 		print_error("No snat address supplied");
 }
 
 static void final_check_d(const struct ebt_u_entry *entry,
-   const struct ebt_entry_target *target, const char *name, unsigned int hook)
+   const struct ebt_entry_target *target, const char *name, unsigned int hook_mask)
 {
-	if ( ((hook != NF_BR_PRE_ROUTING && hook != NF_BR_LOCAL_OUT) ||
+	if (((hook_mask & ~((1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_LOCAL_OUT))) ||
 	   strcmp(name, "nat")) &&
-	   (hook != NF_BR_BROUTING || strcmp(name, "broute")) )
+	   ((hook_mask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute")))
 		print_error("Wrong chain for dnat");
 	if (to_dest_supplied == 0)
 		print_error("No dnat address supplied");
@@ -161,7 +160,7 @@ static void print_s(const struct ebt_u_entry *entry,
 {
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
 
-	printf("snat - to: ");
+	printf("--to-src ");
 	printf("%s", ether_ntoa((struct ether_addr *)natinfo->mac));
 	printf(" --snat-target %s", standard_targets[natinfo->target]);
 }
@@ -171,7 +170,7 @@ static void print_d(const struct ebt_u_entry *entry,
 {
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
 
-	printf("dnat - to: ");
+	printf("--to-dst ");
 	printf("%s", ether_ntoa((struct ether_addr *)natinfo->mac));
 	printf(" --dnat-target %s", standard_targets[natinfo->target]);
 }

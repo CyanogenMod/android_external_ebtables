@@ -3,7 +3,6 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <linux/netfilter_bridge/ebtables.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_redirect.h>
@@ -33,7 +32,6 @@ static void init(struct ebt_entry_target *target)
 	return;
 }
 
-
 #define OPT_REDIRECT_TARGET  0x01
 static int parse(int c, char **argv, int argc,
    const struct ebt_u_entry *entry, unsigned int *flags,
@@ -61,10 +59,10 @@ static int parse(int c, char **argv, int argc,
 }
 
 static void final_check(const struct ebt_u_entry *entry,
-   const struct ebt_entry_target *target, const char *name, unsigned int hook)
+   const struct ebt_entry_target *target, const char *name, unsigned int hook_mask)
 {
-	if ( (hook != NF_BR_PRE_ROUTING || strcmp(name, "nat")) &&
-	   (hook != NF_BR_BROUTING || strcmp(name, "broute")) )
+	if ( ((hook_mask & ~(1 << NF_BR_PRE_ROUTING)) || strcmp(name, "nat")) &&
+	   ((hook_mask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute")) )
 		print_error("Wrong chain for redirect");
 }
 
@@ -74,8 +72,10 @@ static void print(const struct ebt_u_entry *entry,
 	struct ebt_redirect_info *redirectinfo =
 	   (struct ebt_redirect_info *)target->data;
 
-	printf("redirect");
-	printf(" --redirect-target %s", standard_targets[redirectinfo->target]);
+	if (redirectinfo->target == EBT_ACCEPT)
+		return;
+	printf(" --redirect-target %s",
+	   standard_targets[-redirectinfo->target - 1]);
 }
 
 static int compare(const struct ebt_entry_target *t1,
