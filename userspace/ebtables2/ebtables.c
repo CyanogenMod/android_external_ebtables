@@ -295,7 +295,7 @@ merge_options(struct option *oldopts, const struct option *newopts,
 		merge[num_old + i].val += *options_offset;
 	}
 	memset(merge + num_old + num_new, 0, sizeof(struct option));
-	// only free dynamically allocated stuff
+	/* only free dynamically allocated stuff */
 	if (oldopts != ebt_original_options)
 		free(oldopts);
 
@@ -400,7 +400,7 @@ int ebtables_insmod(const char *modname, const char *modprobe)
 	char *buf = NULL;
 	char *argv[3];
 
-	// If they don't explicitly set it, read out of kernel
+	/* If they don't explicitly set it, read out of kernel */
 	if (!modprobe) {
 		buf = get_modprobe();
 		if (!buf)
@@ -467,7 +467,7 @@ static void list_em(struct ebt_u_entries *entries)
 	for (i = 0; i < entries->nentries; i++) {
 		if (replace.flags & LIST_N) {
 			digits = 0;
-			// A little work to get nice rule numbers.
+			/* A little work to get nice rule numbers. */
 			j = i + 1;
 			while (j > 9) {
 				digits++;
@@ -1142,7 +1142,7 @@ letscontinue:
 	return -1;
 }
 
-// execute command A or I
+/* execute command A or I */
 static void add_rule(int rule_nr)
 {
 	int i, j;
@@ -1303,7 +1303,7 @@ static void delete_rule(int begin, int end)
 	while(j--) {
 		u_e2 = *u_e;
 		*u_e = (*u_e)->next;
-		// free everything
+		/* free everything */
 		free_u_entry(u_e2);
 		free(u_e2);
 	}
@@ -2044,7 +2044,7 @@ int main(int argc, char *argv[])
 				            " or equal to 0x0600");
 			break;
 
-		case 4  : // Lc
+		case 4  : /* Lc */
 			check_option(&replace.flags, LIST_C);
 			if (replace.command != 'L')
 				print_error("Use --Lc with -L");
@@ -2052,7 +2052,7 @@ int main(int argc, char *argv[])
 				print_error("--Lx not compatible with --Lc");
 			replace.flags |= LIST_C;
 			break;
-		case 5  : // Ln
+		case 5  : /* Ln */
 			check_option(&replace.flags, LIST_N);
 			if (replace.command != 'L')
 				print_error("Use --Ln with -L");
@@ -2060,7 +2060,7 @@ int main(int argc, char *argv[])
 				print_error("--Lx not compatible with --Ln");
 			replace.flags |= LIST_N;
 			break;
-		case 6  : // Lx
+		case 6  : /* Lx */
 			check_option(&replace.flags, LIST_X);
 			if (replace.command != 'L')
 				print_error("Use --Lx with -L");
@@ -2070,7 +2070,7 @@ int main(int argc, char *argv[])
 				print_error("--Lx not compatible with --Ln");
 			replace.flags |= LIST_X;
 			break;
-		case 8 : // atomic-commit
+		case 8 : /* atomic-commit */
 			replace.command = c;
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");

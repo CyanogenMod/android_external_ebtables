@@ -23,7 +23,7 @@ static struct option opts[] =
 };
 
 #define NUMOPCODES 9
-// a few names
+/* a few names */
 static char *opcodes[] =
 {
 	"Request",
@@ -64,7 +64,7 @@ static void init(struct ebt_entry_match *match)
 	arpinfo->bitmask = 0;
 }
 
-// defined in ebt_ip.c
+/* defined in ebt_ip.c */
 void parse_ip_address(char *address, uint32_t *addr, uint32_t *msk);
 
 #define OPT_OPCODE 0x01
@@ -188,7 +188,7 @@ static void final_check(const struct ebt_u_entry *entry,
 		            "specified as ARP or RARP");
 }
 
-// defined in the ebt_ip.c
+/* defined in the ebt_ip.c */
 char *mask_to_dotted(uint32_t mask);
 
 static void print(const struct ebt_u_entry *entry,

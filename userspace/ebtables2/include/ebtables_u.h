@@ -30,9 +30,9 @@ struct ebt_u_entries
 {
 	int policy;
 	unsigned int nentries;
-	// counter offset for this chain
+	/* counter offset for this chain */
 	unsigned int counter_offset;
-	// used for udc
+	/* used for udc */
 	unsigned int hook_mask;
 	char name[EBT_CHAIN_MAXNAMELEN];
 	struct ebt_u_entry *entries;
@@ -42,7 +42,7 @@ struct ebt_u_chain_list
 {
 	struct ebt_u_entries *udc;
 	struct ebt_u_chain_list *next;
-	// this is only used internally, in communication.c
+	/* this is only used internally, in communication.c */
 	char *kernel_start;
 };
 
@@ -50,25 +50,29 @@ struct ebt_u_replace
 {
 	char name[EBT_TABLE_MAXNAMELEN];
 	unsigned int valid_hooks;
-	// nr of rules in the table
+	/* nr of rules in the table */
 	unsigned int nentries;
 	struct ebt_u_entries *hook_entry[NF_BR_NUMHOOKS];
-	// user defined chains (udc) list
+	/* user defined chains (udc) list */
 	struct ebt_u_chain_list *udc;
-	// nr of counters userspace expects back
+	/* nr of counters userspace expects back */
 	unsigned int num_counters;
-	// where the kernel will put the old counters
+	/* where the kernel will put the old counters */
 	struct ebt_counter *counters;
-	// can be used e.g. to know if a standard option
-	// has been specified twice
+	/*
+	 * can be used e.g. to know if a standard option
+	 * has been specified twice
+	 */
 	unsigned int flags;
-	// we stick the specified command (e.g. -A) in here
+	/* we stick the specified command (e.g. -A) in here */
 	char command;
-	// here we stick the hook to do our thing on (can be -1 if unspecified)
+	/*
+	 * here we stick the hook to do our thing on (can be -1 if unspecified)
+	 */
 	int selected_hook;
-	// used for the atomic option
+	/* used for the atomic option */
 	char *filename;
-	// tells what happened to the old rules
+	/* tells what happened to the old rules */
 	unsigned short *counterchanges;
 };
 
@@ -114,7 +118,7 @@ struct ebt_u_entry
 struct ebt_u_match
 {
 	char name[EBT_FUNCTION_MAXNAMELEN];
-	// size of the real match data
+	/* size of the real match data */
 	unsigned int size;
 	void (*help)(void);
 	void (*init)(struct ebt_entry_match *m);
@@ -129,12 +133,16 @@ struct ebt_u_match
 	int (*compare)(const struct ebt_entry_match *m1,
 	   const struct ebt_entry_match *m2);
 	const struct option *extra_ops;
-	// can be used e.g. to check for multiple occurance of the same option
+	/*
+	 * can be used e.g. to check for multiple occurance of the same option
+	 */
 	unsigned int flags;
 	unsigned int option_offset;
 	struct ebt_entry_match *m;
-	// if used == 1 we no longer have to add it to
-	// the match chain of the new entry
+	/*
+	 * if used == 1 we no longer have to add it to
+	 * the match chain of the new entry
+	 */
 	unsigned int used;
 	struct ebt_u_match *next;
 };
@@ -207,7 +215,7 @@ void __print_bug(char *file, int line, char *format, ...);
 #define print_memory() {printf("Ebtables: " __FILE__ " " __FUNCTION__ \
    " %d :Out of memory.\n", __LINE__); exit(-1);}
 
-// used for keeping the rule counters right during rule adds or deletes
+/* used for keeping the rule counters right during rule adds or deletes */
 #define CNT_NORM 0
 #define CNT_DEL 1
 #define CNT_ADD 2
@@ -215,8 +223,10 @@ void __print_bug(char *file, int line, char *format, ...);
 #define CNT_ZERO 4
 
 extern char *standard_targets[NUM_STANDARD_TARGETS];
-// Transforms a target string into the right integer,
-// returns 0 on success.
+/*
+ * Transforms a target string into the right integer,
+ * returns 0 on success.
+ */
 #define FILL_TARGET(_str, _pos) ({                        \
 	int _i, _ret = 0;                                 \
 	for (_i = 0; _i < NUM_STANDARD_TARGETS; _i++)     \
@@ -229,12 +239,12 @@ extern char *standard_targets[NUM_STANDARD_TARGETS];
 	_ret;                                             \
 })
 
-// Transforms the target value to an index into standard_targets[]
+/* Transforms the target value to an index into standard_targets[] */
 #define TARGET_INDEX(_value) (-_value - 1)
-// Returns a target string corresponding to the value
+/* Returns a target string corresponding to the value */
 #define TARGET_NAME(_value) (standard_targets[TARGET_INDEX(_value)])
-// True if the hook mask denotes that the rule is in a base chain
+/* True if the hook mask denotes that the rule is in a base chain */
 #define BASE_CHAIN (hookmask & (1 << NF_BR_NUMHOOKS))
-// Clear the bit in the hook_mask that tells if the rule is on a base chain
+/* Clear the bit in the hook_mask that tells if the rule is on a base chain */
 #define CLEAR_BASE_CHAIN_BIT (hookmask &= ~(1 << NF_BR_NUMHOOKS))
 #endif /* EBTABLES_U_H */

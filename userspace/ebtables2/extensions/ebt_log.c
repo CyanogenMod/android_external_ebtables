@@ -5,16 +5,18 @@
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_log.h>
 
-// copied from syslog.h
-// used for the LOG target
-#define	LOG_EMERG	0 // system is unusable
-#define	LOG_ALERT	1 // action must be taken immediately
-#define	LOG_CRIT	2 // critical conditions
-#define	LOG_ERR		3 // error conditions
-#define	LOG_WARNING	4 // warning conditions
-#define	LOG_NOTICE	5 // normal but significant condition
-#define	LOG_INFO	6 // informational
-#define	LOG_DEBUG	7 // debug-level messages
+/*
+ * copied from syslog.h
+ * used for the LOG target
+ */
+#define	LOG_EMERG	0 /* system is unusable               */
+#define	LOG_ALERT	1 /* action must be taken immediately */
+#define	LOG_CRIT	2 /* critical conditions              */
+#define	LOG_ERR		3 /* error conditions                 */
+#define	LOG_WARNING	4 /* warning conditions               */
+#define	LOG_NOTICE	5 /* normal but significant condition */
+#define	LOG_INFO	6 /* informational                    */
+#define	LOG_DEBUG	7 /* debug-level messages             */
 
 #define LOG_DEFAULT_LEVEL LOG_INFO
 
@@ -41,7 +43,7 @@ static int name_to_loglevel(char* arg)
 	for (i = 0; i < 8; i++)
 		if (!strcmp(arg, eight_priority[i].c_name))
 			return eight_priority[i].c_val;
-	// return bad loglevel
+	/* return bad loglevel */
 	return 9;
 }
 
