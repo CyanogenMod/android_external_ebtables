@@ -1,0 +1,434 @@
+.TH EBTABLES 8  "01 May 2002"
+.\"
+.\" Man page written by Bart De Schuymer <bart.de.schuymer@pandora.be>
+.\" It is based on the iptables man page.
+.\"
+.\" Iptables page by Herve Eychenne March 2000.
+.\"
+.\"     This program is free software; you can redistribute it and/or modify
+.\"     it under the terms of the GNU General Public License as published by
+.\"     the Free Software Foundation; either version 2 of the License, or
+.\"     (at your option) any later version.
+.\"
+.\"     This program is distributed in the hope that it will be useful,
+.\"     but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\"     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\"     GNU General Public License for more details.
+.\"
+.\"     You should have received a copy of the GNU General Public License
+.\"     along with this program; if not, write to the Free Software
+.\"     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"     
+.\"
+.SH NAME
+ebtables(v.2.0) \- ethernet bridge packet table administration
+.SH SYNOPSIS
+.BR "ebtables -[ADI] " "chain rule-specification [options]"
+.br
+.BR "ebtables -P " "chain target"
+.br
+.BR "ebtables -[FLZ] [" "chain" "]"
+.br
+.B "ebtables -L DB"
+.br
+.BR "ebtables -[b] [" "y/n" "]"
+.br
+.SH DESCRIPTION
+.B ebtables
+is used to set up, maintain, and inspect the tables of Ethernet frame
+rules in the Linux kernel. It works analogous as iptables, but is less
+complicated. This man page is written with the man page of iptables
+next to it, so don't be surprised to see copied sentences and structure.
+
+There are three tables with built-in chains. Each chain is a list
+of rules which can match frames: each rule specifies what to do with a
+frame which matches. This is called a 'target'. The tables are used to
+divide functionality into different sets of chains.
+
+.SS TARGETS
+A firewall rule specifies criteria for a frame, and a target. If the
+frame does not match, the next rule in the chain is the examined one; if
+it does match, then the next thing to do is specified by the target.
+This target can be one of these values:
+.IR ACCEPT ,
+.IR DROP ,
+.IR CONTINUE ,
+an extention.
+.PP
+.I ACCEPT
+means to let the frame through.
+.I DROP
+means the frame has to be dropped.
+.I CONTINUE
+means the next rule has to be checked. This can be handy to know how many
+frames pass a certain point in the chain or to log those frames. For the
+other targets see the
+.B "TARGET EXTENSIONS"
+section.
+.SS TABLES
+There are three tables.
+.TP
+.B "-t, --table"
+This option specifies the frame matching table which the command should
+operate on. The tables are: 
+.BR filter ,
+this is the default table and contains three chains: 
+.B INPUT 
+(for frames destined for the bridge itself), 
+.B OUTPUT 
+(for locally-generated frames) and
+.B FORWARD 
+(for frames being bridged).
+.BR nat ,
+this table is used to change the mac addresses and contains three chains: 
+.B PREROUTING 
+(for altering frames as soon as they come in), 
+.B OUTPUT 
+(for altering locally generated frames before they are bridged) and 
+.B POSTROUTING
+(for altering frames as they are about to go out). A small note on the naming
+of chains POSTROUTING and PREROUTING: it would be more accurate to call them
+PREFORWARDING and POSTFORWARDING, but for all those who come from the
+.BR iptables " world to " ebtables
+it is easier to have the same names.
+.BR broute ,
+this table is used to make a brouter, it has one chain:
+.BR BROUTING .
+The targets
+.BR DROP " and " ACCEPT
+have special meaning in this table.
+.B DROP
+actually means the frame has to be routed, while
+.B ACCEPT
+means the frame has to be bridged. The
+.B BROUTING
+chain is traversed very early. It is only traversed by frames entering on
+a bridge enslaved nic that is in forwarding state. Normally those frames
+would be bridged, but you can decide otherwise here. The
+.B redirect
+target is very handy here.
+.SH OPTIONS
+The options can be divided into several different groups.
+.SS COMMANDS
+These options specify the specific actions to perform; only one of them
+can be specified on the command line (the
+.B -Z
+command is an exception). All these options only apply to the selected
+(or default) table.
+.TP
+.B "-A, --append"
+Append a rule to the end of the selected chain.
+.TP
+.B "-D, --delete"
+Delete the specified rule from the selected chain. There are two versions
+of this command. A rule number (starting at 1) or the complete rule can be
+specified.
+.TP
+.B "-I, --insert"
+Insert the specified rule into the selected chain at the specified rule number (1 meaning
+the head of the chain).
+.TP
+.B "-L, --list"
+List all rules in the selected chain. If no chain is selected, all chains
+are listed. If the chainname equals 
+.BR DB ,
+.B ebtables
+will try to show the database. This database gives a survey of the kind of
+frames that pass the different bridge hooks. It uses the interfaces where
+the frame came in or will go out, the protocol field and the hook. This
+database is independent from the rest of
+.B ebtables
+and is in a different kernel module.
+.TP
+.B "-F, --flush"
+Flush the selected chain. If no chain is selected, every chain will be
+flushed. This does not change the policy of the chain.
+.TP
+.B "-Z, --zero"
+Put the counters of the selected chain on zero. If no chain is selected, all the counters
+are put on zero. This can be used in conjunction with the -L command (see above). 
+This will cause the rule counters to be printed on the screen before they are put on zero.
+.TP
+.B "-P, --policy"
+Set the policy for the chain to the given target. The policy is either
+.B ACCEPT
+, either
+.BR DROP .
+.SS PARAMETERS
+The following parameters make up a rule specification (as used in the add
+and delete commands). A "!" argument before the specification inverts the
+test for that specification. Apart from these standard parameters, there are others, see
+.BR "MATCH EXTENSIONS" .
+.TP
+.BR "-p, --protocol " "[!] \fIprotocol\fP"
+The protocol that was responsible for creating the frame. This can be a
+hexadecimal number, above 
+.IR 0x0600 ,
+a name (e.g.
+.I ARP
+) or
+.BR LENGTH .
+The protocol field of the Ethernet frame can be used to denote the
+length of the header (802.2/802.3 networks). When the value of that field is
+below (or equals)
+.IR 0x0600 ,
+the value equals the size of the header and shouldn't be used as a
+protocol number. Instead, all frames where the protocol field is used as
+the length field are assumed to be of the same 'protocol'. The protocol
+name used in
+.B ebtables
+for these frames is
+.BR LENGTH .
+.br
+The file
+.B /etc/ethertypes
+can be used to show readable
+characters instead of hexadecimal numbers for the protocols. For example,
+.I 0x0800
+will be represented by 
+.IR IPV4 .
+The use of this file is not case sensitive. 
+See that file for more information. The flag 
+.B --proto
+is an alias for this option.
+.TP 
+.BR "-i, --in-interface " "[!] \fIname\fP"
+The interface via which a frame is received (for the
+.BR INPUT ,
+.BR FORWARD ,
+.BR PREROUTING " and " BROUTING
+chains). The flag
+.B --in-if
+is an alias for this option.
+.TP
+.BR "--logical-in " "[!] \fIname\fP"
+The (logical) bridge interface via which a frame is received (for the
+.BR INPUT ,
+.BR FORWARD ,
+.BR PREROUTING " and " BROUTING
+chains).
+.TP
+.BR "-o, --out-interface " "[!] \fIname\fP"
+The interface via which a frame is going to be sent (for the
+.BR OUTPUT ,
+.B FORWARD
+and
+.B POSTROUTING
+chains). The flag
+.B --out-if
+is an alias for this option.
+.TP
+.BR "--logical-out " "[!] \fIname\fP"
+The (logical) bridge interface via which a frame is going to be sent (for
+the
+.BR OUTPUT ,
+.B FORWARD
+and
+.B POSTROUTING
+chains).
+.TP
+.BR "-s, --source " "[!] \fIaddress\fP[/\fImask\fP]"
+The source mac address. Both mask and address are written as 6 hexadecimal
+numbers seperated by colons. Alternatively one can specify Unicast,
+Multicast or Broadcast.
+.br
+Unicast=00:00:00:00:00:00/01:00:00:00:00:00,
+Multicast=01:00:00:00:00:00/01:00:00:00:00:00 and
+Broadcast=ff:ff:ff:ff:ff:ff/ff:ff:ff:ff:ff:ff. Note that a broadcast
+address will also match the multicast specification. The flag
+.B --src
+is an alias for this option.
+.TP
+.BR "-d, --destination " "[!] \fIaddress\fP[/\fImask\fP]"
+The destination mac address. See -s (above) for more details. The flag
+.B --dst
+is an alias for this option.
+
+.SS OTHER OPTIONS
+.TP
+.B "-V, --version"
+Show the version of the userprogram.
+.TP
+.B "-h, --help"
+Give a brief description of the command syntax. Here you can also specify
+names of extensions and
+.B ebtables
+will try to write help about those extensions. E.g. ebtables -h snat log ip arp.
+.TP
+.BR "-b --db " "[\fIy/n\fP]"
+.IR "" "Enable (" y ") or disable (" n ") the database."
+.TP
+.BR "-j, --jump " "\fItarget\fP"
+The target of the rule. This is one of the following values:
+.BR ACCEPT ,
+.BR DROP ,
+.BR CONTINUE ,
+or a target extension, see
+.BR "TARGET EXTENSIONS" .
+.SH MATCH EXTENSIONS
+.B ebtables
+extensions are precompiled into the userspace tool. So there is no need
+to explicitly load them with a -m option like in iptables. However, these
+extensions deal with functionality supported by supplemental kernel modules.
+.SS ip
+Specify ip specific fields. These will only work if the protocol equals
+.BR IPv4 .
+.TP
+.BR "--ip-source " "[!] \fIaddress\fP[/\fImask\fP]"
+The source ip address.
+The flag
+.B --ip-src
+is an alias for this option.
+.TP
+.BR "--ip-destination " "[!] \fIaddress\fP[/\fImask\fP]"
+The destination ip address.
+The flag
+.B --ip-dst
+is an alias for this option.
+.TP
+.BR "--ip-tos " "[!] \fItos\fP"
+The ip type of service, in hexadecimal numbers.
+.BR IPv4 .
+.TP
+.BR "--ip-protocol " "[!] \fIprotocol\fP"
+The ip protocol.
+The flag
+.B --ip-proto
+is an alias for this option.
+.SS arp
+Specify arp specific fields. These will only work if the protocol equals
+.BR ARP " or " RARP .
+.TP
+.BR "--arp-opcode " "[!] \fIopcode\fP"
+The (r)arp opcode (decimal or a string, for more details see ebtables -h arp).
+.TP
+.BR "--arp-htype " "[!] \fIhardware type\fP"
+The hardware type, this can be a decimal or the string "Ethernet". This
+is normally Ethernet (value 1).
+.TP
+.BR "--arp-ptype " "[!] \fIprotocol type\fP"
+The protocol type for which the (r)arp is used (hexadecimal or the string "IPv4").
+This is normally IPv4 (0x0800). 
+.TP
+.BR "--arp-ip-src " "[!] \fIaddress\fP[/\fImask\fP]"
+The ARP IP source address specification.
+.TP
+.BR "--arp-ip-dst " "[!] \fIaddress\fP[/\fImask\fP]"
+The ARP IP destination address specification.
+.SS vlan
+Specify 802.1Q VLAN specific fields. These will only work if the protocol equals
+.BR 802_1Q .
+For more details see
+.BR "ebtables -h vlan" .
+.TP
+.BR "--vlan-id " "[!] \fIid\fP"
+The VLAN identifier (decimal number from 0 to 4095).
+.TP
+.BR "--vlan-prio " "[!] \fIprio\fP"
+The VLAN priority type, this can be a decimal number from 0 to 7. The default value is 0.
+.SH WATCHER EXTENSION(S)
+Watchers are things that only look at frames passing by. These watchers only see the
+frame if the frame passes all the matches of the rule.
+.SS log
+The fact that the log module is a watcher lets us log stuff while giving a target
+by choice. Note that the log module therefore is not a target.
+.TP
+.B "--log"
+.br
+Use this if you won't specify any other log options, so if you want to use the default
+settings: log-prefix="", no arp logging, no ip logging, log-level=info.
+.TP
+.B --log-level "\fIlevel\fP"
+.br
+defines the logging level. For the possible values: ebtables -h log.
+The default level is 
+.IR info .
+.TP
+.BR --log-prefix " \fItext\fP"
+.br
+defines the prefix to be printed before the logging information.
+.TP
+.B --log-ip 
+.br
+will log the ip information when a frame made by the ip protocol matches 
+the rule. The default is no ip information logging.
+.TP
+.B --log-arp
+.br
+will log the (r)arp information when a frame made by the (r)arp protocols
+matches the rule. The default is no (r)arp information logging.
+.SS TARGET EXTENSIONS
+.TP
+.B snat
+The
+.B snat
+target can only be used in the
+.BR POSTROUTING " chain of the " nat " table."
+It specifies that the source mac address has to be changed.
+.br
+.BR "--to-source " "\fIaddress\fP"
+.br
+The flag
+.B --to-src
+is an alias for this option.
+.br
+.BR "--snat-target " "\fItarget\fP"
+.br
+Specifies the standard target. After doing the snat, the rule still has 
+to give a standard target so
+.B ebtables
+knows what to do.
+The default target is ACCEPT. Making it CONTINUE could let you use
+multiple target extensions on the same frame. Making it DROP doesn't
+make sense, but you could do that too.
+.TP
+.B dnat
+The
+.B dnat
+target can only be used in the
+.BR BROUTING " chain of the " broute " table and the "
+.BR PREROUTING " and " OUTPUT " chains of the " nat " table."
+It specifies that the destination mac address has to be changed.
+.br
+.BR "--to-destination " "\fIaddress\fP"
+.br
+The flag
+.B --to-dst
+is an alias for this option.
+.br
+.BR "--dnat-target " "\fItarget\fP"
+.br
+Specifies the standard target. After doing the dnat, the rule still has to
+give a standard target so
+.B ebtables
+knows what to do.
+The default target is ACCEPT. Making it CONTINUE could let you use 
+multiple target extensions on the same frame. Making it DROP only makes
+sense in the BROUTING chain but using the redirect target is more logical
+there.
+.TP
+.B redirect
+The
+.B redirect
+target will change the MAC target address to that of the bridge device the
+frame arrived on. This target can only be used in the
+.BR BROUTING " chain of the " broute " table and the "
+.BR PREROUTING " chain of the " nat " table."
+.br
+.BR "--redirect-target " "\fItarget\fP"
+.br
+Specifies the standard target. After doing the MAC redirect, the rule
+still has to give a standard target so
+.B ebtables
+knows what to do.
+The default target is ACCEPT. Making it CONTINUE could let you use 
+multiple target extensions on the same frame. Making it DROP in the
+BROUTING chain will let the frames be routed.
+.SH FILES
+.I /etc/ethertypes
+.SH BUGS
+This won't work on an architecture with a user32/kernel64 situation like the Sparc64.
+.SH AUTHOR
+.IR "" "Bart De Schuymer <" bart.de.schuymer@pandora.be >
+.SH SEE ALSO
+.BR iptables "(8), " brctl (8)

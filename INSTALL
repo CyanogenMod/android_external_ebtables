@@ -1,0 +1,27 @@
+FOLLOW THESE SIMPLE GUIDELINES:
+-------------------------------
+
+If /usr/src/linux contains the patched kernel for ebtables:
+	%make install
+Otherwise:
+	%make KERNEL_DIR=<<where-the-patched-kernel-is>> install
+
+optional:
+If your /usr/include/linux directory is a symbolic link, use the SYMLINK=y
+option. When unsure, don't use this. If the cp program produces errors
+when executing make install, use this option.
+
+WHAT GETS INSTALLED?
+--------------------
+
+- The needed kernel headers are placed in /usr/include/linux/netfilter_bridge/
+  That's why it needs the KERNEL_DIR. If the SYMLINK=y option is supplied,
+  /usr/include/linux will be a symbolic link.
+- The ebtables manual gets installed in /usr/local/man/man8
+  To put the manual somewhere else, include MANDIR=<<man-path/man>> as
+  option on the command line.
+  The Makefile will append /man8/ebtables.8.
+- ethertypes is placed in /etc/
+- the userspace program ebtables is compiled.
+
+That's all

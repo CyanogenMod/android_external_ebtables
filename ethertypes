@@ -1,0 +1,34 @@
+# all whitespace is ignored
+# comment lines must have a '#' as the first character
+# all protocol numbers are in hexadecimal form
+# maximum namesize = 20 characters
+# always put tabs or spaces between the name and the protocol number
+# don't use more than 4 digits for the protocol number
+# programs using this file should not be case sensitive
+# that's all :-))
+IPV4 	0800	put your comments behind, on the same line, after a tab
+X25	0800    or whitespace
+ARP	0806
+802_1Q	8100	802.1Q Virtual LAN tagged frame
+IPX	8137
+IPV6	86DD
+NetBEUI	8191
+BPQ	08FF	G8BPQ AX.25 Ethernet Packet
+DEC	6000	DEC Assigned proto
+DNA_DL	6001	DEC DNA Dump/Load
+DNA_RC	6002	DEC DNA Remote Console
+DNA_RT	6003	DEC DNA Routing
+LAT	6004	DEC LAT
+DIAG	6005	DEC Diagnostics
+CUST	6006	DEC Customer use
+SCA	6007	DEC Systems Comms Arch
+RARP	8035	Reverse Addr Res packet
+ATALK	809B	Appletalk DDP
+AARP	80F3	Appletalk AARP
+IPX	8137	IPX over DIX
+PPP_DISC	8863	PPPoE discovery messages
+PPP_SES	8864	PPPoE session messages
+ATMMPOA	884C	MultiProtocol over ATM
+ATMFATE	8884	Frame-based ATM Transport over Ethernet
+
+
