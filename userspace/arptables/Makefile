@@ -73,5 +73,7 @@ release:
 		include/linux/netfilter_arp/
 	install -m 0644 -o root -g root \
 		include/netfilter_arp.h include/linux/netfilter_arp.h
+	install -m 0644 -o root -g root \
+		include/arp_tables.h include/linux/netfilter_arp/arp_tables.h
 	make clean
 	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz
