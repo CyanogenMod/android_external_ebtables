@@ -1,3 +1,11 @@
+/* ebt_standard
+ *
+ * Authors:
+ * Bart De Schuymer <bdschuym@pandora.be>
+ *
+ * April, 2002
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>

@@ -5,6 +5,8 @@
 	* added the ebtablesd/ebtablesu scheme to allow faster
 	  addition of rules (and to test the modular code).
 	* some small fixes
+	* added -c option (initialize counters)
+	* added -C option (change counters)
 20031102
 	Since last entry:
 	* <grzes_at_gnu.univ.gda.pl> added arpreply and among modules

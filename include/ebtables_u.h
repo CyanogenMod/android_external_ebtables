@@ -256,6 +256,9 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 void ebt_delete_rule(struct ebt_u_replace *replace,
 		     struct ebt_u_entry *new_entry, int begin, int end);
 void ebt_zero_counters(struct ebt_u_replace *replace);
+void ebt_change_counters(struct ebt_u_replace *replace,
+		     struct ebt_u_entry *new_entry, int begin, int end,
+		     struct ebt_counter *cnt);
 void ebt_new_chain(struct ebt_u_replace *replace, const char *name, int policy);
 void ebt_delete_chain(struct ebt_u_replace *replace);
 void ebt_rename_chain(struct ebt_u_replace *replace, const char *name);
@@ -284,7 +287,8 @@ void ebt_deliver_table(struct ebt_u_replace *repl);
 
 extern int ebt_invert;
 void ebt_check_option(unsigned int *flags, unsigned int mask);
-int ebt_check_inverse(const char option[]);
+#define ebt_check_inverse(arg) _ebt_check_inverse(arg, argc, argv)
+int _ebt_check_inverse(const char option[], int argc, char **argv);
 void ebt_print_mac(const char *mac);
 void ebt_print_mac_and_mask(const char *mac, const char *mask);
 int ebt_get_mac_and_mask(char *from, char *to, char *mask);
@@ -299,6 +303,21 @@ struct ethertypeent *parseethertypebynumber(int type);
 #define ebt_print_bug(format, args...) \
    __ebt_print_bug(__FILE__, __LINE__, format, ##args)
 #define ebt_print_error(format,args...) __ebt_print_error(format, ##args);
+#define ebt_print_error2(format, args...) {__ebt_print_error(format, ##args); \
+   return -1;}
+#define ebt_check_option2(flags,mask)	\
+({ebt_check_option(flags,mask);		\
+ if (ebt_errormsg[0] != '\0')		\
+	return -1;})
+#define ebt_check_inverse2(option)					\
+({int __ret = ebt_check_inverse(option);				\
+if (ebt_errormsg[0] != '\0')						\
+	return -1;							\
+if (!optarg) {								\
+	__ebt_print_error("Option without (mandatory) argument");	\
+	return -1;							\
+}									\
+__ret;})
 #define ebt_print_memory() {printf("Ebtables: " __FILE__ \
    " %s %d :Out of memory.\n", __FUNCTION__, __LINE__); exit(-1);}
 
@@ -308,6 +327,7 @@ struct ethertypeent *parseethertypebynumber(int type);
 #define CNT_ADD 	2
 #define CNT_OWRITE 	3
 #define CNT_ZERO 	4
+#define CNT_CHANGE 	5
 
 extern const char *ebt_hooknames[NF_BR_NUMHOOKS];
 extern const char *ebt_standard_targets[NUM_STANDARD_TARGETS];

@@ -1,3 +1,11 @@
+/* ebtable_broute
+ *
+ * Authors:
+ * Bart De Schuymer <bdschuym@pandora.be>
+ *
+ * April, 2002
+ */
+
 #include <stdio.h>
 #include "../include/ebtables_u.h"
 

@@ -1,3 +1,12 @@
+/* ebt_arpreply
+ *
+ * Authors:
+ * Grzegorz Borowiak <grzes@gnu.univ.gda.pl>
+ * Bart De Schuymer <bdschuym@pandora.be>
+ *
+ *  August, 2003
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,17 +57,16 @@ static int parse(int c, char **argv, int argc,
 
 	switch (c) {
 	case REPLY_MAC:
-		ebt_check_option(flags, OPT_REPLY_MAC);
+		ebt_check_option2(flags, OPT_REPLY_MAC);
 		if (!(addr = ether_aton(optarg)))
-			ebt_print_error("Problem with specified "
-					"--arpreply-mac mac");
+			ebt_print_error2("Problem with specified --arpreply-mac mac");
 		memcpy(replyinfo->mac, addr, ETH_ALEN);
 		mac_supplied = 1;
 		break;
 	case REPLY_TARGET:
-		ebt_check_option(flags, OPT_REPLY_TARGET);
+		ebt_check_option2(flags, OPT_REPLY_TARGET);
 		if (FILL_TARGET(optarg, replyinfo->target))
-			ebt_print_error("Illegal --arpreply-target target");
+			ebt_print_error2("Illegal --arpreply-target target");
 		break;
 
 	default:
@@ -74,17 +82,17 @@ static void final_check(const struct ebt_u_entry *entry,
 	struct ebt_arpreply_info *replyinfo =
 	   (struct ebt_arpreply_info *)target->data;
 
-	if (entry->ethproto != ETH_P_ARP || entry->invflags & EBT_IPROTO)
-		ebt_print_error("For ARP replying the protocol must be "
-				"specified as ARP");
-	if (time == 0 && mac_supplied == 0)
+	if (entry->ethproto != ETH_P_ARP || entry->invflags & EBT_IPROTO) {
+		ebt_print_error("For ARP replying the protocol must be specified as ARP");
+	} else if (time == 0 && mac_supplied == 0) {
 		ebt_print_error("No arpreply mac supplied");
-	if (BASE_CHAIN && replyinfo->target == EBT_RETURN)
-		ebt_print_error("--arpreply-target RETURN not allowed on "
-				"base chain");
-	CLEAR_BASE_CHAIN_BIT;
-	if (strcmp(name, "nat") || hookmask & ~(1 << NF_BR_PRE_ROUTING))
-		ebt_print_error("arpreply only allowed in PREROUTING");
+	} else if (BASE_CHAIN && replyinfo->target == EBT_RETURN) {
+		ebt_print_error("--arpreply-target RETURN not allowed on base chain");
+	} else {
+		CLEAR_BASE_CHAIN_BIT;
+		if (strcmp(name, "nat") || hookmask & ~(1 << NF_BR_PRE_ROUTING))
+			ebt_print_error("arpreply only allowed in PREROUTING");
+	}
 }
 
 static void print(const struct ebt_u_entry *entry,

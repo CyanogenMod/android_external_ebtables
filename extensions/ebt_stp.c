@@ -1,3 +1,11 @@
+/* ebt_stp
+ *
+ * Authors:
+ * Bart De Schuymer <bdschuym@pandora.be>
+ *
+ * July, 2003
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -157,38 +165,32 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 	if (c < 'a' || c > ('a' + STP_NUMOPS - 1))
 		return 0;
 	flag = 1 << (c - 'a');
-	ebt_check_option(flags, flag);
-	if (ebt_check_inverse(optarg))
+	ebt_check_option2(flags, flag);
+	if (ebt_check_inverse2(optarg))
 		stpinfo->invflags |= flag;
-	if (optind > argc)
-		ebt_print_error("Missing argument for --%s", opts[c-'a'].name);
 	stpinfo->bitmask |= flag;
 	switch (flag) {
 	case EBT_STP_TYPE:
-		i = strtol(argv[optind - 1], &end, 0);
+		i = strtol(optarg, &end, 0);
 		if (i < 0 || i > 255 || *end != '\0') {
-			if (!strcasecmp(argv[optind - 1],
-			    BPDU_TYPE_CONFIG_STRING))
+			if (!strcasecmp(optarg, BPDU_TYPE_CONFIG_STRING))
 				stpinfo->type = BPDU_TYPE_CONFIG;
-			else if (!strcasecmp(argv[optind - 1],
-			           BPDU_TYPE_TCN_STRING))
+			else if (!strcasecmp(optarg, BPDU_TYPE_TCN_STRING))
 				stpinfo->type = BPDU_TYPE_TCN;
 			else
-				ebt_print_error("Bad --stp-type argument");
+				ebt_print_error2("Bad --stp-type argument");
 		} else
 			stpinfo->type = i;
 		break;
 	case EBT_STP_FLAGS:
-		i = strtol(argv[optind - 1], &end, 0);
+		i = strtol(optarg, &end, 0);
 		if (i < 0 || i > 255 || *end != '\0') {
-			if (!strcasecmp(argv[optind - 1],
-			    FLAG_TC_STRING))
+			if (!strcasecmp(optarg, FLAG_TC_STRING))
 				stpinfo->config.flags = FLAG_TC;
-			else if (!strcasecmp(argv[optind - 1],
-			           FLAG_TC_ACK_STRING))
+			else if (!strcasecmp(optarg, FLAG_TC_ACK_STRING))
 				stpinfo->config.flags = FLAG_TC_ACK;
 			else
-				ebt_print_error("Bad --stp-flags argument");
+				ebt_print_error2("Bad --stp-flags argument");
 		} else
 			stpinfo->config.flags = i;
 		break;

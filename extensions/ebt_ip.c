@@ -1,29 +1,13 @@
-/*
- *  ebtables ebt_ip: IP extension module for userspace
+/* ebt_ip
  * 
- *  Authors:
- *   Bart De Schuymer <bdschuym@pandora.be>
+ * Authors:
+ * Bart De Schuymer <bdschuym@pandora.be>
  *
- *  Changes:
+ * Changes:
  *    added ip-sport and ip-dport; parsing of port arguments is
  *    based on code from iptables-1.2.7a
  *    Innominate Security Technologies AG <mhopf@innominate.com>
  *    September, 2002
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
  */
 
 #include <stdio.h>
@@ -76,7 +60,7 @@ static uint16_t parse_port(const char *protocol, const char *name)
 	}
 	ebt_print_error("Problem with specified %s port '%s'", 
 			protocol?protocol:"", name);
-	return 0; /* never reached */
+	return 0;
 }
 
 static void
@@ -92,7 +76,11 @@ parse_port_range(const char *protocol, const char *portstring, uint16_t *ports)
 		*cp = '\0';
 		cp++;
 		ports[0] = buffer[0] ? parse_port(protocol, buffer) : 0;
+		if (ebt_errormsg[0] != '\0')
+			return;
 		ports[1] = cp[0] ? parse_port(protocol, cp) : 0xFFFF;
+		if (ebt_errormsg[0] != '\0')
+			return;
 		
 		if (ports[0] > ports[1])
 			ebt_print_error("Invalid portrange (min > max)");
@@ -143,81 +131,67 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 
 	switch (c) {
 	case IP_SOURCE:
-		ebt_check_option(flags, OPT_SOURCE);
+		ebt_check_option2(flags, OPT_SOURCE);
 		ipinfo->bitmask |= EBT_IP_SOURCE;
 
 	case IP_DEST:
 		if (c == IP_DEST) {
-			ebt_check_option(flags, OPT_DEST);
+			ebt_check_option2(flags, OPT_DEST);
 			ipinfo->bitmask |= EBT_IP_DEST;
 		}
-		if (ebt_check_inverse(optarg)) {
+		if (ebt_check_inverse2(optarg)) {
 			if (c == IP_SOURCE)
 				ipinfo->invflags |= EBT_IP_SOURCE;
 			else
 				ipinfo->invflags |= EBT_IP_DEST;
 		}
-
-		if (optind > argc)
-			ebt_print_error("Missing IP address argument");
 		if (c == IP_SOURCE)
-			ebt_parse_ip_address(argv[optind - 1], &ipinfo->saddr,
-			   &ipinfo->smsk);
+			ebt_parse_ip_address(optarg, &ipinfo->saddr, &ipinfo->smsk);
 		else
-			ebt_parse_ip_address(argv[optind - 1], &ipinfo->daddr,
-			   &ipinfo->dmsk);
+			ebt_parse_ip_address(optarg, &ipinfo->daddr, &ipinfo->dmsk);
 		break;
 
 	case IP_SPORT:
 	case IP_DPORT:
 		if (c == IP_SPORT) {
-			ebt_check_option(flags, OPT_SPORT);
+			ebt_check_option2(flags, OPT_SPORT);
 			ipinfo->bitmask |= EBT_IP_SPORT;
-			if (ebt_check_inverse(optarg))
+			if (ebt_check_inverse2(optarg))
 				ipinfo->invflags |= EBT_IP_SPORT;
 		} else {
-			ebt_check_option(flags, OPT_DPORT);
+			ebt_check_option2(flags, OPT_DPORT);
 			ipinfo->bitmask |= EBT_IP_DPORT;
-			if (ebt_check_inverse(optarg))
+			if (ebt_check_inverse2(optarg))
 				ipinfo->invflags |= EBT_IP_DPORT;
 		}
-		if (optind > argc)
-			ebt_print_error("Missing port argument");
 		if (c == IP_SPORT)
-			parse_port_range(NULL, argv[optind - 1], ipinfo->sport);
+			parse_port_range(NULL, optarg, ipinfo->sport);
 		else
-			parse_port_range(NULL, argv[optind - 1], ipinfo->dport);
+			parse_port_range(NULL, optarg, ipinfo->dport);
 		break;
 
 	case IP_myTOS:
-		ebt_check_option(flags, OPT_TOS);
-		if (ebt_check_inverse(optarg))
+		ebt_check_option2(flags, OPT_TOS);
+		if (ebt_check_inverse2(optarg))
 			ipinfo->invflags |= EBT_IP_TOS;
-
-		if (optind > argc)
-			ebt_print_error("Missing IP tos argument");
-		i = strtol(argv[optind - 1], &end, 16);
+		i = strtol(optarg, &end, 16);
 		if (i < 0 || i > 255 || *end != '\0')
-			ebt_print_error("Problem with specified IP tos");
+			ebt_print_error2("Problem with specified IP tos");
 		ipinfo->tos = i;
 		ipinfo->bitmask |= EBT_IP_TOS;
 		break;
 
 	case IP_PROTO:
-		ebt_check_option(flags, OPT_PROTO);
-		if (ebt_check_inverse(optarg))
+		ebt_check_option2(flags, OPT_PROTO);
+		if (ebt_check_inverse2(optarg))
 			ipinfo->invflags |= EBT_IP_PROTO;
-		if (optind > argc)
-			ebt_print_error("Missing IP protocol argument");
-		i = strtoul(argv[optind - 1], &end, 10);
+		i = strtoul(optarg, &end, 10);
 		if (*end != '\0') {
 			struct protoent *pe;
 
-			pe = getprotobyname(argv[optind - 1]);
+			pe = getprotobyname(optarg);
 			if (pe == NULL)
-				ebt_print_error
-				    ("Unknown specified IP protocol - %s",
-				     argv[optind - 1]);
+				ebt_print_error("Unknown specified IP protocol - %s", argv[optind - 1]);
 			ipinfo->protocol = pe->p_proto;
 		} else {
 			ipinfo->protocol = (unsigned char) i;
@@ -236,11 +210,10 @@ static void final_check(const struct ebt_u_entry *entry,
 {
  	struct ebt_ip_info *ipinfo = (struct ebt_ip_info *)match->data;
 
-	if (entry->ethproto != ETH_P_IP || entry->invflags & EBT_IPROTO)
+	if (entry->ethproto != ETH_P_IP || entry->invflags & EBT_IPROTO) {
 		ebt_print_error("For IP filtering the protocol must be "
 		            "specified as IPv4");
-
-	if (ipinfo->bitmask & (EBT_IP_SPORT|EBT_IP_DPORT) &&
+	} else if (ipinfo->bitmask & (EBT_IP_SPORT|EBT_IP_DPORT) &&
 		(!(ipinfo->bitmask & EBT_IP_PROTO) || 
 		ipinfo->invflags & EBT_IP_PROTO ||
 		(ipinfo->protocol!=IPPROTO_TCP && 
@@ -294,16 +267,14 @@ static void print(const struct ebt_u_entry *entry,
 	}
 	if (ipinfo->bitmask & EBT_IP_SPORT) {
 		printf("--ip-sport ");
-		if (ipinfo->invflags & EBT_IP_SPORT) {
+		if (ipinfo->invflags & EBT_IP_SPORT)
 			printf("! ");
-		}
 		print_port_range(ipinfo->sport);
 	}
 	if (ipinfo->bitmask & EBT_IP_DPORT) {
 		printf("--ip-dport ");
-		if (ipinfo->invflags & EBT_IP_DPORT) {
+		if (ipinfo->invflags & EBT_IP_DPORT)
 			printf("! ");
-		}
 		print_port_range(ipinfo->dport);
 	}
 }

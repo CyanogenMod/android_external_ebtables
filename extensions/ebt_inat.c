@@ -1,3 +1,11 @@
+/* ebt_inat
+ *
+ * Authors:
+ * Grzegorz Borowiak <grzes@gnu.univ.gda.pl>
+ *
+ * August, 2003
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
