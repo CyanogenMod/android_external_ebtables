@@ -744,7 +744,8 @@ void check_for_loops()
 			// now see if we've been here before
 			for (k = 0; k < sp; k++)
 				if (stack[k].chain_nr == verdict + NF_BR_NUMHOOKS)
-					goto error;
+					print_error("Loop from chain %s to chain %s",
+					   nr_to_chain(chain_nr)->name, nr_to_chain(stack[k].chain_nr)->name);
 			// jump to the chain, make sure we know how to get back
 			stack[sp].chain_nr = chain_nr;
 			stack[sp].n = j;
@@ -772,8 +773,6 @@ letscontinue:
 	}
 	free(stack);
 	return;
-error:
-	print_error("Loop");
 }
 
 // parse the chain name and return the corresponding nr
