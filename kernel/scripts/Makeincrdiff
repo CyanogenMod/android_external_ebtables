@@ -4,9 +4,9 @@
 #               deleted netsyms
 # 10 September 2002: added br_forward.c
 
-export FROM=linux
-export TO=ebt2.0-rc1
-export FILE=ebtables-v2.0_vs_2.4.18-rc1.001.diff
+export FROM=linux-2.5.32
+export TO=linux-2.5.34
+export FILE=iets.diff
 
 # brouter support
 
@@ -28,7 +28,6 @@ diff -urN $FROM/net/Config.in $TO/net/Config.in >> $FILE
 
 diff -urN $FROM/net/bridge/netfilter/Makefile $TO/net/bridge/netfilter/Makefile >> $FILE
 diff -urN $FROM/net/bridge/netfilter/Config.in $TO/net/bridge/netfilter/Config.in >> $FILE
-diff -urN $FROM/net/bridge/netfilter/br_db.c $TO/net/bridge/netfilter/br_db.c >> $FILE
 diff -urN $FROM/net/bridge/netfilter/ebtable_filter.c $TO/net/bridge/netfilter/ebtable_filter.c >> $FILE
 diff -urN $FROM/net/bridge/netfilter/ebtable_nat.c $TO/net/bridge/netfilter/ebtable_nat.c >> $FILE
 diff -urN $FROM/net/bridge/netfilter/ebtable_broute.c $TO/net/bridge/netfilter/ebtable_broute.c >> $FILE
@@ -51,4 +50,3 @@ diff -urN $FROM/include/linux/netfilter_bridge/ebt_mark_t.h $TO/include/linux/ne
 diff -urN $FROM/include/linux/netfilter_bridge/ebt_mark_m.h $TO/include/linux/netfilter_bridge/ebt_mark_m.h >> $FILE
 diff -urN $FROM/include/linux/netfilter_bridge/ebt_nat.h $TO/include/linux/netfilter_bridge/ebt_nat.h >> $FILE
 diff -urN $FROM/include/linux/netfilter_bridge/ebt_redirect.h $TO/include/linux/netfilter_bridge/ebt_redirect.h >> $FILE
-diff -urN $FROM/include/linux/br_db.h $TO/include/linux/br_db.h >> $FILE
