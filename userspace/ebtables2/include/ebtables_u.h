@@ -198,8 +198,6 @@ struct ebt_u_watcher *find_watcher(const char *name);
 struct ebt_u_table *find_table(char *name);
 void deliver_counters(struct ebt_u_replace *repl);
 void deliver_table(struct ebt_u_replace *repl);
-int name_to_number(char *name, uint16_t *proto);
-int number_to_name(unsigned short proto, char *name);
 void check_option(unsigned int *flags, unsigned int mask);
 int check_inverse(const char option[]);
 void __print_bug(char *file, int line, char *format, ...);
