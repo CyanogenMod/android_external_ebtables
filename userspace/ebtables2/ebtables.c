@@ -28,11 +28,14 @@
 #include <stdarg.h>
 #include <netinet/ether.h>
 #include "include/ebtables_u.h"
+#include "include/ethernetdb.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
 
-// Don't use this function, use print_bug()
+/*
+ * Don't use this function, use print_bug()
+ */
 void __print_bug(char *file, int line, char *format, ...)
 {
 	va_list l;
@@ -45,8 +48,10 @@ void __print_bug(char *file, int line, char *format, ...)
 	exit (-1);
 }
 
-// here are the number-name correspondences kept for the Ethernet
-// frame type field
+/*
+ * here are the number-name correspondences kept for the Ethernet
+ * frame type field
+ */
 #define PROTOCOLFILE "/etc/ethertypes"
 
 #ifndef PROC_SYS_MODPROBE
@@ -63,9 +68,11 @@ char *hooknames[NF_BR_NUMHOOKS] =
 	[NF_BR_BROUTING]"BROUTING"
 };
 
-// default command line options
-// do not mess around with the already assigned numbers unless
-// you know what you are doing
+/*
+ * default command line options
+ * do not mess around with the already assigned numbers unless
+ * you know what you are doing
+ */
 static struct option ebt_original_options[] =
 {
 	{ "append"        , required_argument, 0, 'A' },
@@ -109,7 +116,6 @@ static struct option ebt_original_options[] =
 
 static struct option *ebt_options = ebt_original_options;
 
-// yup, all the possible target names
 char* standard_targets[NUM_STANDARD_TARGETS] =
 {
 	"ACCEPT",
@@ -125,12 +131,18 @@ unsigned char msk_type_multicast[ETH_ALEN] = {1,0,0,0,0,0};
 unsigned char mac_type_broadcast[ETH_ALEN] = {255,255,255,255,255,255};
 unsigned char msk_type_broadcast[ETH_ALEN] = {255,255,255,255,255,255};
 
-// holds all the data
+/*
+ * holds all the data
+ */
 static struct ebt_u_replace replace;
 
-// the chosen table
+/*
+ * the chosen table
+ */
 static struct ebt_u_table *table = NULL;
-// the lists of supported tables, matches, watchers and targets
+/*
+ * the lists of supported tables, matches, watchers and targets
+ */
 static struct ebt_u_table *tables = NULL;
 static struct ebt_u_match *matches = NULL;
 static struct ebt_u_watcher *watchers = NULL;
@@ -172,13 +184,15 @@ struct ebt_u_table *find_table(char *name)
 	return t;
 }
 
-// The pointers in here are special:
-// The struct ebt_target * pointer is actually a struct ebt_u_target * pointer.
-// instead of making yet a few other structs, we just do a cast.
-// We need a struct ebt_u_target pointer because we know the address of the data
-// they point to won't change. We want to allow that the struct ebt_u_target.t
-// member can change.
-// Same holds for the struct ebt_match and struct ebt_watcher pointers
+/*
+ * The pointers in here are special:
+ * The struct ebt_target * pointer is actually a struct ebt_u_target * pointer.
+ * instead of making yet a few other structs, we just do a cast.
+ * We need a struct ebt_u_target pointer because we know the address of the data
+ * they point to won't change. We want to allow that the struct ebt_u_target.t
+ * member can change.
+ * Same holds for the struct ebt_match and struct ebt_watcher pointers
+ */
 struct ebt_u_entry *new_entry;
 
 static void initialize_entry(struct ebt_u_entry *e)
@@ -199,7 +213,9 @@ static void initialize_entry(struct ebt_u_entry *e)
 		print_bug("Couldn't load standard target");
 }
 
-// this doesn't free e, becoz the calling function might need e->next
+/*
+ * this doesn't free e, becoz the calling function might need e->next
+ */
 static void free_u_entry(struct ebt_u_entry *e)
 {
 	struct ebt_u_match_list *m_l, *m_l2;
@@ -222,7 +238,9 @@ static void free_u_entry(struct ebt_u_entry *e)
 	free(e->t);
 }
 
-// the user will use the match, so put it in new_entry
+/*
+ * the user will use the match, so put it in new_entry
+ */
 static void add_match(struct ebt_u_match *m)
 {
 	struct ebt_u_match_list **m_list, *new;
@@ -350,8 +368,10 @@ void register_table(struct ebt_u_table *t)
 	tables = t;
 }
 
-// blatently stolen (again) from iptables.c userspace program
-// find out where the modprobe utility is located
+/*
+ * blatently stolen (again) from iptables.c userspace program
+ * find out where the modprobe utility is located
+ */
 static char *get_modprobe(void)
 {
 	int procfile;
@@ -411,59 +431,16 @@ int ebtables_insmod(const char *modname, const char *modprobe)
 	return 0;
 }
 
-// helper function: processes a line of data from the file /etc/ethertypes
-static int get_a_line(char *buffer, char *value, FILE *ifp)
-{
-	char line[80], *p;
-	const char delim[] = " \t\n";
-
-	while (fgets(line, sizeof(line), ifp)) {
-		p = strtok(line, delim);
-		if (!p || p[0] == '#')
-			continue;
-		if (strlen(p) > 20)
-			continue;
-		strcpy(buffer, p);
-		p = strtok(NULL, delim);
-		if (!p || strlen(p) > 10)
-			continue;
-		strcpy(value, p);
-		return 0;
-	}
-	return -1;
-}
-
-// translate a hexadecimal number to a protocol name, parsing /etc/ethertypes
-// returns 0 on success
-// this demands the name buffer to be of size at least 21
-int number_to_name(unsigned short proto, char *name)
-{
-	FILE *ifp;
-	char buffer[21], value[11], *bfr;
-	unsigned short i;
-
-	if ( !(ifp = fopen(PROTOCOLFILE, "r")) )
-		return -1;
-	while (1) {
-		if (get_a_line(buffer, value, ifp)) {
-			fclose(ifp);
-			return -1;
-		}
-		i = (unsigned short) strtol(value, &bfr, 16);
-		if (*bfr != '\0' || i != proto)
-			continue;
-		strcpy(name, buffer);
-		fclose(ifp);
-		return 0;
-	}
-}
-
-// we use replace.flags, so we can't use the following values:
-// 0x01 == OPT_COMMAND, 0x02 == OPT_TABLE, 0x100 == OPT_ZERO
+/*
+ * we use replace.flags, so we can't use the following values:
+ * 0x01 == OPT_COMMAND, 0x02 == OPT_TABLE, 0x100 == OPT_ZERO
+ */
 #define LIST_N 0x04
 #define LIST_C 0x08
 #define LIST_X 0x10
-// helper function for list_rules()
+/*
+ * helper function for list_rules()
+ */
 static void list_em(struct ebt_u_entries *entries)
 {
 	int i, j, space = 0, digits;
@@ -473,7 +450,6 @@ static void list_em(struct ebt_u_entries *entries)
 	struct ebt_u_match *m;
 	struct ebt_u_watcher *w;
 	struct ebt_u_target *t;
-	char name[21];
 
 	hlp = entries->entries;
 	if (replace.flags & LIST_X && entries->policy != EBT_ACCEPT) {
@@ -508,8 +484,10 @@ static void list_em(struct ebt_u_entries *entries)
 			printf("ebtables -t %s -A %s ",
 			   replace.name, entries->name);
 
-		// Don't print anything about the protocol if no protocol was
-		// specified, obviously this means any protocol will do.
+		/*
+		 * Don't print anything about the protocol if no protocol was
+		 * specified, obviously this means any protocol will do.
+		 */
 		if (!(hlp->bitmask & EBT_NOPROTO)) {
 			printf("-p ");
 			if (hlp->invflags & EBT_IPROTO)
@@ -517,10 +495,13 @@ static void list_em(struct ebt_u_entries *entries)
 			if (hlp->bitmask & EBT_802_3)
 				printf("Length ");
 			else {
-				if (number_to_name(ntohs(hlp->ethproto), name))
+				struct ethertypeent *ent;
+
+				ent = getethertypebynumber(ntohs(hlp->ethproto));
+				if (!ent)
 					printf("0x%x ", ntohs(hlp->ethproto));
 				else
-					printf("%s ", name);
+					printf("%s ", ent->e_name);
 			}
 		}
 		if (hlp->bitmask & EBT_SOURCEMAC) {
@@ -686,7 +667,9 @@ static void check_for_loops()
 	struct ebt_u_entry *e;
 
 	i = -1;
-	// initialize hook_mask to 0
+	/*
+	 * initialize hook_mask to 0
+	 */
 	while (1) {
 		i++;
 		if (i < NF_BR_NUMHOOKS && !(replace.valid_hooks & (1 << i)))
@@ -703,13 +686,17 @@ static void check_for_loops()
 			print_memory();
 	}
 
-	// check for loops, starting from every base chain
+	/*
+	 * check for loops, starting from every base chain
+	 */
 	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
 		if (!(replace.valid_hooks & (1 << i)))
 			continue;
 		entries = nr_to_chain(i);
-		// (1 << NF_BR_NUMHOOKS) implies it's a standard chain
-		// (usefull in the final_check() funtions)
+		/*
+		 * (1 << NF_BR_NUMHOOKS) implies it's a standard chain
+		 * (usefull in the final_check() funtions)
+		 */
 		entries->hook_mask = (1 << i) | (1 << NF_BR_NUMHOOKS);
 		chain_nr = i;
 
@@ -722,13 +709,17 @@ static void check_for_loops()
 				goto letscontinue;
 			entries2 = nr_to_chain(verdict + NF_BR_NUMHOOKS);
 			entries2->hook_mask |= entries->hook_mask;
-			// now see if we've been here before
+			/*
+			 * now see if we've been here before
+			 */
 			for (k = 0; k < sp; k++)
 				if (stack[k].chain_nr == verdict + NF_BR_NUMHOOKS)
 					print_error("Loop from chain %s to chain %s",
 					   nr_to_chain(chain_nr)->name,
 					   nr_to_chain(stack[k].chain_nr)->name);
-			// jump to the chain, make sure we know how to get back
+			/*
+			 * jump to the chain, make sure we know how to get back
+			 */
 			stack[sp].chain_nr = chain_nr;
 			stack[sp].n = j;
 			stack[sp].entries = entries;
@@ -742,10 +733,14 @@ static void check_for_loops()
 letscontinue:
 			e = e->next;
 		}
-		// we are at the end of a standard chain
+		/*
+		 * we are at the end of a standard chain
+		 */
 		if (sp == 0)
 			continue;
-		// go back to the chain one level higher
+		/*
+		 * go back to the chain one level higher
+		 */
 		sp--;
 		j = stack[sp].n;
 		chain_nr = stack[sp].chain_nr;
@@ -757,8 +752,10 @@ letscontinue:
 	return;
 }
 
-// parse the chain name and return the corresponding nr
-// returns -1 on failure
+/*
+ * parse the chain name and return the corresponding nr
+ * returns -1 on failure
+ */
 int get_hooknr(char* arg)
 {
 	int i;
@@ -779,7 +776,6 @@ int get_hooknr(char* arg)
 	return -1;
 }
 
-// yup, print out help
 static void print_help()
 {
 	struct ebt_u_match_list *m_l;
@@ -839,7 +835,9 @@ static void print_help()
 	exit(0);
 }
 
-// execute command L
+/*
+ * execute command L
+ */
 static void list_rules()
 {
 	int i;
@@ -851,7 +849,9 @@ static void list_rules()
 	} else {
 		struct ebt_u_chain_list *cl = replace.udc;
 
-		// create new chains and rename standard chains when necessary
+		/*
+		 * create new chains and rename standard chains when necessary
+		 */
 		if (replace.flags & LIST_X) {
 			while (cl) {
 				printf("ebtables -t %s -N %s\n", replace.name,
@@ -883,22 +883,30 @@ static void list_rules()
 	}
 }
 
-// execute command P
+/*
+ * execute command P
+ */
 static void change_policy(int policy)
 {
 	int i;
 	struct ebt_u_entries *entries = to_chain();
 
-	// don't do anything if the policy is the same
+	/*
+	 * don't do anything if the policy is the same
+	 */
 	if (entries->policy != policy) {
 		entries->policy = policy;
 		replace.num_counters = replace.nentries;
 		if (replace.nentries) {
-			// '+ 1' for the CNT_END
+			/*
+			 * '+ 1' for the CNT_END
+			 */
 			if (!(replace.counterchanges = (unsigned short *) malloc(
 			   (replace.nentries + 1) * sizeof(unsigned short))))
 				print_memory();
-			// done nothing special to the rules
+			/*
+			 * done nothing special to the rules
+			 */
 			for (i = 0; i < replace.nentries; i++)
 				replace.counterchanges[i] = CNT_NORM;
 			replace.counterchanges[replace.nentries] = CNT_END;
@@ -910,9 +918,11 @@ static void change_policy(int policy)
 		exit(0);
 }
 
-// flush one chain or the complete table
-// -1 == nothing to do
-// 0 == give back to kernel
+/*
+ * flush one chain or the complete table
+ * -1 == nothing to do
+ * 0 == give back to kernel
+ */
 static int flush_chains()
 {
 	int i, j, oldnentries, numdel;
@@ -920,15 +930,21 @@ static int flush_chains()
 	struct ebt_u_entry *u_e, *tmp;
 	struct ebt_u_entries *entries = to_chain();
 
-	// flush whole table
+	/*
+	 * flush whole table
+	 */
 	if (!entries) {
 		if (replace.nentries == 0)
 			return -1;
 		replace.nentries = 0;
-		// no need for the kernel to give us counters back
+		/*
+		 * no need for the kernel to give us counters back
+		 */
 		replace.num_counters = 0;
 
-		// free everything and zero (n)entries
+		/*
+		 * free everything and zero (n)entries
+		 */
 		i = -1;
 		while (1) {
 			i++;
@@ -960,13 +976,17 @@ static int flush_chains()
 	numdel = entries->nentries;
 
 	if (replace.nentries) {
-		// +1 for CNT_END
+		/*
+		 * +1 for CNT_END
+		 */
 		if ( !(replace.counterchanges = (unsigned short *)
 		   malloc((oldnentries + 1) * sizeof(unsigned short))) )
 			print_memory();
 	}
-	// delete the counters belonging to the specified chain,
-	// update counter_offset
+	/*
+	 * delete the counters belonging to the specified chain,
+	 * update counter_offset
+	 */
 	i = -1;
 	cnt = replace.counterchanges;
 	while (1) {
@@ -1010,7 +1030,9 @@ static int flush_chains()
 	return 0;
 }
 
-// -1 == no match
+/*
+ * -1 == no match
+ */
 static int check_rule_exists(int rule_nr)
 {
 	struct ebt_u_entry *u_e;
@@ -1022,16 +1044,22 @@ static int check_rule_exists(int rule_nr)
 	struct ebt_u_entries *entries = to_chain();
 	int i, j, k;
 
-	// handle '-D chain rulenr' command
+	/*
+	 * handle '-D chain rulenr' command
+	 */
 	if (rule_nr != -1) {
 		if (rule_nr > entries->nentries)
 			return -1;
-		// user starts counting from 1
+		/*
+		 * user starts counting from 1
+		 */
 		return rule_nr - 1;
 	}
 	u_e = entries->entries;
-	// check for an existing rule (if there are duplicate rules,
-	// take the first occurance)
+	/*
+	 * check for an existing rule (if there are duplicate rules,
+	 * take the first occurance)
+	 */
 	for (i = 0; i < entries->nentries; i++, u_e = u_e->next) {
 		if (!u_e)
 			print_bug("Hmm, trouble");
@@ -1054,7 +1082,9 @@ static int check_rule_exists(int rule_nr)
 		if (new_entry->bitmask != u_e->bitmask ||
 		   new_entry->invflags != u_e->invflags)
 			continue;
-		// compare all matches
+		/*
+		 * compare all matches
+		 */
 		m_l = new_entry->m_list;
 		j = 0;
 		while (m_l) {
@@ -1067,7 +1097,9 @@ static int check_rule_exists(int rule_nr)
 			j++;
 			m_l = m_l->next;
 		}
-		// now be sure they have the same nr of matches
+		/*
+		 * now be sure they have the same nr of matches
+		 */
 		k = 0;
 		m_l = u_e->m_list;
 		while (m_l) {
@@ -1077,7 +1109,9 @@ static int check_rule_exists(int rule_nr)
 		if (j != k)
 			continue;
 
-		// compare all watchers
+		/*
+		 * compare all watchers
+		 */
 		w_l = new_entry->w_list;
 		j = 0;
 		while (w_l) {
@@ -1118,19 +1152,23 @@ static void add_rule(int rule_nr)
 	struct ebt_u_watcher_list *w_l;
 	struct ebt_u_entries *entries = to_chain(), *entries2;
 
-	if (rule_nr != -1) { // command -I
+	if (rule_nr != -1) { /* command -I */
 		if (--rule_nr > entries->nentries)
 			print_error("rule nr too high: %d > %d", rule_nr + 1,
 			   entries->nentries + 1);
 	} else
 		rule_nr = entries->nentries;
-	// we're adding one rule
+	/*
+	 * we're adding one rule
+	 */
 	replace.num_counters = replace.nentries;
 	replace.nentries++;
 	entries->nentries++;
 
-	// handle counter stuff
-	// +1 for CNT_END
+	/*
+	 * handle counter stuff
+	 * +1 for CNT_END
+	 */
 	if ( !(replace.counterchanges = (unsigned short *)
 	   malloc((replace.nentries + 1) * sizeof(unsigned short))) )
 		print_memory();
@@ -1156,15 +1194,21 @@ static void add_rule(int rule_nr)
 	}
 	*cnt = CNT_END;
 
-	// go to the right position in the chain
+	/*
+	 * go to the right position in the chain
+	 */
 	u_e = &entries->entries;
 	for (i = 0; i < rule_nr; i++)
 		u_e = &(*u_e)->next;
-	// insert the rule
+	/*
+	 * insert the rule
+	 */
 	new_entry->next = *u_e;
 	*u_e = new_entry;
 
-	// put the ebt_[match, watcher, target] pointers in place
+	/*
+	 * put the ebt_[match, watcher, target] pointers in place
+	 */
 	m_l = new_entry->m_list;
 	while (m_l) {
 		m_l->m = ((struct ebt_u_match *)m_l->m)->m;
@@ -1177,7 +1221,9 @@ static void add_rule(int rule_nr)
 	}
 	new_entry->t = ((struct ebt_u_target *)new_entry->t)->t;
 
-	// update the counter_offset of chains behind this one
+	/*
+	 * update the counter_offset of chains behind this one
+	 */
 	i = replace.selected_hook;
 	while (1) {
 		i++;
@@ -1192,7 +1238,9 @@ static void add_rule(int rule_nr)
 	}
 }
 
-// execute command D
+/*
+ * execute command D
+ */
 static void delete_rule(int begin, int end)
 {
 	int j, lentmp = 0, nr_deletes;
@@ -1204,7 +1252,9 @@ static void delete_rule(int begin, int end)
 	    (end = check_rule_exists(end)) == -1)
 		print_error("Sorry, rule does not exist");
 
-	// we're deleting rules
+	/*
+	 * we're deleting rules
+	 */
 	replace.num_counters = replace.nentries;
 	nr_deletes = end - begin + 1;
 	replace.nentries -= nr_deletes;
@@ -1219,7 +1269,9 @@ static void delete_rule(int begin, int end)
 			lentmp += entries2->nentries;
 		}
 		lentmp += begin;
-		// +1 for CNT_END
+		/*
+		 * +1 for CNT_END
+		 */
 		if ( !(replace.counterchanges = (unsigned short *)malloc(
 		   (replace.num_counters + 1) * sizeof(unsigned short))) )
 			print_memory();
@@ -1238,11 +1290,15 @@ static void delete_rule(int begin, int end)
 	else
 		replace.num_counters = 0;
 
-	// go to the right position in the chain
+	/*
+	 * go to the right position in the chain
+	 */
 	u_e = &entries->entries;
 	for (j = 0; j < begin; j++)
 		u_e = &(*u_e)->next;
-	// remove the rules
+	/*
+	 * remove the rules
+	 */
 	j = nr_deletes;
 	while(j--) {
 		u_e2 = *u_e;
@@ -1252,7 +1308,9 @@ static void delete_rule(int begin, int end)
 		free(u_e2);
 	}
 
-	// update the counter_offset of chains behind this one
+	/*
+	 * update the counter_offset of chains behind this one
+	 */
 	j = replace.selected_hook;
 	while (1) {
 		j++;
@@ -1267,14 +1325,18 @@ static void delete_rule(int begin, int end)
 	}
 }
 
-// execute command Z
+/*
+ * execute command Z
+ */
 static void zero_counters(int zerochain)
 {
 
 	if (zerochain == -1) {
-		// tell main() we don't update the counters
-		// this results in tricking the kernel to zero its counters,
-		// naively expecting userspace to update its counters. Muahahaha
+		/*
+		 * tell main() we don't update the counters
+		 * this results in tricking the kernel to zero its counters,
+		 * naively expecting userspace to update its counters. Muahahaha
+		 */
 		replace.counterchanges = NULL;
 		replace.num_counters = 0;
 	} else {
@@ -1311,38 +1373,21 @@ static void zero_counters(int zerochain)
 	}
 }
 
-//  0 == success
-//  1 == success, but for the special 'protocol' LENGTH
-// -1 == failure
-int name_to_number(char *name, __u16 *proto)
+/*
+ * Checks the type for validity and calls getethertypebynumber()
+ */
+struct ethertypeent *parseethertypebynumber(int type)
 {
-	FILE *ifp;
-	char buffer[21], value[11], *bfr;
-	unsigned short i;
-
-	if (!strcasecmp("LENGTH", name)) {
-		*proto = 0;
-		new_entry->bitmask |= EBT_802_3;
-		return 1;
-	}
-	if ( !(ifp = fopen(PROTOCOLFILE, "r")) )
-		return -1;
-	while (1) {
-		if (get_a_line(buffer, value, ifp))
-			return -1;
-		if (strcasecmp(buffer, name))
-			continue;
-		fclose(ifp);
-		i = (unsigned short) strtol(value, &bfr, 16);
-		if (*bfr != '\0')
-			return -1;
-		*proto = i;
-		return 0;
-	}
-	return -1;
+	if (type < 1536)
+		print_error("Ethernet protocols have values >= 0x0600");
+	if (type > 0xffff)
+		print_error("Ethernet protocols have values <= 0xffff");
+	return getethertypebynumber(type);
 }
 
-// put the mac address into 6 (ETH_ALEN) bytes
+/*
+ * put the mac address into 6 (ETH_ALEN) bytes
+ */
 int getmac_and_mask(char *from, char *to, char *mask)
 {
 	char *p;
@@ -1379,7 +1424,9 @@ int getmac_and_mask(char *from, char *to, char *mask)
 	return 0;
 }
 
-// executes the final_check() function for all extensions used by the rule
+/*
+ * executes the final_check() function for all extensions used by the rule
+ */
 static void do_final_checks(struct ebt_u_entry *e, struct ebt_u_entries *entries)
 {
 	struct ebt_u_match_list *m_l;
@@ -1407,7 +1454,9 @@ static void do_final_checks(struct ebt_u_entry *e, struct ebt_u_entries *entries
 	   entries->hook_mask, 1);
 }
 
-// used for the -X command
+/*
+ * used for the -X command
+ */
 static void check_for_references(int chain_nr)
 {
 	int i = -1, j;
@@ -1491,15 +1540,19 @@ static void get_kernel_table(const char *modprobe)
 {
 	if ( !(table = find_table(replace.name)) )
 		print_error("Bad table name");
-	// get the kernel's information
+	/*
+	 * get the kernel's information
+	 */
 	if (get_table(&replace)) {
 		ebtables_insmod("ebtables", modprobe);
 		if (get_table(&replace))
 			print_error("The kernel doesn't support the ebtables "
 			"%s table", replace.name);
 	}
-	// when listing a table contained in a file, we don't expect the user
-	// to know what the table's name is
+	/*
+	 * when listing a table contained in a file, we don't expect the user
+	 * to know what the table's name is
+	 */
 	if ( !(table = find_table(replace.name)) )
 		print_error("Bad table name");
 }
@@ -1522,11 +1575,13 @@ int main(int argc, char *argv[])
 {
 	char *buffer;
 	int c, i;
-	// this special one for the -Z option (we can have -Z <this> -L <that>)
+	/*
+	 * this special one for the -Z option (we can have -Z <this> -L <that>)
+	 */
 	int zerochain = -1;
 	int policy = 0;
-	int rule_nr = -1; // used for -[D,I]
-	int rule_nr_end = -1; // used for -I
+	int rule_nr = -1; /* used for -[D,I] */
+	int rule_nr_end = -1; /* used for -I */
 	struct ebt_u_target *t;
 	struct ebt_u_match *m;
 	struct ebt_u_watcher *w;
@@ -1537,7 +1592,9 @@ int main(int argc, char *argv[])
 
 	opterr = 0;
 
-	// initialize the table name, OPT_ flags, selected hook and command
+	/*
+	 * initialize the table name, OPT_ flags, selected hook and command
+	 */
 	strcpy(replace.name, "filter");
 	replace.flags = 0;
 	replace.selected_hook = -1;
@@ -1548,25 +1605,31 @@ int main(int argc, char *argv[])
 	new_entry = (struct ebt_u_entry *)malloc(sizeof(struct ebt_u_entry));
 	if (!new_entry)
 		print_memory();
-	// put some sane values in our new entry
+	/*
+	 * put some sane values in our new entry
+	 */
 	initialize_entry(new_entry);
 
-	// The scenario induced by this loop makes that:
-	// '-t'  ,'-M' and --atomic (if specified) have to come
-	// before '-A' and the like
+	/*
+	 * The scenario induced by this loop makes that:
+	 * '-t'  ,'-M' and --atomic (if specified) have to come
+	 * before '-A' and the like
+	 */
 
-	// getopt saves the day
+	/*
+	 * getopt saves the day
+	 */
 	while ((c = getopt_long(argc, argv,
 	   "-A:D:I:N:E:X:L::Z::F::P:Vhi:o:j:p:s:d:t:M:", ebt_options, NULL)) != -1) {
 		switch (c) {
 
-		case 'A': // add a rule
-		case 'D': // delete a rule
-		case 'P': // define policy
-		case 'I': // insert a rule
-		case 'N': // make a user defined chain
-		case 'E': // rename chain
-		case 'X': // delete chain
+		case 'A': /* add a rule */
+		case 'D': /* delete a rule */
+		case 'P': /* define policy */
+		case 'I': /* insert a rule */
+		case 'N': /* make a user defined chain */
+		case 'E': /* rename chain */
+		case 'X': /* delete chain */
 			replace.command = c;
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
@@ -1602,7 +1665,9 @@ int main(int argc, char *argv[])
 				strcpy(cl->udc->name, optarg);
 				cl->udc->entries = NULL;
 				cl->kernel_start = NULL;
-				// put the new chain at the end
+				/*
+				 * put the new chain at the end
+				 */
 				cl2 = &replace.udc;
 				while (*cl2)
 					cl2 = &((*cl2)->next);
@@ -1634,7 +1699,9 @@ int main(int argc, char *argv[])
 
 				if (replace.selected_hook < NF_BR_NUMHOOKS)
 					print_error("You can't remove a standard chain");
-				// if the chain is referenced, don't delete it
+				/*
+				 * if the chain is referenced, don't delete it
+				 */
 				check_for_references(replace.selected_hook - NF_BR_NUMHOOKS);
 				flush_chains();
 				entries = to_chain();
@@ -1684,9 +1751,9 @@ int main(int argc, char *argv[])
 			}
 			break;
 
-		case 'L': // list
-		case 'F': // flush
-		case 'Z': // zero counters
+		case 'L': /* list */
+		case 'F': /* flush */
+		case 'Z': /* zero counters */
 			if (c == 'Z') {
 				if (replace.flags & OPT_ZERO)
 					print_error("Multiple commands"
@@ -1722,24 +1789,26 @@ int main(int argc, char *argv[])
 			}
 			break;
 
-		case 'V': // version
+		case 'V': /* version */
 			replace.command = 'V';
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
 			printf(PROGNAME" v"PROGVERSION" ("PROGDATE")\n");
 			exit(0);
 
-		case 'M': // modprobe
+		case 'M': /* modprobe */
 			if (replace.command != 'h')
 				print_error("Please put the -M option earlier");
 			modprobe = optarg;
 			break;
 
-		case 'h': // help
+		case 'h': /* help */
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
 			replace.command = 'h';
-			// All other arguments should be extension names
+			/*
+			 * All other arguments should be extension names
+			 */
 			while (optind < argc) {
 				struct ebt_u_match *m;
 				struct ebt_u_watcher *w;
@@ -1764,7 +1833,7 @@ int main(int argc, char *argv[])
 			}
 			break;
 
-		case 't': // table
+		case 't': /* table */
 			if (replace.command != 'h')
 				print_error("Please put the -t option first");
 			check_option(&replace.flags, OPT_TABLE);
@@ -1773,14 +1842,14 @@ int main(int argc, char *argv[])
 			strcpy(replace.name, optarg);
 			break;
 
-		case 'i': // input interface
-		case 2  : // logical input interface
-		case 'o': // output interface
-		case 3  : // logical output interface
-		case 'j': // target
-		case 'p': // net family protocol
-		case 's': // source mac
-		case 'd': // destination mac
+		case 'i': /* input interface */
+		case 2  : /* logical input interface */
+		case 'o': /* output interface */
+		case 3  : /* logical output interface */
+		case 'j': /* target */
+		case 'p': /* net family protocol */
+		case 's': /* source mac */
+		case 'd': /* destination mac */
 			if ((replace.flags & OPT_COMMAND) == 0)
 				print_error("No command specified");
 			if ( replace.command != 'A' &&
@@ -1888,11 +1957,15 @@ int main(int argc, char *argv[])
 						break;
 					}
 				else {
-					// must be an extension then
+					/*
+					 * must be an extension then
+					 */
 					struct ebt_u_target *t;
 
 					t = find_target(optarg);
-					// -j standard not allowed either
+					/*
+					 * -j standard not allowed either
+					 */
 					if (!t || t ==
 					   (struct ebt_u_target *)new_entry->t)
 						print_error("Illegal target "
@@ -1945,12 +2018,17 @@ int main(int argc, char *argv[])
 				            "protocol");
 			new_entry->ethproto = i;
 			if (*buffer != '\0') {
-				if ((i = name_to_number(argv[optind - 1],
-				   &new_entry->ethproto)) == -1)
+				struct ethertypeent *ent;
+
+				if (!strcasecmp(argv[optind - 1], "LENGTH")) {
+					new_entry->bitmask |= EBT_802_3;
+					break;
+				}
+				ent = getethertypebyname(argv[optind - 1]);
+				if (!ent)
 					print_error("Problem with the specified"
 					            " protocol");
-				if (i == 1)
-					new_entry->bitmask |= EBT_802_3;
+				new_entry->ethproto = ent->e_ethertype;
 			}
 			if (new_entry->ethproto < 1536 &&
 			   !(new_entry->bitmask & EBT_802_3))
@@ -1994,7 +2072,9 @@ int main(int argc, char *argv[])
 				   "command");
 			replace.filename = (char *)malloc(strlen(optarg) + 1);
 			strcpy(replace.filename, optarg);
-			// get the information from the file
+			/*
+			 * get the information from the file
+			 */
 			get_table(&replace);
                         if (replace.nentries) {
                                 replace.counterchanges = (unsigned short *)
@@ -2003,17 +2083,21 @@ int main(int argc, char *argv[])
 					replace.counterchanges[i] = CNT_NORM;
 					replace.counterchanges[i] = CNT_END;
                         }
-			// we don't want the kernel giving us its counters, they would
-			// overwrite the counters extracted from the file
+			/*
+			 * we don't want the kernel giving us its counters, they would
+			 * overwrite the counters extracted from the file
+			 */
 			replace.num_counters = 0;
-			// make sure the table will be written to the kernel
+			/*
+			 * make sure the table will be written to the kernel
+			 */
 			free(replace.filename);
 			replace.filename = NULL;
 			ebtables_insmod("ebtables", modprobe);
 			break;
-		case 7 : // atomic-init
-		case 10: // atomic-save
-		case 11: // init-table
+		case 7 : /* atomic-init */
+		case 10: /* atomic-save */
+		case 11: /* init-table */
 			replace.command = c;
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
@@ -2031,7 +2115,7 @@ int main(int argc, char *argv[])
 			}
 			if (c == 11)
 				break;
-		case 9 : // atomic
+		case 9 : /* atomic */
 			if (c == 9 && (replace.flags & OPT_COMMAND))
 				print_error("--atomic has to come before"
 				" the command");
@@ -2043,17 +2127,23 @@ int main(int argc, char *argv[])
 				check_inverse(optarg);
 			else
 				print_error("Bad argument : %s", optarg);
-			// check_inverse() did optind++
+			/*
+			 * check_inverse() did optind++
+			 */
 			optind--;
 			continue;
 		default:
-			// is it a target option?
+			/*
+			 * is it a target option?
+			 */
 			t = (struct ebt_u_target *)new_entry->t;
 			if ((t->parse(c - t->option_offset, argv, argc,
 			   new_entry, &t->flags, &t->t)))
 				goto check_extension;
 
-			// is it a match_option?
+			/*
+			 * is it a match_option?
+			 */
 			for (m = matches; m; m = m->next)
 				if (m->parse(c - m->option_offset, argv,
 				   argc, new_entry, &m->flags, &m->m))
@@ -2065,7 +2155,9 @@ int main(int argc, char *argv[])
 				goto check_extension;
 			}
 
-			// is it a watcher option?
+			/*
+			 * is it a watcher option?
+			 */
 			for (w = watchers; w; w = w->next)
 				if (w->parse(c-w->option_offset, argv,
 				   argc, new_entry, &w->flags, &w->w))
@@ -2090,14 +2182,20 @@ check_extension:
 	   replace.flags & OPT_ZERO )
 		print_error("Command -Z only allowed together with command -L");
 
-	// do this after parsing everything, so we can print specific info
+	/*
+	 * do this after parsing everything, so we can print specific info
+	 */
 	if (replace.command == 'h' && !(replace.flags & OPT_ZERO))
 		print_help();
 
-	// do the final checks
+	/*
+	 * do the final checks
+	 */
 	if (replace.command == 'A' || replace.command == 'I' ||
 	   replace.command == 'D') {
-		// this will put the hook_mask right for the chains
+		/*
+		 * this will put the hook_mask right for the chains
+		 */
 		check_for_loops();
 		entries = to_chain();
 		m_l = new_entry->m_list;
@@ -2118,8 +2216,10 @@ check_extension:
 		t->final_check(new_entry, t->t, replace.name,
 		   entries->hook_mask, 0);
 	}
-	// so, the extensions can work with the host endian
-	// the kernel does not have to do this ofcourse
+	/*
+	 * so, the extensions can work with the host endian
+	 * the kernel does not have to do this ofcourse
+	 */
 	new_entry->ethproto = htons(new_entry->ethproto);
 
 	if (replace.command == 'P') {
@@ -2143,8 +2243,10 @@ check_extension:
 	} else if (replace.command == 'A' || replace.command == 'I') {
 		add_rule(rule_nr);
 		check_for_loops();
-		// do the final_check(), for all entries
-		// needed when adding a rule that has a chain target
+		/*
+		 * do the final_check(), for all entries
+		 * needed when adding a rule that has a chain target
+		 */
 		i = -1;
 		while (1) {
 			struct ebt_u_entry *e;
@@ -2159,7 +2261,9 @@ check_extension:
 			}
 			e = entries->entries;
 			while (e) {
-				// userspace extensions use host endian
+				/*
+				 * userspace extensions use host endian
+				 */
 				e->ethproto = ntohs(e->ethproto);
 				do_final_checks(e, entries);
 				e->ethproto = htons(e->ethproto);
@@ -2171,8 +2275,10 @@ check_extension:
 			rule_nr_end = entries->nentries;
 		delete_rule(rule_nr, rule_nr_end);
 	}
-	// commands -N, -E, -X, --atomic-commit, --atomic-commit, --atomic-save,
-	// --init-table fall through
+	/*
+	 * commands -N, -E, -X, --atomic-commit, --atomic-commit, --atomic-save,
+	 * --init-table fall through
+	 */
 
 	if (table->check)
 		table->check(&replace);
