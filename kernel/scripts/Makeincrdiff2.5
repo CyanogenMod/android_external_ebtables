@@ -1,8 +1,9 @@
 #!/bin/bash
 # used for making the incremental kernel 2.5.x diffs
 
-export FROM=linux-old
-export TO=linux-2.5.53
+#export FROM=/ebtables2/kernel/linux2.5/
+export FROM=linux-2.5.70
+export TO=linux-2.5.70-new
 export FILE=file.diff
 
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/Makefile $TO/net/bridge/netfilter/Makefile >> $FILE
@@ -11,8 +12,10 @@ diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebtable_filter.c $TO/net/br
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebtable_nat.c $TO/net/bridge/netfilter/ebtable_nat.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebtable_broute.c $TO/net/bridge/netfilter/ebtable_broute.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebt_redirect.c $TO/net/bridge/netfilter/ebt_redirect.c >> $FILE
+diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebt_802_3.c $TO/net/bridge/netfilter/ebt_802_3.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebt_arp.c $TO/net/bridge/netfilter/ebt_arp.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebt_ip.c $TO/net/bridge/netfilter/ebt_ip.c >> $FILE
+diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebt_pkttype.c $TO/net/bridge/netfilter/ebt_pkttype.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebt_vlan.c $TO/net/bridge/netfilter/ebt_vlan.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebt_log.c $TO/net/bridge/netfilter/ebt_log.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebt_mark.c $TO/net/bridge/netfilter/ebt_mark.c >> $FILE
@@ -21,6 +24,7 @@ diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebt_snat.c $TO/net/bridge/n
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebt_dnat.c $TO/net/bridge/netfilter/ebt_dnat.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebtables.c $TO/net/bridge/netfilter/ebtables.c >> $FILE
 diff -urNp --exclude TAGS $FROM/include/linux/netfilter_bridge/ebtables.h $TO/include/linux/netfilter_bridge/ebtables.h >> $FILE
+diff -urNp --exclude TAGS $FROM/include/linux/netfilter_bridge/ebt_802_3.h $TO/include/linux/netfilter_bridge/ebt_802_3.h >> $FILE
 diff -urNp --exclude TAGS $FROM/include/linux/netfilter_bridge/ebt_arp.h $TO/include/linux/netfilter_bridge/ebt_arp.h >> $FILE
 diff -urNp --exclude TAGS $FROM/include/linux/netfilter_bridge/ebt_ip.h $TO/include/linux/netfilter_bridge/ebt_ip.h >> $FILE
 diff -urNp --exclude TAGS $FROM/include/linux/netfilter_bridge/ebt_vlan.h $TO/include/linux/netfilter_bridge/ebt_vlan.h >> $FILE
