@@ -12,6 +12,7 @@
 #include <linux/netfilter_bridge/ebt_log.h>
 #include <linux/module.h>
 #include <linux/ip.h>
+#include <linux/in.h>
 #include <linux/if_arp.h>
 #include <linux/spinlock.h>
 
@@ -32,6 +33,29 @@ static int ebt_log_check(const char *tablename, unsigned int hookmask,
 	return 0;
 }
 
+struct tcpudphdr
+{
+	uint16_t src;
+	uint16_t dst;
+};
+
+struct arppayload
+{
+	unsigned char mac_src[ETH_ALEN];
+	unsigned char ip_src[4];
+	unsigned char mac_dst[ETH_ALEN];
+	unsigned char ip_dst[4];
+};
+
+static void print_MAC(unsigned char *p)
+{
+	int i;
+
+	for (i = 0; i < ETH_ALEN; i++, p++)
+		printk("%02x%c", *p, i == ETH_ALEN - 1 ? ' ':':');
+}
+
+#define myNIPQUAD(a) a[0], a[1], a[2], a[3]
 static void ebt_log(const struct sk_buff *skb, const struct net_device *in,
    const struct net_device *out, const void *data, unsigned int datalen)
 {
@@ -44,18 +68,11 @@ static void ebt_log(const struct sk_buff *skb, const struct net_device *in,
 	printk("%s IN=%s OUT=%s ", info->prefix, in ? in->name : "",
 	   out ? out->name : "");
 
-	if (skb->dev->hard_header_len) {
-		int i;
-		unsigned char *p = (skb->mac.ethernet)->h_source;
+	printk("MAC source = ");
+	print_MAC((skb->mac.ethernet)->h_source);
+	printk("MAC dest = ");
+	print_MAC((skb->mac.ethernet)->h_dest);
 
-		printk("MAC source = ");
-		for (i = 0; i < ETH_ALEN; i++,p++)
-			printk("%02x%c", *p, i == ETH_ALEN - 1 ? ' ':':');
-		printk("MAC dest = ");
-		p = (skb->mac.ethernet)->h_dest;
-		for (i = 0; i < ETH_ALEN; i++,p++)
-			printk("%02x%c", *p, i == ETH_ALEN - 1 ? ' ':':');
-	}
 	printk("proto = 0x%04x", ntohs(((*skb).mac.ethernet)->h_proto));
 
 	if ((info->bitmask & EBT_LOG_IP) && skb->mac.ethernet->h_proto ==
@@ -64,6 +81,18 @@ static void ebt_log(const struct sk_buff *skb, const struct net_device *in,
 		printk(" IP SRC=%u.%u.%u.%u IP DST=%u.%u.%u.%u,",
 		   NIPQUAD(iph->saddr), NIPQUAD(iph->daddr));
 		printk(" IP tos=0x%02X, IP proto=%d", iph->tos, iph->protocol);
+		if (iph->protocol == IPPROTO_TCP ||
+		    iph->protocol == IPPROTO_UDP) {
+			struct tcpudphdr *ports = (struct tcpudphdr *)(skb->data + iph->ihl*4);
+
+			if (skb->data + iph->ihl*4 > skb->tail) {
+				printk(" INCOMPLETE TCP/UDP header");
+				goto out;
+			}
+			printk(" SPT=%u DPT=%u", ntohs(ports->src),
+			   ntohs(ports->dst));
+		}
+		goto out;
 	}
 
 	if ((info->bitmask & EBT_LOG_ARP) &&
@@ -73,7 +102,30 @@ static void ebt_log(const struct sk_buff *skb, const struct net_device *in,
 		printk(" ARP HTYPE=%d, PTYPE=0x%04x, OPCODE=%d",
 		   ntohs(arph->ar_hrd), ntohs(arph->ar_pro),
 		   ntohs(arph->ar_op));
+		/* If it's for Ethernet and the lengths are OK,
+		 * then log the ARP payload */
+		if (arph->ar_hrd == __constant_htons(1) &&
+		    arph->ar_hln == ETH_ALEN &&
+		    arph->ar_pln == sizeof(uint32_t)) {
+			struct arppayload *arpp = (struct arppayload *)(skb->data + sizeof(*arph));
+
+			if (skb->data + sizeof(*arph) > skb->tail) {
+				printk(" INCOMPLETE ARP header");
+				goto out;
+			}
+
+			printk(" ARP MAC SRC=");
+			print_MAC(arpp->mac_src);
+			printk(" ARP IP SRC=%u.%u.%u.%u",
+			       myNIPQUAD(arpp->ip_src));
+			printk(" ARP MAC DST=");
+			print_MAC(arpp->mac_dst);
+			printk(" ARP IP DST=%u.%u.%u.%u",
+			       myNIPQUAD(arpp->ip_dst));
+		}
+
 	}
+out:
 	printk("\n");
 	spin_unlock_bh(&ebt_log_lock);
 }
