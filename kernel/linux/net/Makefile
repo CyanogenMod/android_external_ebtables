@@ -28,7 +28,7 @@ endif
 endif
 
 ifneq ($(CONFIG_BRIDGE),n)
-ifneq ($CONFIG_BRIDGE),)
+ifneq ($(CONFIG_BRIDGE),)
 subdir-$(CONFIG_BRIDGE)		+= bridge/netfilter
 endif
 endif
