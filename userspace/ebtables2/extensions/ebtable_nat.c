@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <sys/socket.h>
 #include "../include/ebtables_u.h"
 
 #define NAT_VALID_HOOKS ((1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_LOCAL_OUT) | \

@@ -23,6 +23,7 @@
 
 #ifndef EBTABLES_U_H
 #define EBTABLES_U_H
+#include <netinet/in.h>
 #include <linux/netfilter_bridge/ebtables.h>
 
 struct ebt_u_entries
@@ -95,7 +96,7 @@ struct ebt_u_entry
 {
 	unsigned int bitmask;
 	unsigned int invflags;
-	__u16 ethproto;
+	uint16_t ethproto;
 	char in[IFNAMSIZ];
 	char logical_in[IFNAMSIZ];
 	char out[IFNAMSIZ];
@@ -197,7 +198,7 @@ struct ebt_u_watcher *find_watcher(const char *name);
 struct ebt_u_table *find_table(char *name);
 void deliver_counters(struct ebt_u_replace *repl);
 void deliver_table(struct ebt_u_replace *repl);
-int name_to_number(char *name, __u16 *proto);
+int name_to_number(char *name, uint16_t *proto);
 int number_to_name(unsigned short proto, char *name);
 void check_option(unsigned int *flags, unsigned int mask);
 int check_inverse(const char option[]);
@@ -215,4 +216,27 @@ void __print_bug(char *file, int line, char *format, ...);
 #define CNT_END 3
 #define CNT_ZERO 4
 
+extern char *standard_targets[NUM_STANDARD_TARGETS];
+// Transforms a target string into the right integer,
+// returns 0 on success.
+#define FILL_TARGET(_str, _pos) ({                        \
+	int _i, _ret = 0;                                 \
+	for (_i = 0; _i < NUM_STANDARD_TARGETS; _i++)     \
+		if (!strcmp(_str, standard_targets[_i])) {\
+			_pos = -_i - 1;                   \
+			break;                            \
+		}                                         \
+	if (_i == NUM_STANDARD_TARGETS)                   \
+		_ret = 1;                                 \
+	_ret;                                             \
+})
+
+// Transforms the target value to an index into standard_targets[]
+#define TARGET_INDEX(_value) (-_value - 1)
+// Returns a target string corresponding to the value
+#define TARGET_NAME(_value) (standard_targets[TARGET_INDEX(_value)])
+// True if the hook mask denotes that the rule is in a base chain
+#define BASE_CHAIN (hook_mask & (1 << NF_BR_NUMHOOKS))
+// Clear the bit in the hook_mask that tells if the rule is on a base chain
+#define CLEAR_BASE_CHAIN_BIT (hook_mask &= ~(1 << NF_BR_NUMHOOKS))
 #endif /* EBTABLES_U_H */

@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_arp.h>
@@ -23,40 +21,38 @@ static struct option opts[] =
 	{ 0 }
 };
 
+#define NUMOPCODES 9
 // a few names
 static char *opcodes[] =
 {
 	"Request",
 	"Reply",
-	"Request Reverse",
-	"Reply Reverse",
-	"DRARP Request",
-	"DRARP Reply",
-	"DRARP Error",
-	"InARP Request",
-	"ARP NAK",
-	""
+	"Request_Reverse",
+	"Reply_Reverse",
+	"DRARP_Request",
+	"DRARP_Reply",
+	"DRARP_Error",
+	"InARP_Request",
+	"ARP_NAK",
 };
 
 static void print_help()
 {
-	int i = 0;
+	int i;
 
 	printf(
 "arp options:\n"
 "--arp-opcode opcode            : ARP opcode (integer or string)\n"
 "--arp-htype type               : ARP hardware type (integer or string)\n"
 "--arp-ptype type               : ARP protocol type (hexadecimal or string)\n"
-"--arp-ip-src [!] address[/mask]: ARP ip source specification\n"
-"--arp-ip-dst [!] address[/mask]: ARP ip target specification\n"
+"--arp-ip-src [!] address[/mask]: ARP IP source specification\n"
+"--arp-ip-dst [!] address[/mask]: ARP IP target specification\n"
 " opcode strings: \n");
-	while (strcmp(opcodes[i], "")) {
+	for (i = 0; i < NUMOPCODES; i++)
 		printf("%d = %s\n", i + 1, opcodes[i]);
-		i++;
-	}
 	printf(
-" hardware type string: \n 1 = Ethernet\n"
-" protocol type string: \n 0x0800 = IPv4\n");
+" hardware type string: 1 = Ethernet\n"
+" protocol type string: see /etc/ethertypes\n");
 }
 
 static void init(struct ebt_entry_match *match)
@@ -68,7 +64,7 @@ static void init(struct ebt_entry_match *match)
 }
 
 // defined in ebt_ip.c
-void parse_ip_address(char *address, __u32 *addr, __u32 *msk);
+void parse_ip_address(char *address, uint32_t *addr, uint32_t *msk);
 
 #define OPT_OPCODE 0x01
 #define OPT_HTYPE  0x02
@@ -79,10 +75,10 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
    unsigned int *flags, struct ebt_entry_match **match)
 {
 	struct ebt_arp_info *arpinfo = (struct ebt_arp_info *)(*match)->data;
-	int i;
+	long int i;
 	char *end;
-	__u32 *addr;
-	__u32 *mask;
+	uint32_t *addr;
+	uint32_t *mask;
 
 	switch (c) {
 	case ARP_OPCODE:
@@ -91,18 +87,16 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			arpinfo->invflags |= EBT_ARP_OPCODE;
 
 		if (optind > argc)
-			print_error("Missing arp opcode argument");
+			print_error("Missing ARP opcode argument");
 		i = strtol(argv[optind - 1], &end, 10);
 		if (i < 0 || i >= (0x1 << 16) || *end !='\0') {
-			i = 0;
-			while (strcmp(opcodes[i], "")) {
+			for (i = 0; i < NUMOPCODES; i++)
 				if (!strcasecmp(opcodes[i], optarg))
 					break;
-				i++;
-			}
-			if (!strcmp(opcodes[i], ""))
+			if (i == NUMOPCODES)
 				print_error("Problem with specified "
-				            "arp opcode");
+				            "ARP opcode");
+			i++;
 		}
 		arpinfo->opcode = htons(i);
 		arpinfo->bitmask |= EBT_ARP_OPCODE;
@@ -114,13 +108,13 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			arpinfo->invflags |= EBT_ARP_HTYPE;
 
 		if (optind > argc)
-			print_error("Missing arp hardware type argument");
+			print_error("Missing ARP hardware type argument");
 		i = strtol(argv[optind - 1], &end, 10);
 		if (i < 0 || i >= (0x1 << 16) || *end !='\0') {
 			if (!strcasecmp("Ethernet", argv[optind - 1]))
 				i = 1;
 			else
-				print_error("Problem with specified arp "
+				print_error("Problem with specified ARP "
 				            "hardware type");
 		}
 		arpinfo->htype = htons(i);
@@ -128,23 +122,26 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		break;
 
 	case ARP_PTYPE:
+	{
+		uint16_t proto;
+
 		check_option(flags, OPT_PTYPE);
 		if (check_inverse(optarg))
 			arpinfo->invflags |= EBT_ARP_PTYPE;
 
 		if (optind > argc)
-			print_error("Missing arp protocol type argument");
+			print_error("Missing ARP protocol type argument");
 		i = strtol(argv[optind - 1], &end, 16);
 		if (i < 0 || i >= (0x1 << 16) || *end !='\0') {
-			if (!strcasecmp("IPv4", argv[optind - 1]))
-				i = 0x0800;
-			else
-				print_error("Problem with specified arp "
+			if (name_to_number (argv[optind - 1], &proto) == -1)
+				print_error("Problem with specified ARP "
 				            "protocol type");
-		}
-		arpinfo->ptype = htons(i);
+		} else
+			proto = i;
+		arpinfo->ptype = htons(proto);
 		arpinfo->bitmask |= EBT_ARP_PTYPE;
 		break;
+	}
 
 	case ARP_IP_S:
 	case ARP_IP_D:
@@ -166,7 +163,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 				arpinfo->invflags |= EBT_ARP_DST_IP;
 		}
 		if (optind > argc)
-			print_error("Missing ip address argument");
+			print_error("Missing ARP IP address argument");
 		parse_ip_address(argv[optind - 1], addr, mask);
 		break;
 	default:
@@ -187,18 +184,24 @@ static void final_check(const struct ebt_u_entry *entry,
 }
 
 // defined in the ebt_ip.c
-char *mask_to_dotted(__u32 mask);
+char *mask_to_dotted(uint32_t mask);
+
 static void print(const struct ebt_u_entry *entry,
    const struct ebt_entry_match *match)
 {
 	struct ebt_arp_info *arpinfo = (struct ebt_arp_info *)match->data;
 	int i;
+	char name[21];
 
 	if (arpinfo->bitmask & EBT_ARP_OPCODE) {
+		int opcode = ntohs(arpinfo->opcode);
 		printf("--arp-op ");
 		if (arpinfo->invflags & EBT_ARP_OPCODE)
 			printf("! ");
-		printf("%d ", ntohs(arpinfo->opcode));
+		if (opcode > 0 && opcode <= NUMOPCODES)
+			printf("%s ", opcodes[opcode - 1]);
+		else
+			printf("%d ", opcode);
 	}
 	if (arpinfo->bitmask & EBT_ARP_HTYPE) {
 		printf("--arp-htype ");
@@ -210,7 +213,10 @@ static void print(const struct ebt_u_entry *entry,
 		printf("--arp-ptype ");
 		if (arpinfo->invflags & EBT_ARP_PTYPE)
 			printf("! ");
-		printf("0x%x ", ntohs(arpinfo->ptype));
+		if (number_to_name(ntohs(arpinfo->ptype), name))
+			printf("0x%x ", ntohs(arpinfo->ptype));
+		else
+			printf("%s ", name);
 	}
 	if (arpinfo->bitmask & EBT_ARP_SRC_IP) {
 		printf("--arp-ip-src ");
@@ -279,7 +285,7 @@ static struct ebt_u_match arp_match =
 	final_check,
 	print,
 	compare,
-	opts,
+	opts
 };
 
 static void _init(void) __attribute__ ((constructor));

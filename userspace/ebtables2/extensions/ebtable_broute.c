@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <sys/socket.h>
 #include "../include/ebtables_u.h"
 
 

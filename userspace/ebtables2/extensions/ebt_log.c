@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_log.h>
@@ -16,11 +15,12 @@
 #define	LOG_NOTICE	5 // normal but significant condition
 #define	LOG_INFO	6 // informational
 #define	LOG_DEBUG	7 // debug-level messages
+
 #define LOG_DEFAULT_LEVEL LOG_INFO
 
 typedef struct _code {
-	char	*c_name;
-	int	c_val;
+	char *c_name;
+	int c_val;
 } CODE;
 
 static CODE eight_priority[] = {
@@ -31,20 +31,16 @@ static CODE eight_priority[] = {
 	{ "warning", LOG_WARNING },
 	{ "notice", LOG_NOTICE },
 	{ "info", LOG_INFO },
-	{ "debug", LOG_DEBUG },
-	{ NULL, -1 }
+	{ "debug", LOG_DEBUG }
 };
 
 static int name_to_loglevel(char* arg)
 {
-	int i = 0, c_val = eight_priority[0].c_val;
+	int i;
 	
-	while (c_val != -1) {
+	for (i = 0; i < 8; i++)
 		if (!strcmp(arg, eight_priority[i].c_name))
-			return c_val;
-		i++;
-		c_val = eight_priority[i].c_val;
-	}
+			return eight_priority[i].c_val;
 	// return bad loglevel
 	return 9;
 }
@@ -100,7 +96,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
    unsigned int *flags, struct ebt_entry_watcher **watcher)
 {
 	struct ebt_log_info *loginfo = (struct ebt_log_info *)(*watcher)->data;
-	int i;
+	long int i;
 	char *end;
 
 	switch (c) {
@@ -186,10 +182,9 @@ static struct ebt_u_watcher log_watcher =
 	final_check,
 	print,
 	compare,
-	opts,
+	opts
 };
 
-#undef _init
 static void _init(void) __attribute__ ((constructor));
 static void _init(void)
 {

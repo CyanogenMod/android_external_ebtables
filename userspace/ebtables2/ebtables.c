@@ -23,14 +23,9 @@
 
 #include <getopt.h>
 #include <string.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <linux/netfilter_bridge/ebtables.h>
-#include <netinet/in.h>
 #include <netinet/ether.h>
 #include "include/ebtables_u.h"
 #include <unistd.h>
@@ -440,6 +435,7 @@ static int get_a_line(char *buffer, char *value, FILE *ifp)
 
 // translate a hexadecimal number to a protocol name, parsing /etc/ethertypes
 // returns 0 on success
+// this the name buffer to be of size 21
 int number_to_name(unsigned short proto, char *name)
 {
 	FILE *ifp;

@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/socket.h>
 #include <string.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
@@ -25,9 +24,9 @@ static void init(struct ebt_entry_match *match)
 {
 	struct ebt_mark_m_info *markinfo = (struct ebt_mark_m_info *)match->data;
 
-	markinfo->mark = 0;
-	markinfo->mask = 0;
-	markinfo->invert = 0;
+	markinfo->mark    = 0;
+	markinfo->mask    = 0;
+	markinfo->invert  = 0;
 	markinfo->bitmask = 0;
 }
 
@@ -113,7 +112,7 @@ static struct ebt_u_match mark_match =
 	final_check,
 	print,
 	compare,
-	opts,
+	opts
 };
 
 static void _init(void) __attribute((constructor));

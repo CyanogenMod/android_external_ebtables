@@ -1,13 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_redirect.h>
-
-extern char *standard_targets[NUM_STANDARD_TARGETS];
 
 #define REDIRECT_TARGET '1'
 static struct option opts[] =
@@ -37,19 +33,13 @@ static int parse(int c, char **argv, int argc,
    const struct ebt_u_entry *entry, unsigned int *flags,
    struct ebt_entry_target **target)
 {
-	int i;
 	struct ebt_redirect_info *redirectinfo =
 	   (struct ebt_redirect_info *)(*target)->data;
 
 	switch (c) {
 	case REDIRECT_TARGET:
 		check_option(flags, OPT_REDIRECT_TARGET);
-		for (i = 0; i < NUM_STANDARD_TARGETS; i++)
-			if (!strcmp(optarg, standard_targets[i])) {
-				redirectinfo->target = -i - 1;
-				break;
-			}
-		if (i == NUM_STANDARD_TARGETS)
+		if (FILL_TARGET(optarg, redirectinfo->target))
 			print_error("Illegal --redirect-target target");
 		break;
 	default:
@@ -65,10 +55,9 @@ static void final_check(const struct ebt_u_entry *entry,
 	struct ebt_redirect_info *redirectinfo =
 	   (struct ebt_redirect_info *)target->data;
 
-	if ((hook_mask & (1 << NF_BR_NUMHOOKS)) &&
-	   redirectinfo->target == EBT_RETURN)
+	if (BASE_CHAIN && redirectinfo->target == EBT_RETURN)
 		print_error("--redirect-target RETURN not allowed on base chain");
-	hook_mask &= ~(1 << NF_BR_NUMHOOKS);
+	CLEAR_BASE_CHAIN_BIT;
 	if ( ((hook_mask & ~(1 << NF_BR_PRE_ROUTING)) || strcmp(name, "nat")) &&
 	   ((hook_mask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute")) )
 		print_error("Wrong chain for redirect");
@@ -82,8 +71,7 @@ static void print(const struct ebt_u_entry *entry,
 
 	if (redirectinfo->target == EBT_ACCEPT)
 		return;
-	printf(" --redirect-target %s",
-	   standard_targets[-redirectinfo->target - 1]);
+	printf(" --redirect-target %s", TARGET_NAME(redirectinfo->target));
 }
 
 static int compare(const struct ebt_entry_target *t1,
