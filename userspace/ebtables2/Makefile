@@ -4,8 +4,19 @@ PROGNAME:=ebtables
 PROGVERSION:=2.0.7
 PROGDATE:=January\ 2004
 
-LIBDIR?=$(DESTDIR)/usr/lib/
-MANDIR?=$(DESTDIR)/usr/local/man
+# default paths
+LIBDIR:=/usr/lib/
+MANDIR:=/usr/local/man
+BINDIR:=/sbin
+ETCDIR:=/etc
+
+# include DESTDIR param
+override LIBDIR:=$(DESTDIR)$(LIBDIR)
+override MANDIR:=$(DESTDIR)$(MANDIR)
+override BINDIR:=$(DESTDIR)$(BINDIR)
+override ETCDIR:=$(DESTDIR)$(ETCDIR)
+
+
 CFLAGS:=-Wall -Wunused
 CC:=gcc
 LD:=ld
@@ -23,11 +34,10 @@ OBJECTS:=$(OBJECTS2) ebtables.o $(EXT_OBJS) $(EXT_LIBS)
 
 KERNEL_INCLUDES?=include/
 
-ETHERTYPESPATH?=$(DESTDIR)/etc
+ETHERTYPESPATH?=$(ETCDIR)
 ETHERTYPESFILE:=$(ETHERTYPESPATH)/ethertypes
 
-BINPATH?=$(DESTDIR)/sbin/
-BINFILE:=$(BINPATH)ebtables
+BINFILE:=$(BINDIR)/ebtables
 
 PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DPROGNAME=\"$(PROGNAME)\" \
@@ -68,7 +78,7 @@ $(ETHERTYPESFILE): ethertypes
 
 .PHONY: exec
 exec: ebtables
-	mkdir -p $(BINPATH)
+	mkdir -p $(BINDIR)
 	install -m 0755 -o root -g root $< $(BINFILE)
 
 .PHONY: install

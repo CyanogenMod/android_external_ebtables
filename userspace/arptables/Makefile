@@ -7,11 +7,18 @@ endif
 ARPTABLES_VERSION:=0.0.3
 OLD_ARPTABLES_VERSION:=0.0.2
 
-PREFIX:=$(DESTDIR)/usr/local
+# default paths
+PREFIX:=/usr/local
 LIBDIR:=$(PREFIX)/lib
 BINDIR:=$(PREFIX)/sbin
 MANDIR:=$(PREFIX)/man
-INCDIR:=$(PREFIX)/include
+
+# include DESTDIR param
+override LIBDIR:=$(DESTDIR)$(LIBDIR)
+override MANDIR:=$(DESTDIR)$(MANDIR)
+override BINDIR:=$(DESTDIR)$(BINDIR)
+
+
 BINFILE:=$(BINDIR)/arptables
 
 # directory for new arptables releases
@@ -21,7 +28,7 @@ COPT_FLAGS:=-O2
 CFLAGS:=$(COPT_FLAGS) -Wall -Wunused -I$(KERNEL_DIR)/include/ -Iinclude/ -DARPTABLES_VERSION=\"$(ARPTABLES_VERSION)\" #-g -DDEBUG #-pg # -DARPTC_DEBUG
 
 EXTRAS+=iptables iptables.o
-EXTRA_INSTALLS+=$(DESTDIR)$(BINDIR)/iptables $(DESTDIR)$(MANDIR)/man8/iptables.8
+EXTRA_INSTALLS+=$(BINDIR)/iptables $(MANDIR)/man8/iptables.8
 
 ifndef ARPT_LIBDIR
 ARPT_LIBDIR:=$(LIBDIR)/arptables
@@ -43,8 +50,8 @@ libarptc/libarptc.o: libarptc/libarptc.c libarptc/libarptc_incl.c
 arptables: arptables-standalone.o arptables.o libarptc/libarptc.o $(EXT_OBJS)
 	$(CC) $(CFLAGS)  -o $@ $^
 
-$(DESTDIR)$(BINDIR)/arptables: arptables
-	@[ -d $(DESTDIR)$(BINDIR) ] || mkdir -p $(DESTDIR)$(BINDIR)
+$(BINDIR)/arptables: arptables
+	mkdir -p $(BINDIR)
 	cp $< $@
 
 $(MANDIR)/man8/arptables.8: arptables.8
@@ -53,6 +60,7 @@ $(MANDIR)/man8/arptables.8: arptables.8
 
 .PHONY: exec
 exec: arptables
+	mkdir -p $(BINDIR)
 	install -m 0755 -o root -g root $< $(BINFILE)
 
 .PHONY: install
