@@ -186,7 +186,6 @@ void get_dbinfo(struct brdb_dbinfo *nr);
 void get_db(int len, struct brdb_dbentry *db);
 void deliver_allowdb(__u16 *decision);
 int name_to_protocol(char *name);
-int getmac(char *from, char *to);
 void check_option(unsigned int *flags, unsigned int mask);
 int check_inverse(const char option[]);
 #define print_bug(format, args...) \
