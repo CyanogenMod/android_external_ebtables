@@ -42,7 +42,7 @@ static int ebt_802_3_check(const char *tablename, unsigned int hookmask,
 {
 	struct ebt_802_3_info *info = (struct ebt_802_3_info *)data;
 
-	if (datalen < sizeof(struct ebt_802_3_info))
+	if (datalen != EBT_ALIGN(sizeof(struct ebt_802_3_info)))
 		return -EINVAL;
 	if (info->bitmask & ~EBT_802_3_MASK || info->invflags & ~EBT_802_3_MASK)
 		return -EINVAL;

@@ -135,7 +135,7 @@ ebt_check_vlan(const char *tablename,
 	/*
 	 * Parameters buffer overflow check 
 	 */
-	if (datalen != sizeof(struct ebt_vlan_info)) {
+	if (datalen != EBT_ALIGN(sizeof(struct ebt_vlan_info))) {
 		DEBUG_MSG
 		    ("passed size %d is not eq to ebt_vlan_info (%d)\n",
 		     datalen, sizeof(struct ebt_vlan_info));
