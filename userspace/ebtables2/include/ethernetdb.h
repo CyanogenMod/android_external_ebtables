@@ -27,7 +27,7 @@
 
 /* Absolute file name for network data base files.  */
 #ifndef	_PATH_ETHERTYPES
-#define	_PATH_ETHERTYPES	"/usr/local/etc/ethertypes"
+#define	_PATH_ETHERTYPES	"/etc/ethertypes"
 #endif				/* _PATH_ETHERTYPES */
 
 struct ethertypeent {
