@@ -18,12 +18,14 @@
       <H1>Ebtables (Ethernet Bridge Tables) Frequently Asked Questions</H1>
     </DIV>
     <A name="top"></A> 
+    <P>Last modified: March 3, 2003</P>
     <H2>Questions</H2>
     <OL>
       <LI><A href="#quiz0">Intro</A></LI>
       <LI><A href="#quiz1">Installation</A></LI>
       <LI><A href="#quiz2">Usage</A></LI>
-      <LI><A href="#quiz3">Other</A></LI>
+      <LI><A href="#quiz3">Problems</A></LI>
+      <LI><A href="#quiz4">Other</A></LI>
     </OL>
     <H2>Answers</H2>
     <OL>
@@ -54,10 +56,9 @@
           want to use a 2.5.x (or above) kernel, then just use the latest
           and greatest kernel version. You won't have to patch the kernel.
           Check out the submitted kernel patches, available through the
-          <A href="http://users.pandora.be/bart.de.schuymer/ebtables/sourcecode.html">
-          sourcecode</A> section of the ebtables <A href="http://users.pandora.be/bart.de.schuymer/ebtables">
-          homepage</A> to see if there have been patches applied in later
-          kernel versions than the one you are using.</DD>
+          <A href="http://ebtables.sourceforge.net/sourcecode.html">
+          sourcecode</A> section of the ebtables <A href="http://ebtables.sourceforge.net">
+          homepage</A> to see if there are any pending patches.</DD>
           <DD>If you want to use a 2.4.x kernel, then go to
           <A href="http://sourceforge.net/projects/ebtables/">Ethernet bridge
           tables</A> and download the <B>br_nf_bds</B>, <B>ebtables_kernel</B>
@@ -127,13 +128,13 @@
           <DT>Can I filter on ARP packets in the Linux bridge box using
           ebtables?</DT>
           <DD>Yes, it's possible to filter on the ARP header, using ebtables.
-          See the <A href="ebtables.8.html">ebtables manual page</A> for
+          See the <A href="http://ebtables.sourceforge.net/ebtables-man.html">ebtables manual page</A> for
           details.</DD>
           <DT>Can I use ebtables with iptables? Are there any problems to
           use it together? How exactly the packet/frame traversing the ebtables/iptables?</DT>
           <DD>Yes, it's possible to use ebtables with iptables. Detailed
           info about ebtables/iptables interaction is explained at the
-          <A href="http://users.pandora.be/bart.de.schuymer/ebtables/br_fw_ia/br_fw_ia.html">
+          <A href="http://ebtables.sourceforge.net/br_fw_ia/br_fw_ia.html">
           "ebtables/iptables interaction on a Linux-based bridge"</A> page.</DD>
           <DT>Does ebtables keep count statistics?</DT>
           <DD>
@@ -164,7 +165,7 @@
           <DD>The ebtables PREROUTING chain is only traversed when the bridge code is deciding what
           to do with the frame. So, if a BROUTING chain rule decided the frame should be routed, then
           the ebtables PREROUTING chain won't see it. See the
-          <A href="http://users.pandora.be/bart.de.schuymer/ebtables/br_fw_ia/br_fw_ia.html">
+          <A href="http://ebtables.sourceforge.net/br_fw_ia/br_fw_ia.html">
           "ebtables/iptables interaction on a Linux-based bridge"</A> page for the details.</DD>
           <DT>I'm using a 2.5.x or higher kernel and my iptables rules won't match on the bridge port
           devices, what's wrong?</DT>
@@ -215,10 +216,41 @@ ebtables2/kernel/scripts/CopyRep2.5
         </DL>
         <BR>
          <A class=navbar href="#top">[Back to the top]</A>
-				<HR>
+      <HR>
       </LI>
       <LI>
-        <B><A name="quiz3">Other</A></B><BR>
+        <B><A name="quiz3">Problems</A></B><BR>
+        <DL>
+          <DT>This stuff isn't working on my 64-bit machine with a 32-bit userspace (like the Sparc64)</DT>
+          <DD>We know. It's kind of hard to fix this without access to such a machine. The problem is caused by the
+          different word length between kernel and userspace.</DD>
+          <DT>I'm getting this message when doing IP DNAT: ``Performing cross-bridge DNAT requires IP
+          forwarding to be enabled''</DT>
+          <DD>First make sure IP forwarding is enabled:
+<PRE>
+# echo '1' > /proc/sys/net/ipv4/ip_forward
+</PRE>
+          If that's the case and the message doesn't go away, make sure your routing table has all necessary
+          entries. For example, suppose we want to DNAT traffic on a bridge device that doesn't have an IP address to
+          an IP address somewhere on the Internet.
+<PRE>
+eth0 = connection to Internet
+br0 = eth1+eth2
+br0 has no IP address
+iptables -t nat -A PREROUTING -s 172.16.1.2 -d 172.16.1.4 -j DNAT --to-dest &lt;destination&gt;
+route -A -net 172.16.1.0 netmask 255.255.255.0 dev br0
+</PRE>
+        172.16.1.2 is on the eth1 side, .4 on the eth2 side, the &lt;destination&gt; is somewhere on the Internet.
+        Without the routing table entry (last line above), it is obvious that this DNAT wouldn't work (because the bridge/router
+        wouldn't know where to send 172.16.1.xx traffic). It is possible that the mentioned
+        error message gets printed on the screen or in your logs when this routing table entry is omitted.
+        </DD>
+        </DL>
+        <BR>
+        <A class=navbar href="#top">[Back to the top]</A>
+      </LI>
+      <LI>
+        <B><A name="quiz4">Other</A></B><BR>
         <DL>
           <DT>I'm not a Linux system's programmer, but I need a feature, which
           is not (yet) implemented in ebtables. What should I do?</DT>
@@ -227,13 +259,13 @@ ebtables2/kernel/scripts/CopyRep2.5
           your wanted feature to this mailing list.</DD>
           <DT>I'm a C programmer and I want to add an ebtables feature by
           myself. Where should I begin?</DT>
-          <DD>Subscribe to the <A href= 
+          <DD>Subscribe to the <A href=
           "https://lists.sourceforge.net/lists/listinfo/ebtables-devel">ebtables
           developers mail list</A>. Read the <A href=
-          "ebtables-hacking-HOWTO.html">"Ebtables Hacking HOWTO"</A> and
+          "http://ebtables.sourceforge.net/ebtables-hacking/ebtables-hacking-HOWTO.html">"Ebtables Hacking HOWTO"</A> and
           have a look at the already implemented modules. You will find that
           adding a module is not very hard. Additional information is available
-          at the ebtables <A href="http://users.pandora.be/bart.de.schuymer/ebtables">
+          at the ebtables <A href="http://ebtables.sourceforge.net">
           homepage</A>.</DD>
         </DL>
         <BR>
