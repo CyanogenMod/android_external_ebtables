@@ -26,6 +26,11 @@
 #include <netinet/in.h>
 #include <linux/netfilter_bridge/ebtables.h>
 
+#ifndef EBT_MIN_ALIGN
+#define EBT_MIN_ALIGN (__alignof__(struct ebt_entry_target))
+#endif
+#define EBT_ALIGN(s) (((s) + (EBT_MIN_ALIGN-1)) & ~(EBT_MIN_ALIGN-1))
+
 struct ebt_u_entries
 {
 	int policy;
