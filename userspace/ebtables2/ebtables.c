@@ -665,7 +665,7 @@ struct ebt_u_entries *nr_to_chain(int nr)
 	}
 }
 
-static struct ebt_u_entries *to_chain()
+static inline struct ebt_u_entries *to_chain()
 {
 	return nr_to_chain(replace.selected_hook);
 }
@@ -994,8 +994,7 @@ static int flush_chains()
 	if (replace.nentries) {
 		*cnt = CNT_END;
 		replace.num_counters = oldnentries;
-	}
-	else
+	} else
 		replace.num_counters = 0;
 
 	entries = to_chain();
@@ -1194,20 +1193,22 @@ static void add_rule(int rule_nr)
 }
 
 // execute command D
-static void delete_rule(int rule_nr)
+static void delete_rule(int begin, int end)
 {
-	int i, j, lentmp = 0;
+	int j, lentmp = 0, nr_deletes;
 	unsigned short *cnt;
 	struct ebt_u_entry **u_e, *u_e2;
 	struct ebt_u_entries *entries = to_chain(), *entries2;
 
-	if ( (i = check_rule_exists(rule_nr)) == -1 )
+	if ((begin = check_rule_exists(begin)) == -1 ||
+	    (end = check_rule_exists(end)) == -1)
 		print_error("Sorry, rule does not exist");
 
-	// we're deleting a rule
+	// we're deleting rules
 	replace.num_counters = replace.nentries;
-	replace.nentries--;
-	entries->nentries--;
+	nr_deletes = end - begin + 1;
+	replace.nentries -= nr_deletes;
+	entries->nentries -= nr_deletes;
 
 	if (replace.nentries) {
 		for (j = 0; j < replace.selected_hook; j++) {
@@ -1217,22 +1218,21 @@ static void delete_rule(int rule_nr)
 			entries2 = nr_to_chain(j);
 			lentmp += entries2->nentries;
 		}
-		lentmp += i;
+		lentmp += begin;
 		// +1 for CNT_END
 		if ( !(replace.counterchanges = (unsigned short *)malloc(
 		   (replace.num_counters + 1) * sizeof(unsigned short))) )
 			print_memory();
 		cnt = replace.counterchanges;
-		for (j = 0; j < lentmp; j++) {
+		for (j = 0; j < lentmp; j++, cnt++)
 			*cnt = CNT_NORM;
-			cnt++;
-		}
-		*cnt = CNT_DEL;
-		cnt++;
-		for (j = 0; j < replace.num_counters - lentmp; j++) {
+		for (j = 0; j < nr_deletes; j++, cnt++)
+			*cnt = CNT_DEL;
+  
+		for (j = 0; j < replace.num_counters - lentmp - nr_deletes;
+		     j++, cnt++)
 			*cnt = CNT_NORM;
-			cnt++;
-		}
+  
 		*cnt = CNT_END;
 	}
 	else
@@ -1240,27 +1240,30 @@ static void delete_rule(int rule_nr)
 
 	// go to the right position in the chain
 	u_e = &entries->entries;
-	for (j = 0; j < i; j++)
+	for (j = 0; j < begin; j++)
 		u_e = &(*u_e)->next;
-	// remove the rule
-	u_e2 = *u_e;
-	*u_e = (*u_e)->next;
-	// free everything
-	free_u_entry(u_e2);
-	free(u_e2);
+	// remove the rules
+	j = nr_deletes;
+	while(j--) {
+		u_e2 = *u_e;
+		*u_e = (*u_e)->next;
+		// free everything
+		free_u_entry(u_e2);
+		free(u_e2);
+	}
 
 	// update the counter_offset of chains behind this one
-	i = replace.selected_hook;
+	j = replace.selected_hook;
 	while (1) {
-		i++;
-		entries = nr_to_chain(i);
+		j++;
+		entries = nr_to_chain(j);
 		if (!entries) {
-			if (i < NF_BR_NUMHOOKS)
+			if (j < NF_BR_NUMHOOKS)
 				continue;
 			else
 				break;
-		} else
-			entries->counter_offset--;
+		} else 
+			entries->counter_offset -= nr_deletes;
 	}
 }
 
@@ -1436,6 +1439,34 @@ static void check_for_references(int chain_nr)
 	}
 }
 
+static int parse_delete_rule(const char *argv, int *rule_nr, int *rule_nr_end)
+{
+	char *colon = strchr(argv, ':'), *buffer;
+
+	if (colon) {
+		*colon = '\0';
+		if (*(colon + 1) == '\0')
+			*rule_nr_end = -1;
+		else {
+			*rule_nr_end = strtol(colon + 1, &buffer, 10);
+			if (*buffer != '\0' || *rule_nr_end < 0)
+				return -1;
+		}
+	}
+	if (colon == argv)
+		*rule_nr = 1;
+	else {
+		*rule_nr = strtol(argv, &buffer, 10);
+		if (*buffer != '\0' || *rule_nr < 0)
+			return -1;
+	}
+	if (!colon)
+		*rule_nr_end = *rule_nr;
+	if (*rule_nr_end != -1 && *rule_nr > *rule_nr_end)
+		return -1;
+	return 0;
+}
+
 static int invert = 0;
 int check_inverse(const char option[])
 {
@@ -1494,7 +1525,8 @@ int main(int argc, char *argv[])
 	// this special one for the -Z option (we can have -Z <this> -L <that>)
 	int zerochain = -1;
 	int policy = 0;
-	int rule_nr = -1;// used for -[D,I] chain number
+	int rule_nr = -1; // used for -[D,I]
+	int rule_nr_end = -1; // used for -I
 	struct ebt_u_target *t;
 	struct ebt_u_match *m;
 	struct ebt_u_watcher *w;
@@ -1616,8 +1648,15 @@ int main(int argc, char *argv[])
 				break;
 			}
 
-			if ( (c == 'D' && optind < argc  &&
-			   argv[optind][0] != '-')  || c == 'I') {
+			if (c == 'D' && optind < argc &&
+			    argv[optind][0] != '-') {
+				if (parse_delete_rule(argv[optind],
+				    &rule_nr, &rule_nr_end))
+					print_error("Problem with the "
+					            "specified rule number(s)");
+				optind++;
+			}
+			if (c == 'I') {
 				if (optind >= argc || argv[optind][0] == '-')
 					print_error("No rulenr for -I"
 					            " specified");
@@ -2127,8 +2166,11 @@ check_extension:
 				e = e->next;
 			}
 		}
-	} else if (replace.command == 'D')
-		delete_rule(rule_nr);
+	} else if (replace.command == 'D') {
+		if (rule_nr != -1 && rule_nr_end == -1)
+			rule_nr_end = entries->nentries;
+		delete_rule(rule_nr, rule_nr_end);
+	}
 	// commands -N, -E, -X, --atomic-commit, --atomic-commit, --atomic-save,
 	// --init-table fall through
 
