@@ -425,9 +425,13 @@ Usually it's 0x0800 (IPv4). See also
 file.
 .SS mark_m
 .TP
-.BR "--mark " "[!] \fIvalue\fP[/\fImask\fP]"
-Matches frames with the given unsigned mark value (if a mask is specified,
-the logical AND of the mark and the mask is taken before the comparison).
+.BR "--mark " "[!] [\fIvalue\fP][/\fImask\fP]"
+Matches frames with the given unsigned mark value. If a mark value and 
+mask is specified, the logical AND of the mark value of the frame and
+the user specified mask is taken before comparing with the user specified
+mark value. If only a mask is specified (start with '/') the logical AND
+of the mark value of the frame and the user specified mark is taken and
+the result is compared with zero.
 
 .SH WATCHER EXTENSION(S)
 Watchers are things that only look at frames passing by. These watchers only see the
