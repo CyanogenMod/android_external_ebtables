@@ -1,9 +1,9 @@
-.TH EBTABLES 8  "15 March 2003"
+.TH EBTABLES 8  "25 July 2003"
 .\"
 .\" Man page written by Bart De Schuymer <bdschuym@pandora.be>
 .\" It is based on the iptables man page.
 .\"
-.\" The man page was edited by 
+.\" The man page was edited, February 25th 2003, by 
 .\"      Greg Morgan <" dr_kludge_at_users_sourceforge_net >
 .\"
 .\" Iptables page by Herve Eychenne March 2000.
@@ -455,11 +455,13 @@ chains).
 .BR "-s, --source " "[!] \fIaddress\fP[/\fImask\fP]"
 The source mac address. Both mask and address are written as 6 hexadecimal
 numbers separated by colons. Alternatively one can specify Unicast,
-Multicast or Broadcast.
+Multicast, Broadcast or BGA (Bridge Group Address).
 .br
-Unicast=00:00:00:00:00:00/01:00:00:00:00:00,
-Multicast=01:00:00:00:00:00/01:00:00:00:00:00 and
-Broadcast=ff:ff:ff:ff:ff:ff/ff:ff:ff:ff:ff:ff. Note that a broadcast
+.BR "Unicast " "= 00:00:00:00:00:00/01:00:00:00:00:00,"
+.BR "Multicast " "= 01:00:00:00:00:00/01:00:00:00:00:00,"
+.BR "Broadcast " "= ff:ff:ff:ff:ff:ff/ff:ff:ff:ff:ff:ff or"
+.BR "BGA " "= 01:80:c2:00:00:00/ff:ff:ff:ff:ff:ff."
+Note that a broadcast
 address will also match the multicast specification. The flag
 .B --src
 is an alias for this option.
@@ -477,7 +479,7 @@ to explicitly load them with a -m option like in
 However, these
 extensions deal with functionality supported by supplemental kernel modules.
 .SS 802.3
-Specify 802.3 DSAP/SSAP fields or SNAP type.  These only work if the protocol equals
+Specify 802.3 DSAP/SSAP fields or SNAP type.  The protocol must be specified as
 .BR "LENGTH " (see " protocol " above).
 .TP
 .BR "--802_3-sap " "[!] \fIsap\fP"
@@ -487,10 +489,10 @@ equal, so only one byte (hexadecimal) is needed as an argument.
 .BR "--802_3-type " "[!] \fItype\fP"
 If the 802.3 DSAP and SSAP values are 0xaa then the SNAP type field must
 be consulted to determine the payload protocol.  This is a two byte
-(hexadecimal) argument.  Only 802.3 frames with DSAP/SSAP 0xaa are 
+(hexadecimal) argument.  Only 802.3 frames with DSAP/SSAP 0xaa are
 checked for type.
 .SS arp
-Specify arp fields. These will only work if the protocol equals
+Specify arp fields. The protocol must be specified as
 .BR ARP " or " RARP .
 .TP
 .BR "--arp-opcode " "[!] \fIopcode\fP"
@@ -517,7 +519,7 @@ The ARP MAC source address specification.
 .BR "--arp-mac-dst " "[!] \fIaddress\fP[/\fImask\fP]"
 The ARP MAC destination address specification.
 .SS ip
-Specify ip fields. These will only work if the protocol equals
+Specify ip fields. The protocol must be specified as
 .BR IPv4 .
 .TP
 .BR "--ip-source " "[!] \fIaddress\fP[/\fImask\fP]"
@@ -571,9 +573,54 @@ generic networking code. Possible values: broadcast (MAC destination is
 broadcast address), multicast (MAC destination is multicast address),
 host (MAC destination is the receiving network device) or otherhost
 (none of the above).
+.SS stp
+Specify stp BPDU (bridge protocol data unit) fields. The destination
+address must be specified as the bridge group address (BGA).
+.TP
+.BR "--stp-type " "[!] \fItype\fP"
+The BPDU type (0-255), special recognized types:
+.BR config ": configuration BPDU (=0) and"
+.BR tcn ": topology change notification BPDU (=128)."
+.TP
+.BR "--stp-flags " "[!] \fIflag\fP"
+The BPDU flag (0-255), special recognized flags:
+.BR topology-change ": the topology change flag (=1)"
+.BR topology-change-ack ": the topology change acknowledgement flag (=128)."
+.TP
+.BR "--stp-root-prio " "[!] [\fIprio\fP][:\fIprio\fP]"
+The root priority (0-65535) range.
+.TP
+.BR "--stp-root-addr " "[!] [\fIaddress\fP][/\fImask\fP]"
+The root mac address, see the option
+.BR -s " for more details."
+.TP
+.BR "--stp-root-cost " "[!] [\fIcost\fP][:\fIcost\fP]"
+The root path cost (0-4294967295) range.
+.TP
+.BR "--stp-sender-prio " "[!] [\fIprio\fP][:\fIprio\fP]"
+The BPDU's sender priority (0-65535) range.
+.TP
+.BR "--stp-sender-addr " "[!] [\fIaddress\fP][/\fImask\fP]"
+The BPDU's sender mac address, see the option
+.BR -s " for more details."
+.TP
+.BR "--stp-port " "[!] [\fIport\fP][:\fIport\fP]"
+The port identifier (0-65535) range.
+.TP
+.BR "--stp-msg-age " "[!] [\fIage\fP][:\fIage\fP]"
+The message age timer (0-65535) range.
+.TP
+.BR "--stp-max-age " "[!] [\fIage\fP][:\fIage\fP]"
+The max age timer (0-65535) range.
+.TP
+.BR "--stp-hello-time " "[!] [\fItime\fP][:\fItime\fP]"
+The hello time timer (0-65535) range.
+.TP
+.BR "--stp-forward-delay " "[!] [\fIdelay\fP][:\fIdelay\fP]"
+The forward delay timer (0-65535) range.
 .SS vlan
 Specify 802.1Q Tag Control Information fields.
-The protocol rule specification (frame type) should be set to
+The protocol must be specified as
 .BR 802_1Q " (0x8100)."
 .TP
 .BR "--vlan-id " "[!] \fIid\fP"
@@ -717,8 +764,6 @@ that using RETURN in a base chain is not allowed.
 .I /etc/ethertypes
 .SH ENVIRONMENT VARIABLES
 .I EBTABLES_ATOMIC_FILE
-.SH BUGS
-This won't work on an architecture with a user32/kernel64 situation like the Sparc64.
 .SH MAILINGLISTS
 .I ebtables-user@lists.sourceforge.net
 .br
