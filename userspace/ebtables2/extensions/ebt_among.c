@@ -48,7 +48,7 @@ static void print_help()
 ",...,zz:zz:zz:zz:zz:zz[=ip.ip.ip.ip][,]\n"
 "Things in brackets are optional.\n"
 "If you want to allow two (or more) IP addresses to one MAC address, you\n"
-"can specify two (or more) pairs witch the same MAC, e.g.\n"
+"can specify two (or more) pairs with the same MAC, e.g.\n"
 " 00:00:00:fa:eb:fe=153.19.120.250,00:00:00:fa:eb:fe=192.168.0.1\n"
 	);
 }
