@@ -35,7 +35,7 @@ MODULE_DESCRIPTION ("802.1Q match module (ebtables extension), v"
 MODULE_LICENSE ("GPL");
 
 
-#define DEBUG_MSG(...) if (debug) printk (KERN_DEBUG __FILE__ ":" __FUNCTION__ ": "  __VA_ARGS__)
+#define DEBUG_MSG(...) if (debug) printk (KERN_DEBUG __FILE__ ":" __VA_ARGS__)
 #define INV_FLAG(_inv_flag_) (info->invflags & _inv_flag_) ? "!" : ""
 #define GET_BITMASK(_BIT_MASK_) info->bitmask & _BIT_MASK_
 #define SET_BITMASK(_BIT_MASK_) info->bitmask |= _BIT_MASK_
