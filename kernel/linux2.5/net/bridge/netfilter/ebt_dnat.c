@@ -48,7 +48,7 @@ static struct ebt_target dnat =
 	.name		= EBT_DNAT_TARGET,
 	.target		= ebt_target_dnat,
 	.check		= ebt_target_dnat_check,
-	.me		= THIS_MODULE
+	.me		= THIS_MODULE,
 };
 
 static int __init init(void)

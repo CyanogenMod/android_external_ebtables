@@ -54,7 +54,7 @@ static struct ebt_target redirect_target =
 	.name		= EBT_REDIRECT_TARGET,
 	.target		= ebt_target_redirect,
 	.check		= ebt_target_redirect_check,
-	.me		= THIS_MODULE
+	.me		= THIS_MODULE,
 };
 
 static int __init init(void)

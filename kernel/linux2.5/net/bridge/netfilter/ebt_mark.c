@@ -50,7 +50,7 @@ static struct ebt_target mark_target =
 	.name		= EBT_MARK_TARGET,
 	.target		= ebt_target_mark,
 	.check		= ebt_target_mark_check,
-	.me		= THIS_MODULE
+	.me		= THIS_MODULE,
 };
 
 static int __init init(void)

@@ -44,7 +44,7 @@ static struct ebt_match filter_mark =
 	.name		= EBT_MARK_MATCH,
 	.match		= ebt_filter_mark,
 	.check		= ebt_mark_check,
-	.me		= THIS_MODULE
+	.me		= THIS_MODULE,
 };
 
 static int __init init(void)

@@ -83,7 +83,7 @@ static struct ebt_watcher log =
 	.name		= EBT_LOG_WATCHER,
 	.watcher	= ebt_log,
 	.check		= ebt_log_check,
-	.me		= THIS_MODULE
+	.me		= THIS_MODULE,
 };
 
 static int __init init(void)

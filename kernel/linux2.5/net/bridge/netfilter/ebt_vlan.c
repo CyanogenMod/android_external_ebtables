@@ -229,7 +229,7 @@ static struct ebt_match filter_vlan = {
 	.name		= EBT_VLAN_MATCH,
 	.match		= ebt_filter_vlan,
 	.check		= ebt_check_vlan,
-	.me		= THIS_MODULE
+	.me		= THIS_MODULE,
 };
 
 /*
