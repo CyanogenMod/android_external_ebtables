@@ -123,8 +123,6 @@ unsigned char msk_type_multicast[ETH_ALEN] = {1,0,0,0,0,0};
 unsigned char mac_type_broadcast[ETH_ALEN] = {255,255,255,255,255,255};
 unsigned char msk_type_broadcast[ETH_ALEN] = {255,255,255,255,255,255};
 
-// tells what happened to the old rules
-static unsigned short *counterchanges;
 // holds all the data
 static struct ebt_u_replace replace;
 
@@ -900,16 +898,16 @@ static void change_policy(int policy)
 		replace.num_counters = replace.nentries;
 		if (replace.nentries) {
 			// '+ 1' for the CNT_END
-			if (!(counterchanges = (unsigned short *) malloc(
+			if (!(replace.counterchanges = (unsigned short *) malloc(
 			   (replace.nentries + 1) * sizeof(unsigned short))))
 				print_memory();
 			// done nothing special to the rules
 			for (i = 0; i < replace.nentries; i++)
-				counterchanges[i] = CNT_NORM;
-			counterchanges[replace.nentries] = CNT_END;
+				replace.counterchanges[i] = CNT_NORM;
+			replace.counterchanges[replace.nentries] = CNT_END;
 		}
 		else
-			counterchanges = NULL;
+			replace.counterchanges = NULL;
 	}
 	else
 		exit(0);
@@ -966,14 +964,14 @@ static int flush_chains()
 
 	if (replace.nentries) {
 		// +1 for CNT_END
-		if ( !(counterchanges = (unsigned short *)
+		if ( !(replace.counterchanges = (unsigned short *)
 		   malloc((oldnentries + 1) * sizeof(unsigned short))) )
 			print_memory();
 	}
 	// delete the counters belonging to the specified chain,
 	// update counter_offset
 	i = -1;
-	cnt = counterchanges;
+	cnt = replace.counterchanges;
 	while (1) {
 		i++;
 		entries = nr_to_chain(i);
@@ -1136,10 +1134,10 @@ static void add_rule(int rule_nr)
 
 	// handle counter stuff
 	// +1 for CNT_END
-	if ( !(counterchanges = (unsigned short *)
+	if ( !(replace.counterchanges = (unsigned short *)
 	   malloc((replace.nentries + 1) * sizeof(unsigned short))) )
 		print_memory();
-	cnt = counterchanges;
+	cnt = replace.counterchanges;
 	for (i = 0; i < replace.selected_hook; i++) {
 		if (i < NF_BR_NUMHOOKS && !(replace.valid_hooks & (1 << i)))
 			continue;
@@ -1155,7 +1153,7 @@ static void add_rule(int rule_nr)
 	}
 	*cnt = CNT_ADD;
 	cnt++;
-	while (cnt != counterchanges + replace.nentries) {
+	while (cnt != replace.counterchanges + replace.nentries) {
 		*cnt = CNT_NORM;
 		cnt++;
 	}
@@ -1228,10 +1226,10 @@ static void delete_rule(int rule_nr)
 		}
 		lentmp += i;
 		// +1 for CNT_END
-		if ( !(counterchanges = (unsigned short *)malloc(
+		if ( !(replace.counterchanges = (unsigned short *)malloc(
 		   (replace.num_counters + 1) * sizeof(unsigned short))) )
 			print_memory();
-		cnt = counterchanges;
+		cnt = replace.counterchanges;
 		for (j = 0; j < lentmp; j++) {
 			*cnt = CNT_NORM;
 			cnt++;
@@ -1288,7 +1286,7 @@ static void zero_counters(int zerochain)
 		// tell main() we don't update the counters
 		// this results in tricking the kernel to zero its counters,
 		// naively expecting userspace to update its counters. Muahahaha
-		counterchanges = NULL;
+		replace.counterchanges = NULL;
 		replace.num_counters = 0;
 	} else {
 		int i, j;
@@ -1297,11 +1295,11 @@ static void zero_counters(int zerochain)
 
 		if (entries->nentries == 0)
 			exit(0);
-		counterchanges = (unsigned short *)
+		replace.counterchanges = (unsigned short *)
 		   malloc((replace.nentries + 1) * sizeof(unsigned short));
-		if (!counterchanges)
+		if (!replace.counterchanges)
 			print_memory();
-		cnt = counterchanges;
+		cnt = replace.counterchanges;
 		for (i = 0; i < zerochain; i++) {
 			if (i < NF_BR_NUMHOOKS &&
 			   !(replace.valid_hooks & (1 << i)))
@@ -1316,7 +1314,7 @@ static void zero_counters(int zerochain)
 			*cnt = CNT_ZERO;
 			cnt++;
 		}
-		while (cnt != counterchanges + replace.nentries) {
+		while (cnt != replace.counterchanges + replace.nentries) {
 			*cnt = CNT_NORM;
 			cnt++;
 		}
@@ -1563,6 +1561,7 @@ int main(int argc, char *argv[])
 	replace.selected_hook = -1;
 	replace.command = 'h';
 	replace.filename = NULL;
+	replace.counterchanges = NULL;
 
 	new_entry = (struct ebt_u_entry *)malloc(sizeof(struct ebt_u_entry));
 	if (!new_entry)
@@ -2051,11 +2050,11 @@ int main(int argc, char *argv[])
 			// get the information from the file
 			get_table(&replace);
                         if (replace.nentries) {
-                                counterchanges = (unsigned short *)
+                                replace.counterchanges = (unsigned short *)
                                    malloc(sizeof(unsigned short) * (replace.nentries + 1));
 				for (i = 0; i < replace.nentries; i++)
-                                        counterchanges[i] = CNT_NORM;
-                                counterchanges[i] = CNT_END;
+					replace.counterchanges[i] = CNT_NORM;
+					replace.counterchanges[i] = CNT_END;
                         }
 			free(replace.filename);
 			replace.filename = NULL;
@@ -2076,11 +2075,11 @@ int main(int argc, char *argv[])
 					"table %s", replace.name);
 			}
 			if (replace.nentries) {
-				counterchanges = (unsigned short *)
+				replace.counterchanges = (unsigned short *)
 				   malloc(sizeof(unsigned short) * (replace.nentries + 1));
 				for (i = 0; i < replace.nentries; i++)
-					counterchanges[i] = CNT_NORM;
-				counterchanges[i] = CNT_END;
+					replace.counterchanges[i] = CNT_NORM;
+				replace.counterchanges[i] = CNT_END;
 			}
 			if (c == 11)
 				break;
@@ -2225,7 +2224,7 @@ check_extension:
 
 	deliver_table(&replace);
 
-	if (counterchanges)
-		deliver_counters(&replace, counterchanges);
+	if (replace.counterchanges)
+		deliver_counters(&replace);
 	return 0;
 }

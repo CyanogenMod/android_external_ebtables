@@ -68,6 +68,8 @@ struct ebt_u_replace
 	int selected_hook;
 	// used for the atomic option
 	char *filename;
+	// tells what happened to the old rules
+	unsigned short *counterchanges;
 };
 
 struct ebt_u_table
@@ -194,8 +196,7 @@ struct ebt_u_target *find_target(const char *name);
 struct ebt_u_match *find_match(const char *name);
 struct ebt_u_watcher *find_watcher(const char *name);
 struct ebt_u_table *find_table(char *name);
-void deliver_counters(struct ebt_u_replace *repl,
-   unsigned short * counterchanges);
+void deliver_counters(struct ebt_u_replace *repl);
 void deliver_table(struct ebt_u_replace *repl);
 void get_dbinfo(struct brdb_dbinfo *nr);
 void get_db(int len, struct brdb_dbentry *db);
