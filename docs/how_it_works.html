@@ -175,7 +175,7 @@ the ipOUTPUT(1) chain is traversed while the packet is in the ip code, while the
 the packet has entered the bridge code. This makes it possible to do DNAT to another device in ipOUTPUT(1) and lets
 one use the bridge ports in the ipOUTPUT(2) chain.</P>
 <P class=section>
-4. Two possible ways for frames/packets to pass through the <EM>iptables</EM> PREROUTING, FORWARD and POSTROUTING
+6. Two possible ways for frames/packets to pass through the <EM>iptables</EM> PREROUTING, FORWARD and POSTROUTING
 chains:</P>
 <P>
 With the br-nf patch there are 2 ways a frame/packet can pass through the 3 given <EM>iptables</EM>
@@ -240,16 +240,27 @@ port after first masquerading the ip address. So the packet's source ip address 
 first line of the script to avoid this. Note that if I wanted to filter the connections to and from the
 internet, I would certainly need the first line so I don't filter the local connections as well.</P>
 <P class=section>
-5. ip DNAT in the <EM>iptables</EM> PREROUTING chain on frames/packets entering on a bridge port:</P>
+7. ip DNAT in the <EM>iptables</EM> PREROUTING chain on frames/packets entering on a bridge port:</P>
 <P>Through some groovy play it is assured that (see /net/bridge/br_netfilter.c) DNAT'ed packets that after DNAT'ing
 have the same output device as the input device they came on (the logical bridge device which we like to call br0)
 will be bridged, not routed. So they will go through the <EM>ebtables</EM> FORWARD chain. All other DNAT'ed packets will be
 routed, so won't go through the <EM>ebtables</EM> FORWARD chain, will go through the <EM>ebtables</EM> INPUT chain and might go
 through the <EM>ebtables</EM> OUTPUT chain.</P>
+<P class=section>
+8. using the mac module extension for <EM>iptables</EM>:</P>
+<P>The side effect explained here occurs when the br-nf code is compiled in the kernel, the ip packet is routed and the out device
+for that packet is a logical bridge. The side effect is encountered when filtering on the mac source in the
+<EM>iptables</EM> FORWARD chains. As should be clear from earlier sections, the traversal of the <EM>iptables</EM> FORWARD chains
+is postponed until the packet is in the bridge code. This is done so one can filter on the bridge port out device. This has a
+side effect on the MAC source address, because the ip code will have changed the MAC source address to the MAC address of the bridge.
+It is therefore impossible, in the <EM>iptables</EM> FORWARD chains, to filter on the MAC source address of the computer sending
+the packet in question to the bridge/router. If you really need to filter on this MAC source address, you should do it in the nat
+PREROUTING chain. Agreed, very ugly, but making it possible to filter on the real MAC source address in the FORWARD chains would
+involve a very dirty hack and is probably not worth it.</P>
 <P>
 Released under the GPL.</P>
 <P>
 Bart De Schuymer.</P>
 <P>
-Last updated the 19th May 2002.</P>
+Last updated June 2nd, 2002.</P>
 </BODY></HTML>
