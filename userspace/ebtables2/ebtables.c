@@ -2064,9 +2064,13 @@ check_extension:
 	// the kernel does not have to do this ofcourse
 	new_entry->ethproto = htons(new_entry->ethproto);
 
-	if (replace.command == 'P')
+	if (replace.command == 'P') {
+		if (replace.selected_hook < NF_BR_NUMHOOKS &&
+		   policy == EBT_RETURN)
+			print_error("Policy RETURN only allowed for user "
+			            "defined chains");
 		change_policy(policy);
-	else if (replace.command == 'L') {
+	} else if (replace.command == 'L') {
 		list_rules();
 		if (replace.flags & OPT_ZERO)
 			zero_counters(zerochain);
