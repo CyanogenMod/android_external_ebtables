@@ -15,7 +15,9 @@ WHAT GETS INSTALLED?
   To put the manual somewhere else, include MANDIR=<<man-path/man>> as
   option on the command line.
   The Makefile will append /man8/ebtables.8.
-- ethertypes is placed in /etc/
+- ethertypes is by default placed in /usr/local/etc/, if you
+  want to change this, include ETHERTYPESPATH=<<path/>>.
+
 - the userspace program ebtables is compiled and the executable is copied
   to /sbin/ebtables.
 
