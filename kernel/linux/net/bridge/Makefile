@@ -19,6 +19,4 @@ obj-y		:= br.o br_device.o br_fdb.o br_forward.o br_if.o br_input.o \
 			br_stp_if.o br_stp_timer.o
 obj-m		:= $(O_TARGET)
 
-obj-$(CONFIG_BRIDGE_NF) += br_netfilter.o
-
 include $(TOPDIR)/Rules.make

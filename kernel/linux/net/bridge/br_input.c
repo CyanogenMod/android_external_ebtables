@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_input.c,v 1.3 2002/08/23 16:56:52 bdschuym Exp $
+ *	$Id: br_input.c,v 1.4 2002/08/29 21:27:53 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -50,7 +50,7 @@ static void br_pass_frame_up(struct net_bridge *br, struct sk_buff *skb)
 			br_pass_frame_up_finish);
 }
 
-int br_handle_frame_finish(struct sk_buff *skb)
+static int br_handle_frame_finish(struct sk_buff *skb)
 {
 	struct net_bridge *br;
 	unsigned char *dest;
