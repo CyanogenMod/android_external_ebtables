@@ -52,6 +52,8 @@ void __print_bug(char *file, int line, char *format, ...)
 #define PROC_SYS_MODPROBE "/proc/sys/kernel/modprobe"
 #endif
 #define ATOMIC_ENV_VARIABLE "EBTABLES_ATOMIC_FILE"
+#define PRINT_VERSION printf(PROGNAME" v"PROGVERSION" ("PROGDATE")\n")
+
 
 char *hooknames[NF_BR_NUMHOOKS] =
 {
@@ -435,7 +437,7 @@ static void list_extensions()
         struct ebt_u_match *m = matches;
         struct ebt_u_watcher *w = watchers;
 
-	printf(PROGNAME" v"PROGVERSION" ("PROGDATE")\n");
+	PRINT_VERSION;
 	printf("Supported userspace extensions:\n\nSupported tables:\n");
         while(tbl) {
 		printf("%s\n", tbl->name);
@@ -809,7 +811,8 @@ static void print_help()
 	struct ebt_u_match_list *m_l;
 	struct ebt_u_watcher_list *w_l;
 
-	printf(PROGNAME" v"PROGVERSION" ("PROGDATE")\n"
+	PRINT_VERSION;
+	printf(
 "Usage:\n"
 "ebtables -[ADI] chain rule-specification [options]\n"
 "ebtables -P chain target\n"
@@ -1832,7 +1835,7 @@ int main(int argc, char *argv[])
 			replace.command = 'V';
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
-			printf(PROGNAME" v"PROGVERSION" ("PROGDATE")\n");
+			PRINT_VERSION;
 			exit(0);
 
 		case 'M': /* modprobe */
