@@ -70,18 +70,21 @@ ebt_hook (unsigned int hook, struct sk_buff **pskb, const struct net_device *in,
 static struct nf_hook_ops ebt_ops_filter[] = {
 	{
 		.hook		= ebt_hook,
+		.owner		= THIS_MODULE,
 		.pf		= PF_BRIDGE,
 		.hooknum	= NF_BR_LOCAL_IN,
 		.priority	= NF_BR_PRI_FILTER_BRIDGED,
 	},
 	{
 		.hook		= ebt_hook,
+		.owner		= THIS_MODULE,
 		.pf		= PF_BRIDGE,
 		.hooknum	= NF_BR_FORWARD,
 		.priority	= NF_BR_PRI_FILTER_BRIDGED,
 	},
 	{
 		.hook		= ebt_hook,
+		.owner		= THIS_MODULE,
 		.pf		= PF_BRIDGE,
 		.hooknum	= NF_BR_LOCAL_OUT,
 		.priority	= NF_BR_PRI_FILTER_OTHER,
@@ -95,7 +98,7 @@ static int __init init(void)
 	ret = ebt_register_table(&frame_filter);
 	if (ret < 0)
 		return ret;
-	for (i = 0; i < sizeof(ebt_ops_filter) / sizeof(ebt_ops_filter[0]); i++)
+	for (i = 0; i < ARRAY_SIZE(ebt_ops_filter); i++)
 		if ((ret = nf_register_hook(&ebt_ops_filter[i])) < 0)
 			goto cleanup;
 	return ret;
@@ -110,7 +113,7 @@ static void __exit fini(void)
 {
 	int i;
 
-	for (i = 0; i < sizeof(ebt_ops_filter) / sizeof(ebt_ops_filter[0]); i++)
+	for (i = 0; i < ARRAY_SIZE(ebt_ops_filter); i++)
 		nf_unregister_hook(&ebt_ops_filter[i]);
 	ebt_unregister_table(&frame_filter);
 }
