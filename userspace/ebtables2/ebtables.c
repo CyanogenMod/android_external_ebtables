@@ -67,6 +67,9 @@ static struct option ebt_original_options[] = {
 	{ "insert"        , required_argument, 0, 'I' },
 	{ "delete"        , required_argument, 0, 'D' },
 	{ "list"          , optional_argument, 0, 'L' },
+	{ "Lc"            , no_argument      , 0, 4   },
+	{ "Ln"            , no_argument      , 0, 5   },
+	{ "Lx"            , no_argument      , 0, 6   },
 	{ "zero"          , optional_argument, 0, 'Z' },
 	{ "flush"         , optional_argument, 0, 'F' },
 	{ "policy"        , required_argument, 0, 'P' },
@@ -507,6 +510,11 @@ int number_to_name(unsigned short proto, char *name)
 	}
 }
 
+// we use replace.flags, so we can't use the following values:
+// 0x01 == OPT_COMMAND, 0x02 == OPT_TABLE, 0x100 == OPT_ZERO
+#define LIST_N 0x04
+#define LIST_C 0x08
+#define LIST_X 0x10
 // helper function for list_rules()
 static void list_em(struct ebt_u_entries *entries)
 {
@@ -520,9 +528,14 @@ static void list_em(struct ebt_u_entries *entries)
 	char name[21];
 
 	hlp = entries->entries;
-	printf("\nBridge chain: %s\nPolicy: %s\n", entries->name,
-	   standard_targets[-entries->policy - 1]);
-	printf("nr. of entries: %d \n", entries->nentries);
+	if (replace.flags & LIST_X && entries->policy != EBT_ACCEPT) {
+		printf("ebtables -t %s -P %s %s\n", replace.name,
+		   entries->name, standard_targets[-entries->policy - 1]);
+	} else if (!(replace.flags & LIST_X)) {
+		printf("\nBridge chain: %s\nPolicy: %s\n", entries->name,
+		   standard_targets[-entries->policy - 1]);
+		printf("nr. of entries: %d \n", entries->nentries);
+	}
 
 	i = entries->nentries;
 	while (i > 9) {
@@ -531,16 +544,21 @@ static void list_em(struct ebt_u_entries *entries)
 	}
 
 	for (i = 0; i < entries->nentries; i++) {
-		digits = 0;
-		// A little work to get nice rule numbers.
-		j = i + 1;
-		while (j > 9) {
-			digits++;
-			j /= 10;
+		if (replace.flags & LIST_N) {
+			digits = 0;
+			// A little work to get nice rule numbers.
+			j = i + 1;
+			while (j > 9) {
+				digits++;
+				j /= 10;
+			}
+			for (j = 0; j < space - digits; j++)
+				printf(" ");
+			printf("%d. ", i + 1);
 		}
-		for (j = 0; j < space - digits; j++)
-			printf(" ");
-		printf("%d. ", i + 1);
+		if (replace.flags & LIST_X)
+			printf("ebtables -t %s -A %s ",
+			   replace.name, entries->name);
 
 		// Don't print anything about the protocol if no protocol was
 		// specified, obviously this means any protocol will do.
@@ -668,8 +686,9 @@ enddst:
 		if (!t)
 			print_bug("Target not found");
 		t->print(hlp, hlp->t);
-		printf(", count = %llu",
-		   replace.counters[entries->counter_offset + i].pcnt);
+		if (replace.flags & LIST_C)
+			printf(", count = %llu",
+			   replace.counters[entries->counter_offset + i].pcnt);
 		printf("\n");
 		hlp = hlp->next;
 	}
@@ -876,12 +895,28 @@ static void list_rules()
 {
 	int i;
 
-	printf("Bridge table: %s\n", table->name);
+	if (!(replace.flags & LIST_X))
+		printf("Bridge table: %s\n", table->name);
 	if (replace.selected_hook != -1) {
 		list_em(to_chain());
 	} else {
 		struct ebt_u_chain_list *cl = replace.udc;
 
+		// create new chains and rename standard chains when necessary
+		if (replace.flags & LIST_X) {
+			while (cl) {
+				printf("ebtables -t %s -N %s\n", replace.name,
+				   cl->udc->name);
+				cl = cl->next;
+			}
+			cl = replace.udc;
+			for (i = 0; i < NF_BR_NUMHOOKS; i++)
+				if (replace.valid_hooks & (1 << i) &&
+				   strcmp(replace.hook_entry[i]->name, hooknames[i]))
+					printf("ebtables -t %s -E %s %s\n",
+					   replace.name, hooknames[i],
+					   replace.hook_entry[i]->name);
+		}
 		i = 0;
 		while (1) {
 			if (i < NF_BR_NUMHOOKS) {
@@ -2013,8 +2048,43 @@ int main(int argc, char *argv[])
 			allowbc = *optarg;
 			break;
 
-		default:
+		case 4  : // Lc
+			check_option(&replace.flags, LIST_C);
+			if (replace.selected_hook == DATABASEHOOKNR)
+				print_error("--Lc not valid for listing"
+				   " the database");
+			if (replace.command != 'L')
+				print_error("Use --Lc with -L");
+			if (replace.flags & LIST_X)
+				print_error("--Lx not compatible with --Lc");
+			replace.flags |= LIST_C;
+			break;
+		case 5  : // Ln
+			check_option(&replace.flags, LIST_N);
+			if (replace.selected_hook == DATABASEHOOKNR)
+				print_error("--Ln not valid for listing"
+				   " the database");
+			if (replace.command != 'L')
+				print_error("Use --Ln with -L");
+			if (replace.flags & LIST_X)
+				print_error("--Lx not compatible with --Ln");
+			replace.flags |= LIST_N;
+			break;
+		case 6  : // Lx
+			check_option(&replace.flags, LIST_X);
+			if (replace.selected_hook == DATABASEHOOKNR)
+				print_error("--Lx not valid for listing"
+				   " the database");
+			if (replace.command != 'L')
+				print_error("Use --Lx with -L");
+			if (replace.flags & LIST_C)
+				print_error("--Lx not compatible with --Lc");
+			if (replace.flags & LIST_N)
+				print_error("--Lx not compatible with --Ln");
+			replace.flags |= LIST_X;
+			break;
 
+		default:
 			// is it a target option?
 			t = (struct ebt_u_target *)new_entry->t;
 			if ((t->parse(c - t->option_offset, argv, argc,
