@@ -41,8 +41,8 @@ static void print_help()
 {
 	printf(
 "`among' options:\n"
-"--among-dst list                : matches if ether dst is in list\n"
-"--among-src list                : matches if ether src is in list\n"
+"--among-dst [!] list          : matches if ether dst is in list\n"
+"--among-src [!] list          : matches if ether src is in list\n"
 "list has form:\n"
 " xx:xx:xx:xx:xx:xx[=ip.ip.ip.ip],yy:yy:yy:yy:yy:yy[=ip.ip.ip.ip]"
 ",...,zz:zz:zz:zz:zz:zz[=ip.ip.ip.ip][,]\n"
