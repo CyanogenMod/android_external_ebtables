@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br.c,v 1.1 2002/08/23 20:01:53 bdschuym Exp $
+ *	$Id: br.c,v 1.2 2002/09/16 19:50:06 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -28,13 +28,7 @@
 #include "../atm/lec.h"
 #endif
 
-#if defined(CONFIG_BRIDGE_EBT_BROUTE) || \
-    defined(CONFIG_BRIDGE_EBT_BROUTE_MODULE)
-unsigned int (*broute_decision) (unsigned int hook, struct sk_buff **pskb,
-                        const struct net_device *in,
-                        const struct net_device *out,
-                        int (*okfn)(struct sk_buff *)) = NULL;
-#endif
+int (*br_should_route_hook) (struct sk_buff **pskb) = NULL;
 
 void br_dec_use_count()
 {
@@ -82,10 +76,7 @@ static void __exit br_deinit(void)
 #endif
 }
 
-#if defined(CONFIG_BRIDGE_EBT_BROUTE) || \
-    defined(CONFIG_BRIDGE_EBT_BROUTE_MODULE)
-EXPORT_SYMBOL(broute_decision);
-#endif
+EXPORT_SYMBOL(br_should_route_hook);
 
 module_init(br_init)
 module_exit(br_deinit)
