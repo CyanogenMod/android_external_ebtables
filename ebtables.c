@@ -635,13 +635,13 @@ enddst:
 			printf("--logical-out ");
 			if (hlp->invflags & EBT_ILOGICALOUT)
 				printf("! ");
-			printf("%s, ", hlp->logical_out);
+			printf("%s ", hlp->logical_out);
 		}
 		if (hlp->out[0] != '\0') {
 			printf("-o ");
 			if (hlp->invflags & EBT_IOUT)
 				printf("! ");
-			printf("%s, ", hlp->out);
+			printf("%s ", hlp->out);
 		}
 
 		m_l = hlp->m_list;
