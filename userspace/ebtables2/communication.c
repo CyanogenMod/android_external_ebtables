@@ -32,7 +32,8 @@ static void get_sockfd()
 		sockfd = socket(AF_INET, SOCK_RAW, PF_INET);
 		if (sockfd < 0)
 			print_error("Problem getting a socket, "
-			   "do you have the right permissions?");
+			   "you probably don't have the right "
+			   "permissions");
 	}
 }
 
