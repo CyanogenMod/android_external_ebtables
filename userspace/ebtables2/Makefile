@@ -1,7 +1,7 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGVERSION:=2.0.3
+PROGVERSION:=2.0.4
 PROGDATE:=April\ 2003
 
 MANDIR?=/usr/local/man
@@ -14,7 +14,7 @@ OBJECTS:=getethertype.o ebtables.o communication.o $(EXT_OBJS)
 
 KERNEL_INCLUDES?=include/
 
-ETHERTYPESPATH?=/etc/
+ETHERTYPESPATH?=/etc
 ETHERTYPESFILE:=$(ETHERTYPESPATH)/ethertypes
 
 BINPATH?=/sbin/
