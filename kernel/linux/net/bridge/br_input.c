@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_input.c,v 1.5 2002/09/10 17:33:26 bdschuym Exp $
+ *	$Id: br_input.c,v 1.6 2002/09/16 21:06:14 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -19,10 +19,6 @@
 #include <linux/if_bridge.h>
 #include <linux/netfilter_bridge.h>
 #include "br_private.h"
-#if defined(CONFIG_BRIDGE_EBT_BROUTE) || \
-    defined(CONFIG_BRIDGE_EBT_BROUTE_MODULE)
-#include <linux/netfilter.h>
-#endif
 
 unsigned char bridge_ula[6] = { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x00 };
 
@@ -153,12 +149,9 @@ int br_handle_frame(struct sk_buff *skb)
 		goto handle_special_frame;
 
 	if (p->state == BR_STATE_FORWARDING) {
-#if defined(CONFIG_BRIDGE_EBT_BROUTE) || \
-    defined(CONFIG_BRIDGE_EBT_BROUTE_MODULE)
-		if (broute_decision && broute_decision(NF_BR_BROUTING, &skb,
-		   skb->dev, NULL, NULL) == NF_DROP)
+		if (br_should_route_hook && br_should_route_hook(&skb))
 			return -1;
-#endif
+
 		NF_HOOK(PF_BRIDGE, NF_BR_PRE_ROUTING, skb, skb->dev, NULL,
 			br_handle_frame_finish);
 		read_unlock(&br->lock);
