@@ -1465,14 +1465,14 @@ static int __init init(void)
 	if ((ret = nf_register_sockopt(&ebt_sockopts)) < 0)
 		return ret;
 
-	printk("Ebtables v2.0 registered");
+	printk(KERN_NOTICE "Ebtables v2.0 registered\n");
 	return 0;
 }
 
 static void __exit fini(void)
 {
 	nf_unregister_sockopt(&ebt_sockopts);
-	printk("Ebtables v2.0 unregistered");
+	printk(KERN_NOTICE "Ebtables v2.0 unregistered\n");
 }
 
 EXPORT_SYMBOL(ebt_register_table);
