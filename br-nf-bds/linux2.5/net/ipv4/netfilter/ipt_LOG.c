@@ -286,11 +286,16 @@ ipt_log_target(struct sk_buff **pskb,
 	spin_lock_bh(&log_lock);
 	printk(level_string);
 	printk("%sIN=%s ", loginfo->prefix, in ? in->name : "");
-	if ((*pskb)->physindev && in != (*pskb)->physindev)
-		printk("PHYSIN=%s ", (*pskb)->physindev->name);
-	printk("OUT=%s ", out ? out->name : "");
-	if ((*pskb)->physoutdev && out != (*pskb)->physoutdev)
-		printk("PHYSOUT=%s ", (*pskb)->physoutdev->name);
+	if ((*pskb)->nf_bridge) {
+		struct net_device *physindev = (*pskb)->nf_bridge->physindev;
+		struct net_device *physoutdev = (*pskb)->nf_bridge->physoutdev;
+
+		if (physindev && in != physindev)
+			printk("PHYSIN=%s ", physindev->name);
+		printk("OUT=%s ", out ? out->name : "");
+		if (physoutdev && out != physoutdev)
+			printk("PHYSOUT=%s ", physoutdev->name);
+	}
 
 	if (in && !out) {
 		/* MAC logging for input chain only. */

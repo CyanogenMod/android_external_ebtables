@@ -418,8 +418,8 @@ static void nf_queue(struct sk_buff *skb,
 {
 	int status;
 	struct nf_info *info;
-	struct net_device *physindev;
-	struct net_device *physoutdev;
+	struct net_device *physindev = NULL;
+	struct net_device *physoutdev = NULL;
 
 	if (!queue_handler[pf].outfn) {
 		kfree_skb(skb);
@@ -442,8 +442,12 @@ static void nf_queue(struct sk_buff *skb,
 	if (indev) dev_hold(indev);
 	if (outdev) dev_hold(outdev);
 
-	if ((physindev = skb->physindev)) dev_hold(physindev);
-	if ((physoutdev = skb->physoutdev)) dev_hold(physoutdev);
+	if (skb->nf_bridge) {
+		physindev = skb->nf_bridge->physindev;
+		if (physindev) dev_hold(physindev);
+		physoutdev = skb->nf_bridge->physoutdev;
+		if (physoutdev) dev_hold(physoutdev);
+	}
 
 	status = queue_handler[pf].outfn(skb, info, queue_handler[pf].data);
 	if (status < 0) {

@@ -4,7 +4,7 @@
  *	Authors:	Alan Cox <iiitac@pyr.swan.ac.uk>
  *			Florian La Roche <rzsfl@rz.uni-sb.de>
  *
- *	Version:	$Id: skbuff.c,v 1.4 2002/09/18 20:29:33 bdschuym Exp $
+ *	Version:	$Id: skbuff.c,v 1.5 2002/10/19 14:30:25 bdschuym Exp $
  *
  *	Fixes:
  *		Alan Cox	:	Fixed the worst of the load
@@ -234,8 +234,6 @@ static inline void skb_headerinit(void *p, kmem_cache_t *cache,
 	skb->sk		  = NULL;
 	skb->stamp.tv_sec = 0;	/* No idea about time */
 	skb->dev	  = NULL;
-	skb->physindev	  = NULL;
-	skb->physoutdev	  = NULL;
 	skb->dst	  = NULL;
 	memset(skb->cb, 0, sizeof(skb->cb));
 	skb->pkt_type	  = PACKET_HOST;	/* Default type */
@@ -250,6 +248,7 @@ static inline void skb_headerinit(void *p, kmem_cache_t *cache,
 #ifdef CONFIG_NETFILTER_DEBUG
 	skb->nf_debug	  = 0;
 #endif
+	skb->nf_bridge	  = NULL;
 #endif
 #ifdef CONFIG_NET_SCHED
 	skb->tc_index	  = 0;
@@ -329,6 +328,7 @@ void __kfree_skb(struct sk_buff *skb)
 	}
 #ifdef CONFIG_NETFILTER
 	nf_conntrack_put(skb->nfct);
+	nf_bridge_put(skb->nf_bridge);
 #endif
 	skb_headerinit(skb, NULL, 0);  /* clean state */
 	kfree_skbmem(skb);
@@ -365,8 +365,6 @@ struct sk_buff *skb_clone(struct sk_buff *skb, int gfp_mask)
 	n->sk = NULL;
 	C(stamp);
 	C(dev);
-	C(physindev);
-	C(physoutdev);
 	C(h);
 	C(nh);
 	C(mac);
@@ -396,6 +394,7 @@ struct sk_buff *skb_clone(struct sk_buff *skb, int gfp_mask)
 #ifdef CONFIG_NETFILTER_DEBUG
 	C(nf_debug);
 #endif
+	C(nf_bridge);
 #endif /*CONFIG_NETFILTER*/
 #if defined(CONFIG_HIPPI)
 	C(private);
@@ -408,6 +407,7 @@ struct sk_buff *skb_clone(struct sk_buff *skb, int gfp_mask)
 	skb->cloned = 1;
 #ifdef CONFIG_NETFILTER
 	nf_conntrack_get(skb->nfct);
+	nf_bridge_get(skb->nf_bridge);
 #endif
 	return n;
 }
@@ -422,8 +422,6 @@ static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 	new->list	= NULL;
 	new->sk		= NULL;
 	new->dev	= old->dev;
-	new->physindev	= old->physindev;
-	new->physoutdev	= old->physoutdev;
 	new->priority	= old->priority;
 	new->protocol	= old->protocol;
 	new->dst	= dst_clone(old->dst);
@@ -444,6 +442,8 @@ static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 #ifdef CONFIG_NETFILTER_DEBUG
 	new->nf_debug	= old->nf_debug;
 #endif
+	new->nf_bridge	= old->nf_bridge;
+	nf_bridge_get(new->nf_bridge);
 #endif
 #ifdef CONFIG_NET_SCHED
 	new->tc_index	= old->tc_index;

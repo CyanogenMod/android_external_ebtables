@@ -68,10 +68,7 @@ static DECLARE_MUTEX(ipt_mutex);
 #define inline
 #endif
 
-/* Locking is simple: we assume at worst case there will be one packet
-   in user context and one from bottom halves (or soft irq if Alexey's
-   softnet patch was applied).
-
+/*
    We keep a set of rules for each CPU, so we can avoid write-locking
    them in the softirq when updating the counters and therefore
    only need to read-lock in the softirq; doing a write_lock_bh() in user
@@ -295,8 +292,15 @@ ipt_do_table(struct sk_buff **pskb,
 	datalen = (*pskb)->len - ip->ihl * 4;
 	indev = in ? in->name : nulldevname;
 	outdev = out ? out->name : nulldevname;
-	physindev = (*pskb)->physindev ? (*pskb)->physindev->name : nulldevname;
-	physoutdev = (*pskb)->physoutdev ? (*pskb)->physoutdev->name : nulldevname;
+	if ((*pskb)->nf_bridge) {
+		physindev = (*pskb)->nf_bridge->physindev ?
+			(*pskb)->nf_bridge->physindev->name : nulldevname;
+		physoutdev = (*pskb)->nf_bridge->physoutdev ?
+			(*pskb)->nf_bridge->physoutdev->name : nulldevname;
+	} else {
+		physindev = nulldevname;
+		physoutdev = nulldevname;
+	}
 
 	/* We handle fragments by dealing with the first fragment as
 	 * if it was a normal packet.  All other fragments are treated
