@@ -1,8 +1,8 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGVERSION:=2.0.2
-PROGDATE:=December\ 2002
+PROGVERSION:=2.0.3
+PROGDATE:=April\ 2003
 
 MANDIR?=/usr/local/man
 CFLAGS:=-Wall -Wunused
