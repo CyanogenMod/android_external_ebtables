@@ -31,12 +31,17 @@ static int ebt_target_redirect(struct sk_buff **pskb, unsigned int hooknr,
 	return info->target;
 }
 
+static struct ebt_target redirect_target;
 static int ebt_target_redirect_check(const char *tablename, unsigned int hookmask,
-   const struct ebt_entry *e, void *data, unsigned int datalen)
+   const struct ebt_entry *e, void *data, unsigned int datalen,
+   unsigned int version)
 {
 	struct ebt_redirect_info *info = (struct ebt_redirect_info *)data;
 
 	if (datalen != sizeof(struct ebt_redirect_info))
+		return -EINVAL;
+	if (ebt_check_version(version, redirect_target.version,
+			      redirect_target.name))
 		return -EINVAL;
 	if (BASE_CHAIN && info->target == EBT_RETURN)
 		return -EINVAL;
@@ -55,6 +60,7 @@ static struct ebt_target redirect_target =
 	.target		= ebt_target_redirect,
 	.check		= ebt_target_redirect_check,
 	.me		= THIS_MODULE,
+	.version	= VERSIONIZE(1,0),
 };
 
 static int __init init(void)

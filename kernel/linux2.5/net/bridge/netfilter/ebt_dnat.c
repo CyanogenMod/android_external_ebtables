@@ -24,8 +24,10 @@ static int ebt_target_dnat(struct sk_buff **pskb, unsigned int hooknr,
 	return info->target;
 }
 
+static struct ebt_target dnat;
 static int ebt_target_dnat_check(const char *tablename, unsigned int hookmask,
-   const struct ebt_entry *e, void *data, unsigned int datalen)
+   const struct ebt_entry *e, void *data, unsigned int datalen,
+   unsigned int version)
 {
 	struct ebt_nat_info *info = (struct ebt_nat_info *)data;
 
@@ -38,6 +40,8 @@ static int ebt_target_dnat_check(const char *tablename, unsigned int hookmask,
 		return -EINVAL;
 	if (datalen != sizeof(struct ebt_nat_info))
 		return -EINVAL;
+	if (ebt_check_version(version, dnat.version, dnat.name))
+		return -EINVAL;
 	if (INVALID_TARGET)
 		return -EINVAL;
 	return 0;
@@ -49,6 +53,7 @@ static struct ebt_target dnat =
 	.target		= ebt_target_dnat,
 	.check		= ebt_target_dnat_check,
 	.me		= THIS_MODULE,
+	.version	= VERSIONIZE(1,0),
 };
 
 static int __init init(void)

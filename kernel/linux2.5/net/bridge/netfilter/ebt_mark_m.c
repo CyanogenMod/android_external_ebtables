@@ -23,12 +23,16 @@ static int ebt_filter_mark(const struct sk_buff *skb,
 	return !(((skb->nfmark & info->mask) == info->mark) ^ info->invert);
 }
 
+static struct ebt_match filter_mark;
 static int ebt_mark_check(const char *tablename, unsigned int hookmask,
-   const struct ebt_entry *e, void *data, unsigned int datalen)
+   const struct ebt_entry *e, void *data, unsigned int datalen,
+   unsigned int version)
 {
         struct ebt_mark_m_info *info = (struct ebt_mark_m_info *) data;
 
 	if (datalen != sizeof(struct ebt_mark_m_info))
+		return -EINVAL;
+	if (ebt_check_version(version, filter_mark.version, filter_mark.name))
 		return -EINVAL;
 	if (info->bitmask & ~EBT_MARK_MASK)
 		return -EINVAL;
@@ -45,6 +49,7 @@ static struct ebt_match filter_mark =
 	.match		= ebt_filter_mark,
 	.check		= ebt_mark_check,
 	.me		= THIS_MODULE,
+	.version	= VERSIONIZE(1,0),
 };
 
 static int __init init(void)

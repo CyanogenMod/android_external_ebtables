@@ -17,21 +17,6 @@
 
 static spinlock_t ebt_log_lock = SPIN_LOCK_UNLOCKED;
 
-static int ebt_log_check(const char *tablename, unsigned int hookmask,
-   const struct ebt_entry *e, void *data, unsigned int datalen)
-{
-	struct ebt_log_info *info = (struct ebt_log_info *)data;
-
-	if (datalen != sizeof(struct ebt_log_info))
-		return -EINVAL;
-	if (info->bitmask & ~EBT_LOG_MASK)
-		return -EINVAL;
-	if (info->loglevel >= 8)
-		return -EINVAL;
-	info->prefix[EBT_LOG_PREFIX_SIZE - 1] = '\0';
-	return 0;
-}
-
 struct tcpudphdr
 {
 	uint16_t src;
@@ -135,12 +120,32 @@ out:
 	spin_unlock_bh(&ebt_log_lock);
 }
 
+static struct ebt_watcher log;
+static int ebt_log_check(const char *tablename, unsigned int hookmask,
+   const struct ebt_entry *e, void *data, unsigned int datalen,
+   unsigned int version)
+{
+	struct ebt_log_info *info = (struct ebt_log_info *)data;
+
+	if (datalen != sizeof(struct ebt_log_info))
+		return -EINVAL;
+	if (ebt_check_version(version, log.version, log.name))
+		return -EINVAL;
+	if (info->bitmask & ~EBT_LOG_MASK)
+		return -EINVAL;
+	if (info->loglevel >= 8)
+		return -EINVAL;
+	info->prefix[EBT_LOG_PREFIX_SIZE - 1] = '\0';
+	return 0;
+}
+
 static struct ebt_watcher log =
 {
 	.name		= EBT_LOG_WATCHER,
 	.watcher	= ebt_log,
 	.check		= ebt_log_check,
 	.me		= THIS_MODULE,
+	.version	= VERSIONIZE(1,0),
 };
 
 static int __init init(void)

@@ -30,12 +30,16 @@ static int ebt_target_mark(struct sk_buff **pskb, unsigned int hooknr,
 	return info->target;
 }
 
+static struct ebt_target mark_target;
 static int ebt_target_mark_check(const char *tablename, unsigned int hookmask,
-   const struct ebt_entry *e, void *data, unsigned int datalen)
+   const struct ebt_entry *e, void *data, unsigned int datalen,
+   unsigned int version)
 {
 	struct ebt_mark_t_info *info = (struct ebt_mark_t_info *)data;
 
 	if (datalen != sizeof(struct ebt_mark_t_info))
+		return -EINVAL;
+	if (ebt_check_version(version, mark_target.version, mark_target.name))
 		return -EINVAL;
 	if (BASE_CHAIN && info->target == EBT_RETURN)
 		return -EINVAL;
@@ -51,6 +55,7 @@ static struct ebt_target mark_target =
 	.target		= ebt_target_mark,
 	.check		= ebt_target_mark_check,
 	.me		= THIS_MODULE,
+	.version	= VERSIONIZE(1,0),
 };
 
 static int __init init(void)

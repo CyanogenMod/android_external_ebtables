@@ -35,24 +35,59 @@
 #define ASSERT_WRITE_LOCK(x)
 #include <linux/netfilter_ipv4/listhelp.h>
 
-#if 0
-/* use this for remote debugging
- * Copyright (C) 1998 by Ori Pomerantz
+/* Copyright (C) 1998 by Ori Pomerantz
  * Print the string to the appropriate tty, the one
- * the current task uses
+ * the current task uses.
+ * Unlike prink, this function will print text on xterms and ssh connections.
+ * Useful for telling the user she did something wrong, without it being logged.
  */
-static void print_string(char *str)
+void ebt_print_string(const char *fmt, ...)
 {
 	struct tty_struct *my_tty;
+	static char print_buf[PRINT_BUFFER_LENGTH];
 
 	/* The tty for the current task */
 	my_tty = current->tty;
 	if (my_tty != NULL) {
-		my_tty->driver->write(my_tty, 0, str, strlen(str));
+		va_list args;
+		int printed_len;
+
+		va_start(args, fmt);
+		printed_len = vsnprintf(print_buf, sizeof(print_buf), fmt, args);
+		va_end(args);
+		my_tty->driver->write(my_tty, 0, print_buf, printed_len);
 		my_tty->driver->write(my_tty, 0, "\015\012", 2);
 	}
 }
 
+/* different major number implies incompatibility. Same major number
+ * but userspace minor number > kernel minor number also implies
+ * incompatibility.
+ * Minor numbers can be used when adding new functionality while
+ * compatibility with older versions with the same major number is
+ * guaranteed.
+ */
+int ebt_check_version(unsigned int u,unsigned int k, const char *n)
+{
+	int ret = 0;
+	unsigned int uma = u >> NR_MINORS;
+	unsigned int umi = u - (uma << NR_MINORS);
+	unsigned int kma = k >> NR_MINORS;
+	unsigned int kmi = k - (kma << NR_MINORS);
+
+	if (uma != kma || umi > kmi) {
+		ret = 1;
+		ebt_print_string("Conflicting version between the \'%s\'"
+		   " userspace and kernel module: the userspace module version"
+		   " is %d.%d, the kernel module version is %d.%d",
+			n, uma, umi, kma, kmi);
+	}
+	return ret;
+}
+
+
+#if 0
+/* use this for remote debugging */
 #define BUGPRINT(args) print_string(args);
 #else
 #define BUGPRINT(format, args...) printk("kernel msg: ebtables bug: please "\
@@ -87,7 +122,9 @@ static LIST_HEAD(ebt_matches);
 static LIST_HEAD(ebt_watchers);
 
 static struct ebt_target ebt_standard_target =
-{ {NULL, NULL}, EBT_STANDARD_TARGET, NULL, NULL, NULL, NULL};
+{
+	.name		= EBT_STANDARD_TARGET,
+};
 
 static inline int ebt_do_watcher (struct ebt_entry_watcher *w,
    const struct sk_buff *skb, const struct net_device *in,
@@ -366,8 +403,8 @@ ebt_check_match(struct ebt_entry_match *m, struct ebt_entry *e,
 	}
 	up(&ebt_mutex);
 	if (match->check &&
-	   match->check(name, hookmask, e, m->data, m->match_size) != 0) {
-		BUGPRINT("match->check failed\n");
+	   match->check(name, hookmask, e, m->data, m->match_size,
+			m->version) != 0) {
 		module_put(match->me);
 		return -EINVAL;
 	}
@@ -395,8 +432,8 @@ ebt_check_watcher(struct ebt_entry_watcher *w, struct ebt_entry *e,
 	}
 	up(&ebt_mutex);
 	if (watcher->check &&
-	   watcher->check(name, hookmask, e, w->data, w->watcher_size) != 0) {
-		BUGPRINT("watcher->check failed\n");
+	   watcher->check(name, hookmask, e, w->data, w->watcher_size,
+			  w->version) != 0) {
 		module_put(watcher->me);
 		return -EINVAL;
 	}
@@ -653,7 +690,8 @@ ebt_check_entry(struct ebt_entry *e, struct ebt_table_info *newinfo,
 	} else if ((e->target_offset + t->target_size +
 	   sizeof(struct ebt_entry_target) > e->next_offset) ||
 	   (t->u.target->check &&
-	   t->u.target->check(name, hookmask, e, t->data, t->target_size) != 0)){
+	   t->u.target->check(name, hookmask, e, t->data, t->target_size,
+			      t->version) != 0)) {
 		module_put(t->u.target->me);
 		ret = -EFAULT;
 		goto cleanup_watchers;
@@ -1495,6 +1533,8 @@ EXPORT_SYMBOL(ebt_unregister_watcher);
 EXPORT_SYMBOL(ebt_register_target);
 EXPORT_SYMBOL(ebt_unregister_target);
 EXPORT_SYMBOL(ebt_do_table);
+EXPORT_SYMBOL(ebt_print_string);
+EXPORT_SYMBOL(ebt_check_version);
 module_init(init);
 module_exit(fini);
 MODULE_LICENSE("GPL");

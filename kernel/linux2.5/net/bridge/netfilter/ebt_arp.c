@@ -94,12 +94,16 @@ static int ebt_filter_arp(const struct sk_buff *skb, const struct net_device *in
 	return EBT_MATCH;
 }
 
+static struct ebt_match filter_arp;
 static int ebt_arp_check(const char *tablename, unsigned int hookmask,
-   const struct ebt_entry *e, void *data, unsigned int datalen)
+   const struct ebt_entry *e, void *data, unsigned int datalen,
+   unsigned int version)
 {
 	struct ebt_arp_info *info = (struct ebt_arp_info *)data;
 
 	if (datalen != sizeof(struct ebt_arp_info))
+		return -EINVAL;
+	if (ebt_check_version(version, filter_arp.version, filter_arp.name))
 		return -EINVAL;
 	if ((e->ethproto != __constant_htons(ETH_P_ARP) &&
 	   e->ethproto != __constant_htons(ETH_P_RARP)) ||
@@ -116,6 +120,7 @@ static struct ebt_match filter_arp =
 	.match		= ebt_filter_arp,
 	.check		= ebt_arp_check,
 	.me		= THIS_MODULE,
+	.version	= VERSIONIZE(1,0),
 };
 
 static int __init init(void)

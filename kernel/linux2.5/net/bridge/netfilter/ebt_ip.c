@@ -70,12 +70,16 @@ static int ebt_filter_ip(const struct sk_buff *skb, const struct net_device *in,
 	return EBT_MATCH;
 }
 
+static struct ebt_match filter_ip;
 static int ebt_ip_check(const char *tablename, unsigned int hookmask,
-   const struct ebt_entry *e, void *data, unsigned int datalen)
+   const struct ebt_entry *e, void *data, unsigned int datalen,
+   unsigned int version)
 {
 	struct ebt_ip_info *info = (struct ebt_ip_info *)data;
 
 	if (datalen != sizeof(struct ebt_ip_info))
+		return -EINVAL;
+	if (ebt_check_version(version, filter_ip.version, filter_ip.name))
 		return -EINVAL;
 	if (e->ethproto != __constant_htons(ETH_P_IP) ||
 	   e->invflags & EBT_IPROTO)
@@ -102,6 +106,7 @@ static struct ebt_match filter_ip =
 	.match		= ebt_filter_ip,
 	.check		= ebt_ip_check,
 	.me		= THIS_MODULE,
+	.version	= VERSIONIZE(1,0),
 };
 
 static int __init init(void)
