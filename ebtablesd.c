@@ -347,7 +347,7 @@ continue_read:
 			                "opened", replace[table_nr].name);
 			goto write_msg;
 		}
-		optind = 1;
+		optind = 0; /* Setting optind = 1 causes serious annoyances */
 		do_command(argc, argv, EXEC_STYLE_DAEMON, &replace[table_nr]);
 		ebt_reinit_extensions();
 write_msg:
