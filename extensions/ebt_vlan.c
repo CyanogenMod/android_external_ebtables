@@ -21,6 +21,7 @@
 #include <string.h>
 #include <sys/socket.h>
 
+#include <linux/netfilter_bridge/ebt_vlan.h>
 #include <linux/netfilter_bridge/ebtables.h>
 #include "../include/ebtables_u.h"
 
