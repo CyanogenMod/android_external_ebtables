@@ -106,6 +106,7 @@ parse (int c,
 	    (struct ebt_vlan_info *) (*match)->data;
 	unsigned long i;
 	char *end;
+	__u16 encap;
 	switch (c) {
 	case VLAN_ID:
 		/*
@@ -186,19 +187,19 @@ parse (int c,
 		 * Parameter can be decimal, hexadecimal, or string.
 		 * Check arg val range (still raw area)
 		 */
-		(unsigned short) i = strtol (argv[optind - 1], &end, 16);
-		if (*end == '\0' && (i < ETH_ZLEN || i > 0xFFFF))
+		(unsigned short) encap = strtol (argv[optind - 1], &end, 16);
+		if (*end == '\0' && (encap < ETH_ZLEN || encap > 0xFFFF))
 			print_error
 			    ("Specified encapsulated frame type is out of range\n");
 		if (*end != '\0')
-			if (name_to_protocol (argv[optind - 1]) == -1)
+			if (name_to_number (argv[optind - 1], &encap) == -1)
 				print_error
 				    ("Problem with the specified encapsulated"
 				     "protocol\n");
 		/*
 		 * Set up parameter value (network notation)
 		 */
-		vlaninfo->encap = htons (i);
+		vlaninfo->encap = htons (encap);
 		/*
 		 * Set up parameter presence flag 
 		 */
