@@ -683,8 +683,10 @@ print_zero:
 			ebt_modprobe = optarg;
 			break;
 		case 'h': /* Help */
+#ifdef SILENT_DAEMON
 			if (exec_style == EXEC_STYLE_DAEMON)
 				ebt_print_error2("-h not supported in daemon mode");
+#endif
 			if (OPT_COMMANDS)
 				ebt_print_error2("Multiple commands are not allowed");
 			replace->command = 'h';
@@ -862,8 +864,10 @@ print_zero:
 				ebt_print_error2("Sorry, protocols have values above or equal to 0x0600");
 			break;
 		case 4  : /* Lc */
+#ifdef SILENT_DAEMON
 			if (exec_style == EXEC_STYLE_DAEMON)
 				ebt_print_error2("--Lc is not supported in daemon mode");
+#endif
 			ebt_check_option2(&(replace->flags), LIST_C);
 			if (replace->command != 'L')
 				ebt_print_error("Use --Lc with -L");
@@ -872,8 +876,10 @@ print_zero:
 			replace->flags |= LIST_C;
 			break;
 		case 5  : /* Ln */
+#ifdef SILENT_DAEMON
 			if (exec_style == EXEC_STYLE_DAEMON)
 				ebt_print_error2("--Ln is not supported in daemon mode");
+#endif
 			ebt_check_option2(&(replace->flags), LIST_N);
 			if (replace->command != 'L')
 				ebt_print_error2("Use --Ln with -L");
@@ -882,8 +888,10 @@ print_zero:
 			replace->flags |= LIST_N;
 			break;
 		case 6  : /* Lx */
+#ifdef SILENT_DAEMON
 			if (exec_style == EXEC_STYLE_DAEMON)
 				ebt_print_error2("--Lx is not supported in daemon mode");
+#endif
 			ebt_check_option2(&(replace->flags), LIST_X);
 			if (replace->command != 'L')
 				ebt_print_error2("Use --Lx with -L");
@@ -894,8 +902,10 @@ print_zero:
 			replace->flags |= LIST_X;
 			break;
 		case 12 : /* Lmac2 */
+#ifdef SILENT_DAEMON
 			if (exec_style == EXEC_STYLE_DAEMON)
 				ebt_print_error("--Lmac2 is not supported in daemon mode");
+#endif
 			ebt_check_option2(&(replace->flags), LIST_MAC2);
 			if (replace->command != 'L')
 				ebt_print_error2("Use --Lmac2 with -L");
