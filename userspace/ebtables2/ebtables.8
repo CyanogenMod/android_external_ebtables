@@ -1,6 +1,6 @@
-.TH EBTABLES 8  "11 August 2002"
+.TH EBTABLES 8  "03 December 2002"
 .\"
-.\" Man page written by Bart De Schuymer <bart.de.schuymer@pandora.be>
+.\" Man page written by Bart De Schuymer <bdschuym@pandora.be>
 .\" It is based on the iptables man page.
 .\"
 .\" Iptables page by Herve Eychenne March 2000.
@@ -35,11 +35,11 @@ ebtables (v.2.0) \- Ethernet bridge frame table administration
 .br
 .BR "ebtables --init-table"
 .br
-.BR "ebtables --atomic-init " file
+.BR "ebtables --atomic-init "
 .br
-.BR "ebtables --atomic-save " file
+.BR "ebtables --atomic-save "
 .br
-.BR "ebtables --atomic-commit " file
+.BR "ebtables --atomic-commit "
 .br
 .SH DESCRIPTION
 .B ebtables
@@ -203,26 +203,34 @@ standard chain names when you would ask a question on a mailing list.
 .B "--atomic-init"
 Copy the kernel's initial data of the table to the specified
 file. This can be used as the first action, after which rules are added
-to the file.
+to the file. The file can be specified using the
+.B --atomic-file
+option or through the
+.IR EBTABLES_ATOMIC_FILE " environment variable."
 .TP
 .B "--atomic-save"
 Copy the kernel's current data of the table to the specified
 file. This can be used as the first action, after which rules are added
-to the file.
+to the file. The file can be specified using the
+.B --atomic-file
+option or through the
+.IR EBTABLES_ATOMIC_FILE " environment variable."
 .TP
 .B "--atomic-commit"
 Replace the kernel table data with the data contained in the specified
 file. This is a useful command that allows you to put all your rules of a
 certain table into the kernel at once, saving the kernel a lot of precious
-time. The file which contains the table data is constructed by using
-either the
+time and allowing atomic updates of the tables. The file which contains
+the table data is constructed by using either the
 .B "--atomic-init"
 or the
 .B "--atomic-save"
 command to get a starting file. After that, using the
-.B "--atomic"
-option when constructing rules allows you to extend the file and build up
-the complete wanted table.
+.B "--atomic-file"
+option when constructing rules or setting the
+.IR EBTABLES_ATOMIC_FILE " environment variable"
+allows you to extend the file and build the complete table before
+commiting it to the kernel.
 .SS
 PARAMETERS
 The following parameters make up a rule specification (as used in the add
@@ -335,11 +343,13 @@ a target extension (see
 .BR "TARGET EXTENSIONS" ")"
 or a user defined chain name.
 .TP
-.B --atomic file
+.B --atomic-file file
 Let the command operate on the specified file. The data of the table to
 operate on will be extracted from the file and the result of the operation
 will be saved back into the file. If specified, this option should come
-before the command specification.
+before the command specification. An alternative that should be preferred,
+is setting the
+.BR EBTABLES_ATOMIC_FILE "environment variable."
 .TP
 .B -M, --modprobe program
 When talking to the kernel, use this program to try to automatically load
@@ -561,9 +571,11 @@ Mark the frame with the specified unsigned value.
 .br
 .SH FILES
 .I /etc/ethertypes
+.SH ENVIRONMENT VARIABLES
+.I EBTABLES_ATOMIC_FILE
 .SH BUGS
 This won't work on an architecture with a user32/kernel64 situation like the Sparc64.
 .SH AUTHOR
-.IR "" "Bart De Schuymer <" bart.de.schuymer@pandora.be >
+.IR "" "Bart De Schuymer <" bdschuym@pandora.be >
 .SH SEE ALSO
 .BR iptables "(8), " brctl (8)
