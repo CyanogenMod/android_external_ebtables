@@ -40,11 +40,15 @@ static struct ebt_table broute_table =
   RW_LOCK_UNLOCKED, check, NULL
 };
 
-static unsigned int
-ebt_broute(unsigned int hook, struct sk_buff **pskb, const struct net_device *in,
-   const struct net_device *out, int (*okfn)(struct sk_buff *))
+static unsigned int ebt_broute(struct sk_buff **pskb)
 {
-	return ebt_do_table(hook, pskb, in, out, &broute_table);
+	int ret;
+
+	ret = ebt_do_table(NF_BR_BROUTING, pskb, (*pskb)->dev, NULL,
+	   &broute_table);
+	if (ret == NF_DROP)
+		return 1; // route it
+	return 0; // bridge it
 }
 
 static int __init init(void)
@@ -56,7 +60,7 @@ static int __init init(void)
 		return ret;
 	br_write_lock_bh(BR_NETPROTO_LOCK);
 	// in br_input.c, br_handle_frame() wants to call broute_decision()
-	broute_decision = ebt_broute;
+	br_should_route_hook = ebt_broute;
 	br_write_unlock_bh(BR_NETPROTO_LOCK);
 	return ret;
 }
@@ -64,7 +68,7 @@ static int __init init(void)
 static void __exit fini(void)
 {
 	br_write_lock_bh(BR_NETPROTO_LOCK);
-	broute_decision = NULL;
+	br_should_route_hook = NULL;
 	br_write_unlock_bh(BR_NETPROTO_LOCK);
 	ebt_unregister_table(&broute_table);
 }
