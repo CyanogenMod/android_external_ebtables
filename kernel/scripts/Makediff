@@ -10,9 +10,9 @@
 
 export FROM=linux-2.4.22
 export TO=linux-2.4.22-ebt-brnf
-export FILE=ebtables-brnf_vs_2.4.22.diff
+export FILE=iets.diff
 
-diff -urNp --exclude TAGS $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h >> $FILE
+diff -urNp --exclude TAGS $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h > $FILE
 diff -urNp --exclude TAGS $FROM/include/linux/if_bridge.h $TO/include/linux/if_bridge.h >> $FILE
 diff -urNp --exclude TAGS $FROM/net/core/dev.c $TO/net/core/dev.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/br_input.c $TO/net/bridge/br_input.c >> $FILE
