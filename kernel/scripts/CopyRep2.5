@@ -4,13 +4,17 @@
 
 # 23 August 2002 - this is for the files vs kernel 2.5
 
+# Change these 2 to the appropriate directories
+# FROM points to the CVS base of ebtables
+# TO points to the base of the kernel source tree where we want the files
 export FROM=/ebtables-cvs/ebtables2/
-export TO=/usr/src/ebt2.0pre11
+export TO=/usr/src/linux-2.5.31
 
 mkdir -p $TO/net/bridge/netfilter
 mkdir -p $TO/include/netfilter_bridge
-cp -r -f $FROM/kernel/linux/* $TO/
-cp -r -f $FROM/kernel/linux2.5/* $TO/
-cp -r -f $FROM/br-nf-bds/linux/* $TO/
-cp -r -f $FROM/br-nf-bds2.5/linux/* $TO/
 
+# only the different files are in kernel/linux2.5
+/bin/cp -r -f $FROM/kernel/linux/* $TO/
+/bin/cp -r -f $FROM/kernel/linux2.5/* $TO/
+
+/bin/cp -r -f $FROM/br-nf-bds/linux2.5/* $TO/
