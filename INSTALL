@@ -8,7 +8,7 @@ put the files in the right directories:
 
 If you are using the CVS code or need your own kernel includes, do this
 instead (change the include directory to the appropriate one):
-%make install NONSTANDARD=y KERNEL_INCLUDES=/usr/src/linux/include
+%make install KERNEL_INCLUDES=/usr/src/linux/include
 
 WHAT GETS INSTALLED?
 --------------------
