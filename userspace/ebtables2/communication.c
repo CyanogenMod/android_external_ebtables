@@ -557,7 +557,7 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
    char command)
 {
 	FILE *file;
-	char *hlp;
+	char *hlp = NULL;
 	int size;
 
 	if (!(file = fopen(filename, "r+b")))

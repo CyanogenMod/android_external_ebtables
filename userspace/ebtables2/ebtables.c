@@ -476,9 +476,9 @@ static void list_em(struct ebt_u_entries *entries)
 		printf("ebtables -t %s -P %s %s\n", replace.name,
 		   entries->name, standard_targets[-entries->policy - 1]);
 	} else if (!(replace.flags & LIST_X)) {
-		printf("\nBridge chain: %s\nPolicy: %s\n", entries->name,
+		printf("\nBridge chain: %s, entries: %d, policy: %s\n",
+		   entries->name, entries->nentries,
 		   standard_targets[-entries->policy - 1]);
-		printf("nr. of entries: %d \n", entries->nentries);
 	}
 
 	i = entries->nentries;
