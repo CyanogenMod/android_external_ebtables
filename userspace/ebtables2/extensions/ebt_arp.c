@@ -53,7 +53,7 @@ static void print_help()
 		printf("%d = %s\n", i + 1, opcodes[i]);
 	printf(
 " hardware type string: 1 = Ethernet\n"
-" protocol type string: see /etc/ethertypes\n");
+" protocol type string: see "_PATH_ETHERTYPES"\n");
 }
 
 static void init(struct ebt_entry_match *match)
