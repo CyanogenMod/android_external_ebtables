@@ -37,7 +37,7 @@ static int ebt_target_snat_check(const char *tablename, unsigned int hookmask,
 		return -EINVAL;
 	if (hookmask & ~(1 << NF_BR_POST_ROUTING))
 		return -EINVAL;
-	if (infostuff->target >= NUM_STANDARD_TARGETS)
+	if (infostuff->target < -NUM_STANDARD_TARGETS || infostuff->target >= 0)
 		return -EINVAL;
 	return 0;
 }

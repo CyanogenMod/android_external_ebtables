@@ -653,7 +653,7 @@ enddst:
 			w_l = w_l->next;
 		}
 
-		printf("-j ");
+		printf("-j %s ", hlp->t->u.name);
 		t = find_target(hlp->t->u.name);
 		if (!t)
 			print_bug("Target not found");
@@ -1969,6 +1969,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if ( !table && !(table = find_table(replace.name)) )
+		print_error("Bad table name");
 	// database stuff before ebtables stuff
 	if (replace.command == 'b')
 		allowdb(allowbc);

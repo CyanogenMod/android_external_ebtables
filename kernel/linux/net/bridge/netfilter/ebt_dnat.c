@@ -32,12 +32,12 @@ static int ebt_target_dnat_check(const char *tablename, unsigned int hookmask,
 	struct ebt_nat_info *infostuff = (struct ebt_nat_info *) data;
 
 	if ( (strcmp(tablename, "nat") ||
-	   (hookmask & ~(1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_LOCAL_OUT))) &&
+	   (hookmask & ~((1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_LOCAL_OUT)))) &&
 	   (strcmp(tablename, "broute") || hookmask & ~(1 << NF_BR_BROUTING)) )
 		return -EINVAL;
 	if (datalen != sizeof(struct ebt_nat_info))
 		return -EINVAL;
-	if (infostuff->target >= NUM_STANDARD_TARGETS)
+	if (infostuff->target < -NUM_STANDARD_TARGETS || infostuff->target >= 0)
 		return -EINVAL;
 	return 0;
 }

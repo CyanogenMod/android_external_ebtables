@@ -46,7 +46,7 @@ static int parse(int c, char **argv, int argc,
 		check_option(flags, OPT_REDIRECT_TARGET);
 		for (i = 0; i < NUM_STANDARD_TARGETS; i++)
 			if (!strcmp(optarg, standard_targets[i])) {
-				redirectinfo->target = i;
+				redirectinfo->target = -i - 1;
 				break;
 			}
 		if (i == NUM_STANDARD_TARGETS)

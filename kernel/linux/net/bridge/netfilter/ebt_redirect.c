@@ -38,7 +38,7 @@ static int ebt_target_redirect_check(const char *tablename, unsigned int hookmas
 		return -EINVAL;
 	if (datalen != sizeof(struct ebt_redirect_info))
 		return -EINVAL;
-	if (infostuff->target >= NUM_STANDARD_TARGETS)
+	if (infostuff->target < -NUM_STANDARD_TARGETS || infostuff->target >= 0)
 		return -EINVAL;
 	return 0;
 }
