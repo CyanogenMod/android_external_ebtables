@@ -37,6 +37,12 @@ ebtables (v.2.0) \- ethernet bridge packet table administration
 .br
 .BR "ebtables -[b] [" "y/n" "]"
 .br
+.BR "ebtables --atomic-init " file
+.br
+.BR "ebtables --atomic-save " file
+.br
+.BR "ebtables --atomic-commit " file
+.br
 .SH DESCRIPTION
 .B ebtables
 is used to set up, maintain, and inspect the tables of Ethernet frame
@@ -148,6 +154,26 @@ the frame came in or will go out, the protocol field and the hook. This
 database is independent from the rest of
 .B ebtables
 and is in a different kernel module.
+.br
+The following three options change the output when not listing the
+database:
+.br
+.B "--Ln"
+.br
+Puts rule numbers in front of every rule.
+.br
+.B "--Lc"
+.br
+Puts the counter value at the end of every rule.
+.br
+.B "--Lx"
+.br
+The output is directly usable as executable commands in a script, to be
+run f.e. at bootup. This option is incompatible with the previous two
+options. When no chain name was specified for the
+.B "-L"
+command, all necessary commands for making the user defined chains and
+renaming the standard chains will be made.
 .TP
 .B "-F, --flush"
 Flush the selected chain. If no chain is selected, every chain will be
@@ -178,6 +204,30 @@ Rename the specified chain to the new name. This has no effect on the
 structure of the table. It is also allowed to rename a base chain, f.e.
 if you like PREBRIDGING more than PREROUTING. Be sure to talk about the
 standard chain names when you would ask a question on a mailing list.
+.TP
+.B "--atomic-init"
+Copy the kernel's initial data of the specified table to the specified
+file. This can be used as the first action, after which rules are added
+to the file.
+.TP
+.B "--atomic-save"
+Copy the kernel's current data of the specified table to the specified
+file. This can be used as the first action, after which rules are added
+to the file.
+.TP
+.B "--atomic-commit"
+Replace the kernel table data with the data contained in the specified
+file. This is a useful command that allows you to put all your rules of a
+certain table into the kernel at once, saving the kernel a lot of precious
+time. The file which contains the table data is constructed by using
+either the
+.B "--atomic-init"
+or the
+.B "--atomic-save"
+command to get a starting file. After that, using the
+.B "--atomic"
+option when constructing rules allows you to extend the file and build up
+the complete wanted table.
 .SS
 PARAMETERS
 The following parameters make up a rule specification (as used in the add
@@ -280,8 +330,8 @@ names of extensions and
 .B ebtables
 will try to write help about those extensions. E.g. ebtables -h snat log ip arp.
 .TP
-.BR "-b --db " "[\fIy/n\fP]"
-.IR "" "Enable (" y ") or disable (" n ") the database."
+.BR "-b --db [" "y/n" "]"
+Enable (y) or disable (n) the database.
 .TP
 .BR "-j, --jump " "\fItarget\fP"
 The target of the rule. This is one of the following values:
@@ -291,9 +341,15 @@ The target of the rule. This is one of the following values:
 or a target extension, see
 .BR "TARGET EXTENSIONS" .
 .TP
-.BR "-M, --modprobe " "\fIcommand\fP"
-When talking to the kernel, use this
-.IR command " to try to automatically load missing kernel modules."
+.BR "--atomic " file
+Let the command operate on the specified file. The data of the table to
+operate on will be extracted from the file and the result of the operation
+will be saved back into the file. If specified, this option should come
+before the command specification.
+.TP
+.BR "-M, --modprobe " "program"
+When talking to the kernel, use this program to try to automatically load
+missing kernel modules.
 .SH MATCH EXTENSIONS
 .B ebtables
 extensions are precompiled into the userspace tool. So there is no need
