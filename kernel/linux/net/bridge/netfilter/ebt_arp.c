@@ -79,6 +79,7 @@ static int ebt_filter_arp(const struct sk_buff *skb, const struct net_device *in
 			return EBT_NOMATCH;
 		if (info->bitmask & EBT_ARP_SRC_MAC) {
 			uint8_t verdict, i;
+
 			memcpy(&src, ((*skb).nh.raw) +
 					sizeof(struct arphdr),
 					ETH_ALEN);
@@ -92,6 +93,7 @@ static int ebt_filter_arp(const struct sk_buff *skb, const struct net_device *in
 
 		if (info->bitmask & EBT_ARP_DST_MAC) { 
 			uint8_t verdict, i;
+
 			memcpy(&dst, ((*skb).nh.raw) +
 					sizeof(struct arphdr) +
 			   		(((*skb).nh.arph)->ar_hln) +
