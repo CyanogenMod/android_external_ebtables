@@ -1462,6 +1462,10 @@ static void get_kernel_table(const char *modprobe)
 			print_error("The kernel doesn't support the ebtables "
 			"%s table", replace.name);
 	}
+	// when listing a table contained in a file, we don't expect the user
+	// to know what the table's name is
+	if ( !(table = find_table(replace.name)) )
+		print_error("Bad table name");
 }
 
 #define print_if_l_error print_error("Interface name length must be less " \
