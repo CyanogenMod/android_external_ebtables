@@ -29,6 +29,7 @@ headers:
 
 .PHONY: symlink
 symlink:
+	rm -f /usr/include/linux
 	ln -fs $(KERNEL_DIR)/include/linux /usr/include/linux
 
 communication.o: communication.c include/ebtables_u.h
