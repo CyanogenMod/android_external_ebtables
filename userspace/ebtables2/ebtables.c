@@ -128,6 +128,8 @@ unsigned char mac_type_multicast[ETH_ALEN] = {1,0,0,0,0,0};
 unsigned char msk_type_multicast[ETH_ALEN] = {1,0,0,0,0,0};
 unsigned char mac_type_broadcast[ETH_ALEN] = {255,255,255,255,255,255};
 unsigned char msk_type_broadcast[ETH_ALEN] = {255,255,255,255,255,255};
+unsigned char mac_type_bridge_group[ETH_ALEN] = {0x01,0x80,0xc2,0,0,0};
+unsigned char msk_type_bridge_group[ETH_ALEN] = {255,255,255,255,255,255};
 
 /*
  * holds all the data
@@ -487,10 +489,24 @@ void print_mac_and_mask(const char *mac, const char *mask)
 {
 	char hlpmsk[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
-	print_mac(mac);
-	if (memcmp(mask, hlpmsk, 6)) {
-		printf("/");
-		print_mac(mask);
+	if (!memcmp(mac, mac_type_unicast, 6) &&
+	    !memcmp(mask, msk_type_unicast, 6))
+		printf("Unicast");
+	else if (!memcmp(mac, mac_type_multicast, 6) &&
+	         !memcmp(mask, msk_type_multicast, 6))
+		printf("Multicast");
+	else if (!memcmp(mac, mac_type_broadcast, 6) &&
+	         !memcmp(mask, msk_type_broadcast, 6))
+		printf("Broadcast");
+	else if (!memcmp(mac, mac_type_bridge_group, 6) &&
+	         !memcmp(mask, msk_type_bridge_group, 6))
+		printf("BGA");
+	else {
+		print_mac(mac);
+		if (memcmp(mask, hlpmsk, 6)) {
+			printf("/");
+			print_mac(mask);
+		}
 	}
 }
 
@@ -564,46 +580,14 @@ static void list_em(struct ebt_u_entries *entries)
 			printf("-s ");
 			if (hlp->invflags & EBT_ISOURCE)
 				printf("! ");
-			if (!memcmp(hlp->sourcemac, mac_type_unicast, 6) &&
-			    !memcmp(hlp->sourcemsk, msk_type_unicast, 6)) {
-				printf("Unicast");
-				goto endsrc;
-			}
-			if (!memcmp(hlp->sourcemac, mac_type_multicast, 6) &&
-			    !memcmp(hlp->sourcemsk, msk_type_multicast, 6)) {
-				printf("Multicast");
-				goto endsrc;
-			}
-			if (!memcmp(hlp->sourcemac, mac_type_broadcast, 6) &&
-			    !memcmp(hlp->sourcemsk, msk_type_broadcast, 6)) {
-				printf("Broadcast");
-				goto endsrc;
-			}
 			print_mac_and_mask(hlp->sourcemac, hlp->sourcemsk);
-endsrc:
 			printf(" ");
 		}
 		if (hlp->bitmask & EBT_DESTMAC) {
 			printf("-d ");
 			if (hlp->invflags & EBT_IDEST)
 				printf("! ");
-			if (!memcmp(hlp->destmac, mac_type_unicast, 6) &&
-			    !memcmp(hlp->destmsk, msk_type_unicast, 6)) {
-				printf("Unicast");
-				goto enddst;
-			}
-			if (!memcmp(hlp->destmac, mac_type_multicast, 6) &&
-			    !memcmp(hlp->destmsk, msk_type_multicast, 6)) {
-				printf("Multicast");
-				goto enddst;
-			}
-			if (!memcmp(hlp->destmac, mac_type_broadcast, 6) &&
-			    !memcmp(hlp->destmsk, msk_type_broadcast, 6)) {
-				printf("Broadcast");
-				goto enddst;
-			}
 			print_mac_and_mask(hlp->destmac, hlp->destmsk);
-enddst:
 			printf(" ");
 		}
 		if (hlp->in[0] != '\0') {
@@ -1444,8 +1428,9 @@ struct ethertypeent *parseethertypebynumber(int type)
 
 /*
  * put the mac address into 6 (ETH_ALEN) bytes
+ * returns 0 on success
  */
-int getmac_and_mask(char *from, char *to, char *mask)
+int get_mac_and_mask(char *from, char *to, char *mask)
 {
 	char *p;
 	int i;
@@ -1464,6 +1449,11 @@ int getmac_and_mask(char *from, char *to, char *mask)
 	if (strcasecmp(from, "Broadcast") == 0) {
 		memcpy(to, mac_type_broadcast, ETH_ALEN);
 		memcpy(mask, msk_type_broadcast, ETH_ALEN);
+		return 0;
+	}
+	if (strcasecmp(from, "BGA") == 0) {
+		memcpy(to, mac_type_bridge_group, ETH_ALEN);
+		memcpy(mask, msk_type_bridge_group, ETH_ALEN);
 		return 0;
 	}
 	if ( (p = strrchr(from, '/')) != NULL) {
@@ -2198,7 +2188,7 @@ int main(int argc, char *argv[])
 				if (optind > argc)
 					print_error("No source mac "
 					            "specified");
-				if (getmac_and_mask(argv[optind - 1],
+				if (get_mac_and_mask(argv[optind - 1],
 				   new_entry->sourcemac, new_entry->sourcemsk))
 					print_error("Problem with specified "
 					            "source mac");
@@ -2213,7 +2203,7 @@ int main(int argc, char *argv[])
 				if (optind > argc)
 					print_error("No destination mac "
 					            "specified");
-				if (getmac_and_mask(argv[optind - 1],
+				if (get_mac_and_mask(argv[optind - 1],
 				   new_entry->destmac, new_entry->destmsk))
 					print_error("Problem with specified "
 					            "destination mac");
