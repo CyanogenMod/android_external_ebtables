@@ -40,6 +40,12 @@ void ebt_early_init_once();
 static void sigpipe_handler(int sig)
 {
 }
+static void copy_table_names()
+{
+	strcpy(replace[0].name, "filter");
+	strcpy(replace[1].name, "nat");
+	strcpy(replace[2].name, "broute");
+}
 
 int main(int argc_, char *argv_[])
 {
@@ -86,10 +92,7 @@ int main(int argc_, char *argv_[])
 
 	ebt_silent = 1;
 
-	strcpy(replace[0].name, "filter");
-	strcpy(replace[1].name, "nat");
-	strcpy(replace[2].name, "broute");
-
+	copy_table_names();
 	ebt_early_init_once();
 
 	while (!stop) {
@@ -193,6 +196,7 @@ continue_read:
 				goto write_msg;
 			}
 			ebt_cleanup_replace(&replace[i]);
+			copy_table_names();
 			replace[i].flags &= ~OPT_KERNELDATA;
 			goto write_msg;
 		} else if (!strcmp(argv[1], "open")) {
