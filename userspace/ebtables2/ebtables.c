@@ -104,8 +104,8 @@ char* standard_targets[NUM_STANDARD_TARGETS] = {
 	"RETURN",
 };
 
-unsigned char mac_type_unicast[ETH_ALEN] = {0,0,0,0,0,0};
-unsigned char msk_type_unicast[ETH_ALEN] = {1,0,0,0,0,0};
+unsigned char mac_type_unicast[ETH_ALEN] =   {0,0,0,0,0,0};
+unsigned char msk_type_unicast[ETH_ALEN] =   {1,0,0,0,0,0};
 unsigned char mac_type_multicast[ETH_ALEN] = {1,0,0,0,0,0};
 unsigned char msk_type_multicast[ETH_ALEN] = {1,0,0,0,0,0};
 unsigned char mac_type_broadcast[ETH_ALEN] = {255,255,255,255,255,255};
@@ -373,7 +373,7 @@ int ebtables_insmod(const char *modname, const char *modprobe)
 	char *buf = NULL;
 	char *argv[3];
 
-	/* If they don't explicitly set it, read out of kernel */
+	// If they don't explicitly set it, read out of kernel
 	if (!modprobe) {
 		buf = get_modprobe();
 		if (!buf)
@@ -402,10 +402,11 @@ int ebtables_insmod(const char *modname, const char *modprobe)
 }
 
 
-// used to parse /etc/etherproto
+// used to parse /etc/ethertypes
 int disregard_whitespace(char *buffer, FILE *ifp)
 {
 	int hlp;
+
 	buffer[0] = '\t';
 	while (buffer[0] == '\t' || buffer[0] == '\n' || buffer[0] == ' ') {
 		hlp = fscanf(ifp, "%c", buffer);
@@ -414,10 +415,11 @@ int disregard_whitespace(char *buffer, FILE *ifp)
 	return 0;
 }
 
-// used to parse /etc/etherproto
+// used to parse /etc/ethertypes
 int disregard_tabspace(char *buffer, FILE *ifp)
 {
 	int hlp;
+
 	buffer[0] = '\t';
 	while (buffer[0] == '\t' || buffer[0] == ' ') {
 		hlp = fscanf(ifp, "%c", buffer);
@@ -432,9 +434,10 @@ int get_a_line(char *buffer, char *value, FILE *ifp)
 	int i, hlp;
 	char anotherhlp;
 
-	/* discard comment lines && whitespace*/
+	// discard comment lines and whitespace
 	while (1) {
-		if (disregard_whitespace(buffer, ifp)) return -1;
+		if (disregard_whitespace(buffer, ifp))
+			return -1;
 		if (buffer[0] == '#')
 			while (1) {
 				hlp = fscanf(ifp, "%c", &anotherhlp);
@@ -443,17 +446,20 @@ int get_a_line(char *buffer, char *value, FILE *ifp)
 				if (anotherhlp == '\n')
 					break;
 			}
-		else break;
+		else
+			break;
 	}
 
 	// buffer[0] already contains the first letter
 	for (i = 1; i < 21; i++) {
 		hlp = fscanf(ifp, "%c", buffer + i);
-		if (hlp == EOF || hlp == 0) return -1;
+		if (hlp == EOF || hlp == 0)
+			return -1;
 		if (buffer[i] == '\t' || buffer[i] == ' ')
 			break;
 	}
-	if (i == 21) return -1;
+	if (i == 21)
+		return -1;
 	buffer[i] = '\0';
 	if (disregard_tabspace(value, ifp))
 		return -1;
@@ -477,7 +483,8 @@ int get_a_line(char *buffer, char *value, FILE *ifp)
 	return 0;
 }
 
-// helper function for list_em()
+// translate a hexadecimal number to a protocol name, parsing /etc/etherproto
+// returns 0 on success
 int number_to_name(unsigned short proto, char *name)
 {
 	FILE *ifp;
@@ -542,7 +549,7 @@ static void list_em(struct ebt_u_entries *entries)
 			if (hlp->invflags & EBT_IPROTO)
 				printf("! ");
 			if (hlp->bitmask & EBT_802_3)
-				printf("Length, ");
+				printf("Length ");
 			else {
 				if (number_to_name(ntohs(hlp->ethproto), name))
 					printf("0x%x ", ntohs(hlp->ethproto));
@@ -654,7 +661,9 @@ enddst:
 			w_l = w_l->next;
 		}
 
-		printf("-j %s ", hlp->t->u.name);
+		printf("-j ");
+		if (strcmp(hlp->t->u.name, EBT_STANDARD_TARGET))
+			printf("%s ", hlp->t->u.name);
 		t = find_target(hlp->t->u.name);
 		if (!t)
 			print_bug("Target not found");
@@ -726,6 +735,7 @@ void check_for_loops()
 			print_memory();
 	}
 
+	// check for loops, starting from every base chain
 	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
 		if (!(replace.valid_hooks & (1 << i)))
 			continue;
@@ -761,10 +771,10 @@ void check_for_loops()
 letscontinue:
 			e = e->next;
 		}
-		// we are in a standard chain
+		// we are at the end of a standard chain
 		if (sp == 0)
 			continue;
-		// go back to the chain one level lower
+		// go back to the chain one level higher
 		sp--;
 		j = stack[sp].n;
 		chain_nr = stack[sp].chain_nr;
@@ -777,6 +787,7 @@ letscontinue:
 }
 
 // parse the chain name and return the corresponding nr
+// returns -1 on failure
 int get_hooknr(char* arg)
 {
 	int i;
@@ -886,7 +897,6 @@ static void list_rules()
 			}
 		}
 	}
-	return;
 }
 
 // execute command P
@@ -1032,7 +1042,7 @@ static int check_rule_exists(int rule_nr)
 	// handle '-D chain rulenr' command
 	if (rule_nr != -1) {
 		if (rule_nr > entries->nentries)
-			return 0;
+			return -1;
 		// user starts counting from 1
 		return rule_nr - 1;
 	}
@@ -1044,8 +1054,7 @@ static int check_rule_exists(int rule_nr)
 			print_bug("Hmm, trouble");
 		if ( u_e->ethproto == new_entry->ethproto
 		   && !strcmp(u_e->in, new_entry->in)
-		   && !strcmp(u_e->out, new_entry->out)
-		   && u_e->bitmask == new_entry->bitmask) {
+		   && !strcmp(u_e->out, new_entry->out)) {
 		   	if (strcmp(u_e->logical_in, new_entry->logical_in) ||
 			   strcmp(u_e->logical_out, new_entry->logical_out))
 				continue;
@@ -1115,7 +1124,7 @@ letscontinue:
 	return -1;
 }
 
-// execute command A
+// execute command A or I
 static void add_rule(int rule_nr)
 {
 	int i, j;
@@ -1127,8 +1136,8 @@ static void add_rule(int rule_nr)
 
 	if (rule_nr != -1) { // command -I
 		if (--rule_nr > entries->nentries)
-			print_error("rule nr too high: %d > %d", rule_nr,
-			   entries->nentries);
+			print_error("rule nr too high: %d > %d", rule_nr + 1,
+			   entries->nentries + 1);
 	} else
 		rule_nr = entries->nentries;
 	// we're adding one rule
@@ -1278,7 +1287,7 @@ static void delete_rule(int rule_nr)
 			else
 				break;
 		} else
-		entries->counter_offset--;
+			entries->counter_offset--;
 	}
 }
 
@@ -1288,7 +1297,7 @@ void zero_counters(int zerochain)
 
 	if (zerochain == -1) {
 		// tell main() we don't update the counters
-		// this results in tricking the kernel to zero his counters,
+		// this results in tricking the kernel to zero its counters,
 		// naively expecting userspace to update its counters. Muahahaha
 		counterchanges = NULL;
 		replace.num_counters = 0;
@@ -1451,6 +1460,7 @@ int getmac_and_mask(char *from, char *to, char *mask)
 	return 0;
 }
 
+// executes the final_check() function for all extensions used by the rule
 void do_final_checks(struct ebt_u_entry *e, struct ebt_u_entries *entries)
 {
 	struct ebt_u_match_list *m_l;
@@ -1517,9 +1527,9 @@ int main(int argc, char *argv[])
 	struct ebt_u_target *t;
 	struct ebt_u_match *m;
 	struct ebt_u_watcher *w;
- 	struct ebt_u_match_list *m_l;
+	struct ebt_u_match_list *m_l;
 	struct ebt_u_watcher_list *w_l;
- 	struct ebt_u_entries *entries;
+	struct ebt_u_entries *entries;
 	const char *modprobe = NULL;
 
 	// initialize the table name, OPT_ flags, selected hook and command
@@ -1562,6 +1572,8 @@ int main(int argc, char *argv[])
 					print_error("can't initialize ebtables "
 					"table %s", replace.name);
 			}
+			if (optarg[0] == '-')
+				print_error("No chain name specified");
 			if (c == 'N') {
 				struct ebt_u_chain_list *cl, **cl2;
 
@@ -1572,7 +1584,7 @@ int main(int argc, char *argv[])
 					print_error("Target with name %s exists"
 					   , optarg);
 				if (strlen(optarg) >= EBT_CHAIN_MAXNAMELEN)
-					print_error("Chain name len can't exceed %d",
+					print_error("Chain name length can't exceed %d",
 					   EBT_CHAIN_MAXNAMELEN - 1);
 				cl = (struct ebt_u_chain_list *)
 				   malloc(sizeof(struct ebt_u_chain_list));
@@ -1590,15 +1602,16 @@ int main(int argc, char *argv[])
 				strcpy(cl->udc->name, optarg);
 				cl->udc->entries = NULL;
 				cl->kernel_start = NULL;
+				// put the new chain at the end
 				cl2 = &replace.udc;
 				while (*cl2)
 					cl2 = &((*cl2)->next);
 				*cl2 = cl;
 				break;
 			}
+			if ((replace.selected_hook = get_hooknr(optarg)) == -1)
+				print_error("Chain %s doesn't exist", optarg);
 			if (c == 'E') {
-				if ((replace.selected_hook = get_hooknr(optarg)) == -1)
-					print_error("Chain %s doesn't exist", optarg);
 				if (optind >= argc || argv[optind][0] == '-')
 					print_error("No new chain name specified");
 				if (strlen(argv[optind]) >= EBT_CHAIN_MAXNAMELEN)
@@ -1615,8 +1628,6 @@ int main(int argc, char *argv[])
 			if (c == 'X') {
 				struct ebt_u_chain_list *cl, **cl2;
 
-				if ((replace.selected_hook = get_hooknr(optarg)) == -1)
-					print_error("Chain %s doesn't exist", optarg);
 				if (replace.selected_hook < NF_BR_NUMHOOKS)
 					print_error("You can't remove a standard chain");
 				flush_chains();
@@ -1638,8 +1649,6 @@ int main(int argc, char *argv[])
 				break;
 			}
 
-			if ((replace.selected_hook = get_hooknr(optarg)) == -1)
-				print_error("Chain %s doesn't exist", optarg);
 			if (c == 'D' && optind < argc &&
 			   argv[optind][0] != '-') {
 				rule_nr = strtol(argv[optind], &buffer, 10);
@@ -1652,10 +1661,12 @@ int main(int argc, char *argv[])
 				if (optind >= argc)
 					print_error("No policy specified");
 				policy = 0;
-				for (i = 0; i < 4; i++)
+				for (i = 0; i < NUM_STANDARD_TARGETS; i++)
 					if (!strcmp(argv[optind],
 					   standard_targets[i])) {
 						policy = -i -1;
+						if (policy == EBT_CONTINUE)
+							policy = 0;
 						break;
 					}
 				if (policy == 0)
@@ -1693,7 +1704,6 @@ int main(int argc, char *argv[])
 					            " not allowed");
 				replace.flags |= OPT_COMMAND;
 			}
-			i = -1;
 			if ( !(table = find_table(replace.name)) )
 				print_error("Bad table name");
 			// get the kernel's information
@@ -1703,6 +1713,7 @@ int main(int argc, char *argv[])
 					print_error("can't initialize ebtables "
 					"table %s", replace.name);
 			}
+			i = -1;
 			if (optarg) {
 				if ( (i = get_hooknr(optarg)) == -1 )
 					print_error("Bad chain");
@@ -1767,7 +1778,7 @@ int main(int argc, char *argv[])
 			if (replace.command != 'h')
 				print_error("Please put the -t option first");
 			check_option(&replace.flags, OPT_TABLE);
-			if (strlen(optarg) > EBT_TABLE_MAXNAMELEN)
+			if (strlen(optarg) > EBT_TABLE_MAXNAMELEN - 1)
 				print_error("Table name too long");
 			strcpy(replace.name, optarg);
 			break;
@@ -1799,7 +1810,7 @@ int main(int argc, char *argv[])
 					print_error("No in-interface "
 					            "specified");
 				if (strlen(argv[optind - 1]) >= IFNAMSIZ)
-					print_error("Illegal interfacelength");
+					print_error("Illegal interface length");
 				strcpy(new_entry->in, argv[optind - 1]);
 				break;
 			}
@@ -1817,7 +1828,7 @@ int main(int argc, char *argv[])
 					print_error("No logical in-interface "
 					            "specified");
 				if (strlen(argv[optind - 1]) >= IFNAMSIZ)
-					print_error("Illegal interfacelength");
+					print_error("Illegal interface length");
 				strcpy(new_entry->logical_in, argv[optind - 1]);
 				break;
 			}
@@ -1861,7 +1872,6 @@ int main(int argc, char *argv[])
 				break;
 			}
 			if (c == 'j') {
-
 				check_option(&replace.flags, OPT_JUMP);
 				for (i = 0; i < NUM_STANDARD_TARGETS; i++)
 					if (!strcmp(optarg,
@@ -1892,6 +1902,7 @@ int main(int argc, char *argv[])
 				else {
 					// must be an extension then
 					struct ebt_u_target *t;
+
 					t = find_target(optarg);
 					// -j standard not allowed either
 					if (!t || t ==
@@ -1968,7 +1979,7 @@ int main(int argc, char *argv[])
 			t = (struct ebt_u_target *)new_entry->t;
 			if ((t->parse(c - t->option_offset, argv, argc,
 			   new_entry, &t->flags, &t->t)))
-				continue;
+				goto check_extension;
 
 			// is it a match_option?
 			for (m = matches; m; m = m->next)
@@ -1979,7 +1990,7 @@ int main(int argc, char *argv[])
 			if (m != NULL) {
 				if (m->used == 0)
 					add_match(m);
-				continue;
+				goto check_extension;
 			}
 
 			// is it a watcher option?
@@ -1990,11 +2001,12 @@ int main(int argc, char *argv[])
 
 			if (w == NULL)
 				print_error("Unknown argument");
+			if (w->used == 0)
+				add_watcher(w);
+check_extension:
 			if (replace.command != 'A' && replace.command != 'I' &&
 			   replace.command != 'D')
 				print_error("extensions only for -A, -I and -D");
-			if (w->used == 0)
-				add_watcher(w);
 		}
 	}
 
