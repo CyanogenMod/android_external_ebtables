@@ -1,0 +1,15 @@
+#
+# Bridge netfilter configuration
+#
+dep_tristate '  Bridge: ebtables' CONFIG_BRIDGE_EBT $CONFIG_BRIDGE
+dep_tristate '    ebt: filter table support' CONFIG_BRIDGE_EBT_T_FILTER $CONFIG_BRIDGE_EBT
+dep_tristate '    ebt: nat table support' CONFIG_BRIDGE_EBT_T_NAT $CONFIG_BRIDGE_EBT
+dep_tristate '    ebt: broute table support' CONFIG_BRIDGE_EBT_BROUTE $CONFIG_BRIDGE_EBT
+dep_tristate '    ebt: LOG support' CONFIG_BRIDGE_EBT_LOG $CONFIG_BRIDGE_EBT
+dep_tristate '    ebt: IP filter support' CONFIG_BRIDGE_EBT_IPF $CONFIG_BRIDGE_EBT
+dep_tristate '    ebt: ARP filter support' CONFIG_BRIDGE_EBT_ARPF $CONFIG_BRIDGE_EBT
+dep_tristate '    ebt: 802.1Q VLAN filter support (EXPERIMENTAL)' CONFIG_BRIDGE_EBT_VLANF $CONFIG_BRIDGE_EBT
+dep_tristate '    ebt: nat target support' CONFIG_BRIDGE_EBT_NAT $CONFIG_BRIDGE_EBT
+dep_tristate '    ebt: redirect target support' CONFIG_BRIDGE_EBT_REDIRECT $CONFIG_BRIDGE_EBT
+dep_tristate '  Bridge: ethernet database' CONFIG_BRIDGE_DB $CONFIG_BRIDGE
+
