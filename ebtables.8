@@ -1,6 +1,6 @@
-.TH EBTABLES 8  "09 November 2003"
+.TH EBTABLES 8  "18 January 2004"
 .\"
-.\" Man page written and maintained by Bart De Schuymer <bdschuym@pandora.be>
+.\" Man page written by Bart De Schuymer <bdschuym@pandora.be>
 .\" It is based on the iptables man page.
 .\"
 .\" The man page was edited, February 25th 2003, by 
@@ -36,7 +36,7 @@ ebtables (v.2.0) \- Ethernet bridge frame table administration
 .br
 .BR "ebtables " [ "-t table" ] " -L " [ -Z "] [" " chain" "] [ [ [" --Ln "] [" --Lc "] ] | [" --Lx "] ] [" --Lmac2 "]"
 .br
-.BR "ebtables " [ "-t table" ] " -N chain"
+.BR "ebtables " [ "-t table" ] " -N chain " [ "-P ACCEPT " | " DROP " | " RETURN" ]
 .br
 .BR "ebtables " [ "-t table" ] " -X " [ chain ]
 .br
@@ -266,7 +266,12 @@ option.
 .B "-N, --new-chain"
 Create a new user-defined chain with the given name. The number of
 user-defined chains is unlimited. A user-defined chain name has maximum
-length of 31 characters.
+length of 31 characters. The standard policy of the user-defined chain is
+ACCEPT. You can initialize the new chain with another policy by using the
+.B -P
+option. Unlike the
+.B -P
+command, you only need to specify the policy, not the chain name.
 .TP
 .B "-X, --delete-chain"
 Delete the specified user-defined chain. There must be no remaining references
@@ -491,28 +496,6 @@ If the 802.3 DSAP and SSAP values are 0xaa then the SNAP type field must
 be consulted to determine the payload protocol.  This is a two byte
 (hexadecimal) argument.  Only 802.3 frames with DSAP/SSAP 0xaa are
 checked for type.
-.SS among
-Match a MAC address or MAC/IP address pair versus a list of MAC addresses
-and MAC/IP address pairs.
-A list entry has the following format: xx:xx:xx:xx:xx:xx[=ip.ip.ip.ip][,]. Multiple
-list entries are separated by a comma, specifying an IP address corresponding to
-the MAC address is optional. Multiple MAC/IP address pairs with the same MAC address
-but different IP address (and vice versa) can be specified. If the MAC address doesn't
-match any entry from the list, the frame doesn't match the rule (unless '!' was used).
-.TP
-.BR "--among-dst " "[!] \fIlist\fP"
-Compare the MAC destination to the given list. If the Ethernet frame has type
-.BR IPv4 " or " ARP ,
-then comparison with MAC/IP destination address pairs from the
-list is possible.
-
-.TP
-.BR "--among-src " "[!] \fIlist\fP"
-Compare the MAC source to the given list. If the Ethernet frame has type
-.BR IPv4 " or " ARP ,
-then comparison with MAC/IP source address pairs from the list
-is possible.
-
 .SS arp
 Specify arp fields. The protocol must be specified as
 .BR ARP " or " RARP .
@@ -578,22 +561,6 @@ The destination port or port range for ip protocols 6 (TCP) and
 17 (UDP). The flag
 .B --ip-dport
 is an alias for this option.
-.SS limit
-Matches at a limited rate using a token bucket filter. A rule using
-this extension will match until this limit is reached (unless the '!'
-flag is used). It can be used in combination with the log watcher to
-give limited logging, for example. The usage/implementation is completely
-similar to that of the iptables limit match.
-.TP
-.BR --limit " \fIrate"
-Maximum average matching rate: specified as a number, with an optional
-'/second', '/minute', '/hour', or '/day' suffix; the default is 3/hour.
-.TP
-.BR --limit-burst " \fInumber"
-Maximum initial number of packets to match: this number gets recharged by
-one every time the limit specified above is not reached, up to this number;
-the default is 5.
-
 .SS mark_m
 .TP
 .BR "--mark " "[!] [\fIvalue\fP][/\fImask\fP]"

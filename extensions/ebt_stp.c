@@ -135,7 +135,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 	if (ebt_check_inverse(optarg))
 		stpinfo->invflags |= flag;
 	if (optind > argc)
-		print_error("Missing argument for --%s", opts[c-'a'].name);
+		ebt_print_error("Missing argument for --%s", opts[c-'a'].name);
 	stpinfo->bitmask |= flag;
 	switch (flag) {
 	case EBT_STP_TYPE:
@@ -148,7 +148,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			           BPDU_TYPE_TCN_STRING))
 				stpinfo->type = BPDU_TYPE_TCN;
 			else
-				print_error("Bad STP type argument");
+				ebt_print_error("Bad STP type argument");
 		} else
 			stpinfo->type = i;
 		break;
@@ -162,62 +162,63 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			           FLAG_TC_ACK_STRING))
 				stpinfo->config.flags = FLAG_TC_ACK;
 			else
-				print_error("Bad STP config flags argument");
+				ebt_print_error("Bad STP config flags "
+						"argument");
 		} else
 			stpinfo->config.flags = i;
 		break;
 	case EBT_STP_ROOTPRIO:
 		if (parse_range(argv[optind-1], &(stpinfo->config.root_priol),
 		    &(stpinfo->config.root_priou), 2))
-			print_error("Bad STP config root priority range");
+			ebt_print_error("Bad STP config root priority range");
 		break;
 	case EBT_STP_ROOTCOST:
 		if (parse_range(argv[optind-1], &(stpinfo->config.root_costl),
 		    &(stpinfo->config.root_costu), 4))
-			print_error("Bad STP config root cost range");
+			ebt_print_error("Bad STP config root cost range");
 		break;
 	case EBT_STP_SENDERPRIO:
 		if (parse_range(argv[optind-1], &(stpinfo->config.sender_priol),
 		    &(stpinfo->config.sender_priou), 2))
-			print_error("Bad STP config sender priority range");
+			ebt_print_error("Bad STP config sender priority range");
 		break;
 	case EBT_STP_PORT:
 		if (parse_range(argv[optind-1], &(stpinfo->config.portl),
 		    &(stpinfo->config.portu), 2))
-			print_error("Bad STP config port range");
+			ebt_print_error("Bad STP config port range");
 		break;
 	case EBT_STP_MSGAGE:
 		if (parse_range(argv[optind-1], &(stpinfo->config.msg_agel),
 		    &(stpinfo->config.msg_ageu), 2))
-			print_error("Bad STP config message age range");
+			ebt_print_error("Bad STP config message age range");
 		break;
 	case EBT_STP_MAXAGE:
 		if (parse_range(argv[optind-1], &(stpinfo->config.max_agel),
 		    &(stpinfo->config.max_ageu), 2))
-			print_error("Bad STP config maximum age range");
+			ebt_print_error("Bad STP config maximum age range");
 		break;
 	case EBT_STP_HELLOTIME:
 		if (parse_range(argv[optind-1], &(stpinfo->config.hello_timel),
 		    &(stpinfo->config.hello_timeu), 2))
-			print_error("Bad STP config hello time range");
+			ebt_print_error("Bad STP config hello time range");
 		break;
 	case EBT_STP_FWDD:
 		if (parse_range(argv[optind-1], &(stpinfo->config.forward_delayl),
 		    &(stpinfo->config.forward_delayu), 2))
-			print_error("Bad STP config forward delay range");
+			ebt_print_error("Bad STP config forward delay range");
 		break;
 	case EBT_STP_ROOTADDR:
 		if (ebt_get_mac_and_mask(argv[optind-1],
 		    stpinfo->config.root_addr, stpinfo->config.root_addrmsk))
-			print_error("Bad STP config root address");
+			ebt_print_error("Bad STP config root address");
 		break;
 	case EBT_STP_SENDERADDR:
 		if (ebt_get_mac_and_mask(argv[optind-1], stpinfo->config.sender_addr,
 		    stpinfo->config.sender_addrmsk))
-			print_error("Bad STP config sender address");
+			ebt_print_error("Bad STP config sender address");
 		break;
 	default:
-		print_error("stp match: this shouldn't happen");
+		ebt_print_error("stp match: this shouldn't happen");
 	}
 	return 1;
 }
@@ -231,9 +232,9 @@ static void final_check(const struct ebt_u_entry *entry,
 
 	if (memcmp(entry->destmac, bridge_ula, 6) ||
 	    memcmp(entry->destmsk, msk, 6))
-		print_error("STP matching is only valid when the destination"
-		            " MAC address is the bridge group address (BGA)"
-		            " 01:80:c2:00:00:00");
+		ebt_print_error("STP matching is only valid when the "
+				"destination MAC address is the bridge group "
+				"address (BGA) 01:80:c2:00:00:00");
 }
 
 static void print(const struct ebt_u_entry *entry,
@@ -305,8 +306,7 @@ static struct ebt_u_match stp_match =
 	.extra_ops	= opts,
 };
 
-static void _init(void) __attribute__ ((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_match(&stp_match);
 }

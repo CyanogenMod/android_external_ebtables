@@ -74,8 +74,8 @@ static uint16_t parse_port(const char *protocol, const char *name)
 	else if (port >= 0 || port <= 0xFFFF) {
 		return port;
 	}
-	print_error("Problem with specified %s port '%s'", 
-		    protocol?protocol:"", name);
+	ebt_print_error("Problem with specified %s port '%s'", 
+			protocol?protocol:"", name);
 	return 0; /* never reached */
 }
 
@@ -95,7 +95,7 @@ parse_port_range(const char *protocol, const char *portstring, uint16_t *ports)
 		ports[1] = cp[0] ? parse_port(protocol, cp) : 0xFFFF;
 		
 		if (ports[0] > ports[1])
-			print_error("Invalid portrange (min > max)");
+			ebt_print_error("Invalid portrange (min > max)");
 	}
 	free(buffer);
 }
@@ -159,7 +159,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		}
 
 		if (optind > argc)
-			print_error("Missing IP address argument");
+			ebt_print_error("Missing IP address argument");
 		if (c == IP_SOURCE)
 			ebt_parse_ip_address(argv[optind - 1], &ipinfo->saddr,
 			   &ipinfo->smsk);
@@ -182,7 +182,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 				ipinfo->invflags |= EBT_IP_DPORT;
 		}
 		if (optind > argc)
-			print_error("Missing port argument");
+			ebt_print_error("Missing port argument");
 		if (c == IP_SPORT)
 			parse_port_range(NULL, argv[optind - 1], ipinfo->sport);
 		else
@@ -195,10 +195,10 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			ipinfo->invflags |= EBT_IP_TOS;
 
 		if (optind > argc)
-			print_error("Missing IP tos argument");
+			ebt_print_error("Missing IP tos argument");
 		i = strtol(argv[optind - 1], &end, 16);
 		if (i < 0 || i > 255 || *end != '\0')
-			print_error("Problem with specified IP tos");
+			ebt_print_error("Problem with specified IP tos");
 		ipinfo->tos = i;
 		ipinfo->bitmask |= EBT_IP_TOS;
 		break;
@@ -208,14 +208,14 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		if (ebt_check_inverse(optarg))
 			ipinfo->invflags |= EBT_IP_PROTO;
 		if (optind > argc)
-			print_error("Missing IP protocol argument");
+			ebt_print_error("Missing IP protocol argument");
 		(unsigned char) i = strtoul(argv[optind - 1], &end, 10);
 		if (*end != '\0') {
 			struct protoent *pe;
 
 			pe = getprotobyname(argv[optind - 1]);
 			if (pe == NULL)
-				print_error
+				ebt_print_error
 				    ("Unknown specified IP protocol - %s",
 				     argv[optind - 1]);
 			ipinfo->protocol = pe->p_proto;
@@ -237,7 +237,7 @@ static void final_check(const struct ebt_u_entry *entry,
  	struct ebt_ip_info *ipinfo = (struct ebt_ip_info *)match->data;
 
 	if (entry->ethproto != ETH_P_IP || entry->invflags & EBT_IPROTO)
-		print_error("For IP filtering the protocol must be "
+		ebt_print_error("For IP filtering the protocol must be "
 		            "specified as IPv4");
 
 	if (ipinfo->bitmask & (EBT_IP_SPORT|EBT_IP_DPORT) &&
@@ -245,8 +245,8 @@ static void final_check(const struct ebt_u_entry *entry,
 		ipinfo->invflags & EBT_IP_PROTO ||
 		(ipinfo->protocol!=IPPROTO_TCP && 
 			ipinfo->protocol!=IPPROTO_UDP)))
-		print_error("For port filtering the IP protocol must be "
-		            "either 6 (tcp) or 17 (udp)");
+		ebt_print_error("For port filtering the IP protocol must be "
+				"either 6 (tcp) or 17 (udp)");
 }
 
 static void print(const struct ebt_u_entry *entry,
@@ -364,8 +364,7 @@ static struct ebt_u_match ip_match =
 	.extra_ops	= opts,
 };
 
-static void _init(void) __attribute((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_match(&ip_match);
 }

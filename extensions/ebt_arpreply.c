@@ -50,15 +50,15 @@ static int parse(int c, char **argv, int argc,
 	case REPLY_MAC:
 		ebt_check_option(flags, OPT_REPLY_MAC);
 		if (!(addr = ether_aton(optarg)))
-			print_error("Problem with specified "
-			            "--arpreply-mac mac");
+			ebt_print_error("Problem with specified "
+					"--arpreply-mac mac");
 		memcpy(replyinfo->mac, addr, ETH_ALEN);
 		mac_supplied = 1;
 		break;
 	case REPLY_TARGET:
 		ebt_check_option(flags, OPT_REPLY_TARGET);
 		if (FILL_TARGET(optarg, replyinfo->target))
-			print_error("Illegal --arpreply-target target");
+			ebt_print_error("Illegal --arpreply-target target");
 		break;
 
 	default:
@@ -75,16 +75,16 @@ static void final_check(const struct ebt_u_entry *entry,
 	   (struct ebt_arpreply_info *)target->data;
 
 	if (entry->ethproto != ETH_P_ARP || entry->invflags & EBT_IPROTO)
-		print_error("For ARP replying the protocol must be "
-		            "specified as ARP");
+		ebt_print_error("For ARP replying the protocol must be "
+				"specified as ARP");
 	if (time == 0 && mac_supplied == 0)
-		print_error("No arpreply mac supplied");
+		ebt_print_error("No arpreply mac supplied");
 	if (BASE_CHAIN && replyinfo->target == EBT_RETURN)
-		print_error("--arpreply-target RETURN not allowed on "
-		            "base chain");
+		ebt_print_error("--arpreply-target RETURN not allowed on "
+				"base chain");
 	CLEAR_BASE_CHAIN_BIT;
 	if (strcmp(name, "nat") || hookmask & ~(1 << NF_BR_PRE_ROUTING))
-		print_error("arpreply only allowed in PREROUTING");
+		ebt_print_error("arpreply only allowed in PREROUTING");
 }
 
 static void print(const struct ebt_u_entry *entry,
@@ -125,8 +125,7 @@ static struct ebt_u_target arpreply_target =
 	.extra_ops	= opts,
 };
 
-static void _init(void) __attribute__ ((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_target(&arpreply_target);
 }

@@ -61,7 +61,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		if (ebt_check_inverse(optarg))
 			ptinfo->invert = 1;
 		if (optind > argc)
-			print_error("Missing pkttype class specification");
+			ebt_print_error("Missing pkttype class specification");
 
 		i = strtol(argv[optind - 1], &end, 16);
 		if (*end != '\0') {
@@ -74,7 +74,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 				}
 		}
 		if (i < 0 || i > 255)
-			print_error("Problem with specified pkttype class");
+			ebt_print_error("Problem with specified pkttype class");
 		ptinfo->pkt_type = (uint8_t)i;
 
 		break;
@@ -129,8 +129,7 @@ static struct ebt_u_match pkttype_match =
 	.extra_ops	= opts,
 };
 
-static void _init(void) __attribute((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_match(&pkttype_match);
 }

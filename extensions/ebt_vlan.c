@@ -44,9 +44,9 @@
 #define GET_BITMASK(_MASK_) vlaninfo->bitmask & _MASK_
 #define SET_BITMASK(_MASK_) vlaninfo->bitmask |= _MASK_
 #define INV_FLAG(_inv_flag_) (vlaninfo->invflags & _inv_flag_) ? "! " : ""
-#define CHECK_IF_MISSING_VALUE if (optind > argc) print_error ("Missing %s value", opts[c].name);
+#define CHECK_IF_MISSING_VALUE if (optind > argc) ebt_print_error ("Missing %s value", opts[c].name);
 #define CHECK_INV_FLAG(_INDEX_) if (ebt_check_inverse (optarg)) vlaninfo->invflags |= _INDEX_;
-#define CHECK_RANGE(_RANGE_) if (_RANGE_) print_error ("Invalid %s range", opts[c].name);
+#define CHECK_RANGE(_RANGE_) if (_RANGE_) ebt_print_error ("Invalid %s range", opts[c].name);
 
 #define NAME_VLAN_ID    "id"
 #define NAME_VLAN_PRIO  "prio"
@@ -168,8 +168,8 @@ parse(int c,
 		if (*end != '\0') {
 			ethent = getethertypebyname(argv[optind - 1]);
 			if (ethent == NULL)
-				print_error("Unknown %s encap",
-					    opts[c].name);
+				ebt_print_error("Unknown %s encap",
+						opts[c].name);
 			local.encap = ethent->e_ethertype;
 		}
 		CHECK_RANGE(local.encap < ETH_ZLEN);
@@ -199,16 +199,16 @@ final_check(const struct ebt_u_entry *entry,
 	 * Specified proto isn't 802.1Q?
 	 */
 	if (entry->ethproto != ETH_P_8021Q || entry->invflags & EBT_IPROTO)
-		print_error
-		    ("For use 802.1Q extension the protocol must be specified as 802_1Q");
+		ebt_print_error("For use 802.1Q extension the protocol "
+				"must be specified as 802_1Q");
 	/*
 	 * Check if specified vlan-encap=0x8100 (802.1Q Frame) 
 	 * when vlan-encap specified.
 	 */
 	if (GET_BITMASK(EBT_VLAN_ENCAP)) {
 		if (vlaninfo->encap == htons(0x8100))
-			print_error
-			    ("Encapsulated frame type can not be 802.1Q (0x8100)");
+			ebt_print_error("Encapsulated frame type can not be "
+				"802.1Q (0x8100)");
 	}
 
 	/*
@@ -217,8 +217,8 @@ final_check(const struct ebt_u_entry *entry,
 	 */
 	if (GET_BITMASK(EBT_VLAN_PRIO)) {
 		if (vlaninfo->id && GET_BITMASK(EBT_VLAN_ID))
-			print_error
-			    ("For use user_priority the specified vlan-id must be 0");
+			ebt_print_error("For use user_priority the specified "
+					"vlan-id must be 0");
 	}
 }
 
@@ -318,8 +318,7 @@ static struct ebt_u_match vlan_match = {
 	.extra_ops	= opts,
 };
 
-static void _init(void) __attribute__ ((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_match(&vlan_match);
 }

@@ -105,7 +105,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 	case LOG_PREFIX:
 		ebt_check_option(flags, OPT_PREFIX);
 		if (strlen(optarg) > sizeof(loginfo->prefix) - 1)
-			print_error("Prefix too long");
+			ebt_print_error("Prefix too long");
 		strcpy(loginfo->prefix, optarg);
 		break;
 
@@ -117,7 +117,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		else
 			loginfo->loglevel = i;
 		if (loginfo->loglevel == 9)
-			print_error("Problem with the log-level");
+			ebt_print_error("Problem with the log-level");
 		break;
 
 	case LOG_IP:
@@ -187,8 +187,7 @@ static struct ebt_u_watcher log_watcher =
 	.extra_ops	= opts,
 };
 
-static void _init(void) __attribute__ ((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_watcher(&log_watcher);
 }
