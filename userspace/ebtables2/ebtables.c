@@ -62,6 +62,8 @@ char *hooknames[NF_BR_NUMHOOKS] =
 };
 
 // default command line options
+// do not mess around with the already assigned numbers unless
+// you know what you are doing
 static struct option ebt_original_options[] =
 {
 	{ "append"        , required_argument, 0, 'A' },
@@ -96,10 +98,10 @@ static struct option ebt_original_options[] =
 	{ "rename-chain"  , required_argument, 0, 'E' },
 	{ "delete-chain"  , required_argument, 0, 'X' },
 	{ "atomic-init"   , required_argument, 0, 7   },
-	// communication.c uses fact that atomic-commit equals 8
 	{ "atomic-commit" , required_argument, 0, 8   },
 	{ "atomic"        , required_argument, 0, 9   },
 	{ "atomic-save"   , required_argument, 0, 10  },
+	{ "init-table"    , no_argument      , 0, 11  },
 	{ 0 }
 };
 
@@ -859,6 +861,7 @@ static void print_help()
 "--list   -L [chain]           : List the rules in a chain or in all chains\n"
 "--list   -L "DATABASEHOOKNAME"                : List the database (if present)\n"
 "--flush  -F [chain]           : Delete all rules in chain or in all chains\n"
+"--init-table                  : Replace the kernel table with the initial table\n"
 "--zero   -Z [chain]           : Put counters on zero in chain or in all chains\n"
 "--policy -P chain target      : Change policy on chain to target\n"
 "--new-chain -N chain          : Create a user defined chain\n"
@@ -2111,6 +2114,7 @@ int main(int argc, char *argv[])
 			break;
 		case 7 : // atomic-init
 		case 10: // atomic-save
+		case 11: // init-table
 			replace.command = c;
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
@@ -2123,6 +2127,9 @@ int main(int argc, char *argv[])
 					print_error("can't initialize ebtables "
 					"table %s", replace.name);
 			}
+			replace.num_counters = 0;
+			if (c == 11)
+				break;
 		case 9 : // atomic
 			replace.filename = (char *)malloc(strlen(optarg) + 1);
 			strcpy(replace.filename, optarg);
@@ -2256,7 +2263,8 @@ check_extension:
 		}
 	} else if (replace.command == 'D')
 		delete_rule(rule_nr);
-	// commands -N, -E, -X, --atomic-commit fall through
+	// commands -N, -E, -X, --atomic-commit, --atomic-commit, --atomic-save,
+	// --init-table fall through
 
 	if (table->check)
 		table->check(&replace);
