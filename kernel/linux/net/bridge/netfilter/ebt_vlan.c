@@ -25,17 +25,17 @@
 #include <linux/netfilter_bridge/ebt_vlan.h>
 
 static unsigned char debug;
-#define MODULE_VERSION "0.4 (" __DATE__ " " __TIME__ ")"
+#define MODULE_VERSION "0.5 (" __DATE__ " " __TIME__ ")"
 
-MODULE_PARM (debug, "0-1b");
-MODULE_PARM_DESC (debug, "debug=1 is turn on debug messages");
-MODULE_AUTHOR ("Nick Fedchik <nick@fedchik.org.ua>");
-MODULE_DESCRIPTION ("802.1Q match module (ebtables extension), v"
-		    MODULE_VERSION);
-MODULE_LICENSE ("GPL");
+MODULE_PARM(debug, "0-1b");
+MODULE_PARM_DESC(debug, "debug=1 is turn on debug messages");
+MODULE_AUTHOR("Nick Fedchik <nick@fedchik.org.ua>");
+MODULE_DESCRIPTION("802.1Q match module (ebtables extension), v"
+		   MODULE_VERSION);
+MODULE_LICENSE("GPL");
 
 
-#define DEBUG_MSG(...) if (debug) printk (KERN_DEBUG __FILE__ ":" __VA_ARGS__)
+#define DEBUG_MSG(...) if (debug) printk (KERN_DEBUG __FILE__ ":" __FUNCTION__ ": " __VA_ARGS__)
 #define INV_FLAG(_inv_flag_) (info->invflags & _inv_flag_) ? "!" : ""
 #define GET_BITMASK(_BIT_MASK_) info->bitmask & _BIT_MASK_
 #define SET_BITMASK(_BIT_MASK_) info->bitmask |= _BIT_MASK_
@@ -59,11 +59,10 @@ MODULE_LICENSE ("GPL");
  * 1 - miss (rule params not acceptable to the parsed frame)
  */
 static int
-ebt_filter_vlan (const struct sk_buff *skb,
-		 const struct net_device *in,
-		 const struct net_device *out,
-		 const void *data,
-		 unsigned int datalen)
+ebt_filter_vlan(const struct sk_buff *skb,
+		const struct net_device *in,
+		const struct net_device *out,
+		const void *data, unsigned int datalen)
 {
 	struct ebt_vlan_info *info = (struct ebt_vlan_info *) data;	/* userspace data */
 	struct vlan_ethhdr *frame = (struct vlan_ethhdr *) skb->mac.raw;	/* Passed tagged frame */
@@ -92,45 +91,43 @@ ebt_filter_vlan (const struct sk_buff *skb,
 	 * uniquely identify the VLAN to which the frame belongs. 
 	 * The VID is encoded as an unsigned binary number. 
 	 */
-	TCI = ntohs (frame->h_vlan_TCI);
+	TCI = ntohs(frame->h_vlan_TCI);
 	id = TCI & 0xFFF;
 	prio = TCI >> 13;
 	encap = frame->h_vlan_encapsulated_proto;
 
+	DEBUG_MSG
+	    ("ebt_vlan_info id=%d prio=%d encap=%2.4X bitmask=%2.2X\n",
+	     info->id, info->prio, ntohs(info->encap), info->bitmask);
+	DEBUG_MSG("vlan_ethhdr id=%d prio=%d encap=%2.4X\n", id, prio,
+		  ntohs(encap));
+
 	/*
-	 * First step is to check is null VLAN ID present
-	 * in the parsed frame
+	 * Checking VLAN Identifier (VID)
 	 */
-	if (!(id)) {
-		/*
-		 * Checking VLAN Identifier (VID)
-		 */
-		if (GET_BITMASK (EBT_VLAN_ID)) {	/* Is VLAN ID parsed? */
-			EXIT_ON_MISMATCH (id, EBT_VLAN_ID);
-			DEBUG_MSG
-			    ("matched rule id=%s%d for frame id=%d\n",
-			     INV_FLAG (EBT_VLAN_ID), info->id, id);
-		}
-	} else {
-		/*
-		 * Checking user_priority
-		 */
-		if (GET_BITMASK (EBT_VLAN_PRIO)) {	/* Is VLAN user_priority parsed? */
-			EXIT_ON_MISMATCH (prio, EBT_VLAN_PRIO);
-			DEBUG_MSG
-			    ("matched rule prio=%s%d for frame prio=%d\n",
-			     INV_FLAG (EBT_VLAN_PRIO), info->prio,
-			     prio);
-		}
+	if (GET_BITMASK(EBT_VLAN_ID)) {	/* Is VLAN ID parsed? */
+		EXIT_ON_MISMATCH(id, EBT_VLAN_ID);
+		DEBUG_MSG
+		    ("matched rule id=%s%d for frame id=%d\n",
+		     INV_FLAG(EBT_VLAN_ID), info->id, id);
+	}
+	/*
+	 * Checking user_priority
+	 */
+	if (GET_BITMASK(EBT_VLAN_PRIO)) {	/* Is VLAN user_priority parsed? */
+		EXIT_ON_MISMATCH(prio, EBT_VLAN_PRIO);
+		DEBUG_MSG
+		    ("matched rule prio=%s%d for frame prio=%d\n",
+		     INV_FLAG(EBT_VLAN_PRIO), info->prio, prio);
 	}
 	/*
 	 * Checking Encapsulated Proto (Length/Type) field
 	 */
-	if (GET_BITMASK (EBT_VLAN_ENCAP)) {	/* Is VLAN Encap parsed? */
-		EXIT_ON_MISMATCH (encap, EBT_VLAN_ENCAP);
-		DEBUG_MSG ("matched encap=%s%2.4X for frame encap=%2.4X\n",
-			   INV_FLAG (EBT_VLAN_ENCAP),
-			   ntohs (info->encap), ntohs (encap));
+	if (GET_BITMASK(EBT_VLAN_ENCAP)) {	/* Is VLAN Encap parsed? */
+		EXIT_ON_MISMATCH(encap, EBT_VLAN_ENCAP);
+		DEBUG_MSG("matched encap=%s%2.4X for frame encap=%2.4X\n",
+			  INV_FLAG(EBT_VLAN_ENCAP),
+			  ntohs(info->encap), ntohs(encap));
 	}
 	/*
 	 * All possible extension parameters was parsed.
@@ -154,29 +151,32 @@ ebt_filter_vlan (const struct sk_buff *skb,
  * 1 - miss (rule params is out of range, invalid, incompatible, etc.)
  */
 static int
-ebt_check_vlan (const char *tablename,
-		unsigned int hooknr,
-		const struct ebt_entry *e, void *data,
-		unsigned int datalen)
+ebt_check_vlan(const char *tablename,
+	       unsigned int hooknr,
+	       const struct ebt_entry *e, void *data, unsigned int datalen)
 {
 	struct ebt_vlan_info *info = (struct ebt_vlan_info *) data;
 
+	DEBUG_MSG
+	    ("received ebt_vlan_info id=%d prio=%d encap=%2.4X bitmask=%2.2X\n",
+	     info->id, info->prio, ntohs(info->encap), info->bitmask);
 	/*
 	 * Parameters buffer overflow check 
 	 */
-	if (datalen != sizeof (struct ebt_vlan_info)) {
+	if (datalen != sizeof(struct ebt_vlan_info)) {
 		DEBUG_MSG
 		    ("params size %d is not eq to ebt_vlan_info (%d)\n",
-		     datalen, sizeof (struct ebt_vlan_info));
+		     datalen, sizeof(struct ebt_vlan_info));
 		return -EINVAL;
 	}
 
 	/*
 	 * Is it 802.1Q frame checked?
 	 */
-	if (e->ethproto != __constant_htons (ETH_P_8021Q)) {
-		DEBUG_MSG ("passed entry proto %2.4X is not 802.1Q (8100)\n",
-			   (unsigned short) ntohs (e->ethproto));
+	if (e->ethproto != __constant_htons(ETH_P_8021Q)) {
+		DEBUG_MSG
+		    ("passed entry proto %2.4X is not 802.1Q (8100)\n",
+		     (unsigned short) ntohs(e->ethproto));
 		return -EINVAL;
 	}
 
@@ -185,8 +185,8 @@ ebt_check_vlan (const char *tablename,
 	 * True if even one bit is out of mask
 	 */
 	if (info->bitmask & ~EBT_VLAN_MASK) {
-		DEBUG_MSG ("bitmask %2X is out of mask (%2X)\n",
-			   info->bitmask, EBT_VLAN_MASK);
+		DEBUG_MSG("bitmask %2X is out of mask (%2X)\n",
+			  info->bitmask, EBT_VLAN_MASK);
 		return -EINVAL;
 	}
 
@@ -194,8 +194,8 @@ ebt_check_vlan (const char *tablename,
 	 * Check for inversion flags range 
 	 */
 	if (info->invflags & ~EBT_VLAN_MASK) {
-		DEBUG_MSG ("inversion flags %2X is out of mask (%2X)\n",
-			   info->invflags, EBT_VLAN_MASK);
+		DEBUG_MSG("inversion flags %2X is out of mask (%2X)\n",
+			  info->invflags, EBT_VLAN_MASK);
 		return -EINVAL;
 	}
 
@@ -222,7 +222,7 @@ ebt_check_vlan (const char *tablename,
 	 * 
 	 * For Linux, N = 4094.
 	 */
-	if (GET_BITMASK (EBT_VLAN_ID)) {	/* when vlan-id param was spec-ed */
+	if (GET_BITMASK(EBT_VLAN_ID)) {	/* when vlan-id param was spec-ed */
 		if (!!info->id) {	/* if id!=0 => check vid range */
 			if (info->id > 4094) {	/* check if id > than (0x0FFE) */
 				DEBUG_MSG
@@ -232,30 +232,26 @@ ebt_check_vlan (const char *tablename,
 			}
 			/*
 			 * Note: This is valid VLAN-tagged frame point.
-			 * Any value of user_priority are acceptable, but could be ignored
-			 * according to 802.1Q Std.
+			 * Any value of user_priority are acceptable, 
+			 * but should be ignored according to 802.1Q Std.
+			 * So we just drop the prio flag. 
 			 */
+			info->bitmask &= ~EBT_VLAN_PRIO;
 		} else {
 			/*
 			 * if id=0 (null VLAN ID)  => Check for user_priority range 
+			 * and clean EBT_VLAN_ID as useless
 			 */
-			if (GET_BITMASK (EBT_VLAN_PRIO)) {
-				if ((unsigned char) info->prio > 7) {
-					DEBUG_MSG
-					    ("prio %d is out of range (0-7)\n",
-					     info->prio);
-					return -EINVAL;
-				}
-			}
-			/*
-			 * Note2: This is valid priority-tagged frame point
-			 * with null VID field.
-			 */
+			info->bitmask &= ~EBT_VLAN_ID;
 		}
-	} else {		/* VLAN Id not set */
-		if (GET_BITMASK (EBT_VLAN_PRIO)) {	/* But user_priority is set - abnormal! */
-			info->id = 0;	/* Set null VID (case for Priority-tagged frames) */
-			SET_BITMASK (EBT_VLAN_ID);	/* and set id flag */
+	}
+
+	if (GET_BITMASK(EBT_VLAN_PRIO)) {
+		if ((unsigned char) info->prio > 7) {
+			DEBUG_MSG
+			    ("prio %d is out of range (0-7)\n",
+			     info->prio);
+			return -EINVAL;
 		}
 	}
 	/*
@@ -265,11 +261,11 @@ ebt_check_vlan (const char *tablename,
 	 * the minimum size of a transmitted tagged frame is 68 octets (7.2).
 	 * if_ether.h:  ETH_ZLEN        60   -  Min. octets in frame sans FCS
 	 */
-	if (GET_BITMASK (EBT_VLAN_ENCAP)) {
-		if ((unsigned short) ntohs (info->encap) < ETH_ZLEN) {
+	if (GET_BITMASK(EBT_VLAN_ENCAP)) {
+		if ((unsigned short) ntohs(info->encap) < ETH_ZLEN) {
 			DEBUG_MSG
-			    ("encap packet length %d is less than minimal %d\n",
-			     ntohs (info->encap), ETH_ZLEN);
+			    ("encap farme length %d is less than minimal %d\n",
+			     ntohs(info->encap), ETH_ZLEN);
 			return -EINVAL;
 		}
 	}
@@ -277,8 +273,10 @@ ebt_check_vlan (const char *tablename,
 	/*
 	 * Otherwise is all correct 
 	 */
-	DEBUG_MSG ("802.1Q tagged frame checked (%s table, %d hook)\n",
-		   tablename, hooknr);
+	DEBUG_MSG
+	    ("checked ebt_vlan_info id=%d prio=%d encap=%2.4X bitmask=%2.2X\n",
+	     info->id, info->prio, ntohs(info->encap), info->bitmask);
+
 	return 0;
 }
 
@@ -295,24 +293,24 @@ static struct ebt_match filter_vlan = {
  * Module initialization function.
  * Called when module is loaded to kernelspace
  */
-static int __init init (void)
+static int __init init(void)
 {
-	DEBUG_MSG ("ebtables 802.1Q extension module v"
-		   MODULE_VERSION "\n");
-	DEBUG_MSG ("module debug=%d\n", !!debug);
-	return ebt_register_match (&filter_vlan);
+	DEBUG_MSG("ebtables 802.1Q extension module v"
+		  MODULE_VERSION "\n");
+	DEBUG_MSG("module debug=%d\n", !!debug);
+	return ebt_register_match(&filter_vlan);
 }
 
 /*
  * Module "finalization" function
  * Called when download module from kernelspace
  */
-static void __exit fini (void)
+static void __exit fini(void)
 {
-	ebt_unregister_match (&filter_vlan);
+	ebt_unregister_match(&filter_vlan);
 }
 
-module_init (init);
-module_exit (fini);
+module_init(init);
+module_exit(fini);
 
 EXPORT_NO_SYMBOLS;
