@@ -50,6 +50,21 @@
                                          ": out of memory: "format, ## args)
 // #define MEMPRINT(format, args...)
 
+
+
+// Each cpu has its own set of counters, so there is no need for write_lock in
+// the softirq
+// For reading or updating the counters, the user context needs to
+// get a write_lock
+
+// The size of each set of counters is altered to get cache alignment
+#define SMP_ALIGN(x) (((x) + SMP_CACHE_BYTES-1) & ~(SMP_CACHE_BYTES-1))
+#define COUNTER_OFFSET(n) (SMP_ALIGN(n * sizeof(struct ebt_counter)))
+#define COUNTER_BASE(c, n, cpu) ((struct ebt_counter *)(((char *)c) + \
+   COUNTER_OFFSET(n) * cpu))
+
+
+
 static void print_string(char *str);
 
 static DECLARE_MUTEX(ebt_mutex);
@@ -159,8 +174,8 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 	chaininfo = private->hook_entry[hook];
 	nentries = private->hook_entry[hook]->nentries;
 	point = (struct ebt_entry *)(private->hook_entry[hook]->data);
-	#define cb_base table->private->counters + \
-	   cpu_number_map(smp_processor_id()) * table->private->nentries
+	#define cb_base COUNTER_BASE(private->counters, private->nentries, \
+	   cpu_number_map(smp_processor_id()))
 	counter_base = cb_base + private->hook_entry[hook]->counter_offset;
 	// base for chain jumps
 	base = (char *)chaininfo;
@@ -294,7 +309,6 @@ find_inlist_lock(struct list_head *head,
 		request_module(modulename);
 		ret = find_inlist_lock_noload(head, name, error, mutex);
 	}
-
 	return ret;
 }
 #endif
@@ -851,20 +865,20 @@ static int translate_table(struct ebt_replace *repl,
 }
 
 // called under write_lock
-static inline void get_counters(struct ebt_counter *oldcounters,
+static void get_counters(struct ebt_counter *oldcounters,
    struct ebt_counter *counters, unsigned int nentries)
 {
-	int i, cpu, counter_base;
+	int i, cpu;
+	struct ebt_counter *counter_base;
 
 	// counters of cpu 0
 	memcpy(counters, oldcounters,
 	   sizeof(struct ebt_counter) * nentries);
 	// add other counters to those of cpu 0
 	for (cpu = 1; cpu < smp_num_cpus; cpu++) {
-		counter_base = cpu * nentries;
+		counter_base = COUNTER_BASE(oldcounters, nentries, cpu);
 		for (i = 0; i < nentries; i++)
-			counters[i].pcnt +=
-			   oldcounters[counter_base + i].pcnt;
+			counters[i].pcnt += counter_base[i].pcnt;
 	}
 }
 
@@ -897,14 +911,14 @@ static int do_replace(void *user, unsigned int len)
 		return -ENOMEM;
 
 	if (tmp.nentries) {
-		newinfo->counters = (struct ebt_counter *)vmalloc(
-		   sizeof(struct ebt_counter) * tmp.nentries * smp_num_cpus);
+		int size = COUNTER_OFFSET(tmp.nentries) * smp_num_cpus;
+
+		newinfo->counters = (struct ebt_counter *)vmalloc(size);
 		if (!newinfo->counters) {
 			ret = -ENOMEM;
 			goto free_newinfo;
 		}
-		memset(newinfo->counters, 0,
-		   sizeof(struct ebt_counter) * tmp.nentries * smp_num_cpus);
+		memset(newinfo->counters, 0, size);
 	}
 	else
 		newinfo->counters = NULL;
@@ -1123,13 +1137,12 @@ int ebt_register_table(struct ebt_table *table)
 	   table->table->entries_size);
 
 	if (table->table->nentries) {
-		newinfo->counters = (struct ebt_counter *)
-		   vmalloc(table->table->nentries *
-		   sizeof(struct ebt_counter) * smp_num_cpus);
+		int size = COUNTER_OFFSET(table->table->nentries) * smp_num_cpus;
+
+		newinfo->counters = (struct ebt_counter *)vmalloc(size);
 		if (!newinfo->counters)
 			goto free_entries;
-		memset(newinfo->counters, 0, table->table->nentries *
-		   sizeof(struct ebt_counter) * smp_num_cpus);
+		memset(newinfo->counters, 0, size);
 	}
 	else
 		newinfo->counters = NULL;
