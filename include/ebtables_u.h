@@ -130,6 +130,7 @@ struct ebt_u_entry
 	struct ebt_entry_target *t;
 	struct ebt_u_entry *next;
 	struct ebt_counter cnt;
+	struct ebt_counter cnt_surplus; /* for increasing/decreasing a counter and for option 'C' */
 	/* the standard target needs this to know the name of a udc when
 	 * printing out rules. */
 	struct ebt_u_replace *replace;
@@ -328,6 +329,8 @@ __ret;})
 #define CNT_OWRITE 	3
 #define CNT_ZERO 	4
 #define CNT_CHANGE 	5
+#define CNT_INCR 	6
+#define CNT_DECR 	7
 
 extern const char *ebt_hooknames[NF_BR_NUMHOOKS];
 extern const char *ebt_standard_targets[NUM_STANDARD_TARGETS];

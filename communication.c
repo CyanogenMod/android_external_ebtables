@@ -358,6 +358,8 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 			/* 'Normal' rule, meaning we didn't do anything to it
 			 * So, we just copy */
 			*new = *old;
+			next->cnt = *new;
+			next->cnt_surplus.pcnt = next->cnt_surplus.bcnt = 0;
 			/* We've used an old counter */
 			old++;
 			/* We've set a new counter */
@@ -367,7 +369,16 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 			/* Don't use this old counter */
 			old++;
 		} else {
-			*new = next->cnt;
+			if (cc->type == CNT_INCR) {
+				new->pcnt = old->pcnt + next->cnt_surplus.pcnt;
+				new->bcnt = old->bcnt + next->cnt_surplus.bcnt;
+			} else if (cc->type == CNT_DECR) {
+				new->pcnt = old->pcnt - next->cnt_surplus.pcnt;
+				new->bcnt = old->bcnt - next->cnt_surplus.bcnt;
+			} else
+				*new = next->cnt;
+			next->cnt = *new;
+			next->cnt_surplus.pcnt = next->cnt_surplus.bcnt = 0;
 			if (cc->type == CNT_ADD)
 				new++;
 			else {
