@@ -80,4 +80,5 @@ static void __exit fini(void)
 
 module_init(init);
 module_exit(fini);
+EXPORT_NO_SYMBOLS;
 MODULE_LICENSE("GPL");
