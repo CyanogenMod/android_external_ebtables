@@ -1,4 +1,4 @@
-.TH EBTABLES 8  "25 July 2003"
+.TH EBTABLES 8  "14 August 2003"
 .\"
 .\" Man page written by Bart De Schuymer <bdschuym@pandora.be>
 .\" It is based on the iptables man page.
@@ -670,6 +670,25 @@ the rule. The default is no ip information logging.
 will log the (r)arp information when a frame made by the (r)arp protocols
 matches the rule. The default is no (r)arp information logging.
 .SS TARGET EXTENSIONS
+.SS
+.B arpreply
+The
+.B arpreply
+target can be used in the
+.BR PREROUTING " chain of the " nat " table."
+If this target sees an arp request it will automatically reply
+with an arp reply. The used MAC address for the reply can be specified.
+When the arp message is not an arp request, it is ignored by this target.
+.TP
+.BR "--arpreply-mac " "\fIaddress\fP"
+Specifies the MAC address to reply with: the Ethernet source MAC and the
+ARP payload source MAC will be filled in with this address.
+.TP
+.BR "--arpreply-target " "\fItarget\fP"
+Specifies the standard target. After sending the arp reply, the rule still
+has to give a standard target so
+.B ebtables
+knows what to do. The default target is DROP.
 .SS
 .B dnat
 The
