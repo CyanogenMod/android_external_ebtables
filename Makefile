@@ -14,14 +14,10 @@ OBJECTS:=getethertype.o ebtables.o communication.o $(EXT_OBJS)
 
 KERNEL_INCLUDES?=include/
 
-ifeq ($(ETHERTYPESPATH),)
-ETHERTYPESPATH:=/etc/
-endif
-ETHERTYPESFILE:=$(ETHERTYPESPATH)ethertypes
+ETHERTYPESPATH?=/etc/
+ETHERTYPESFILE:=$(ETHERTYPESPATH)/ethertypes
 
-ifeq ($(BINPATH),)
-BINPATH:=/sbin/
-endif
+BINPATH?=/sbin/
 BINFILE:=$(BINPATH)ebtables
 
 PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
