@@ -96,6 +96,14 @@ struct nf_conntrack {
 struct nf_ct_info {
 	struct nf_conntrack *master;
 };
+
+struct nf_bridge_info {
+	atomic_t use;
+	struct net_device *physindev;
+	struct net_device *physoutdev;
+	unsigned int mask;
+	unsigned long hh[16 / sizeof(unsigned long)];
+};
 #endif
 
 struct sk_buff_head {
@@ -140,8 +148,6 @@ struct skb_shared_info {
  *	@sk: Socket we are owned by
  *	@stamp: Time we arrived
  *	@dev: Device we arrived on/are leaving by
- *	@physindev: Phsical device we arrived on (see bridge-nf)
- *	@physoutdev: Phsical device we will leave by (see bridge-nf)
  *	@h: Transport layer header
  *	@nh: Network layer header
  *	@mac: Link layer header
@@ -168,6 +174,7 @@ struct skb_shared_info {
  *	@nfcache: Cache info
  *	@nfct: Associated connection, if any
  *	@nf_debug: Netfilter debugging
+ *	@nf_bridge: Saved data about a bridged frame - see br_netfilter.c
  *	@tc_index: Traffic control index
  */
 
@@ -180,8 +187,6 @@ struct sk_buff {
 	struct sock		*sk;
 	struct timeval		stamp;
 	struct net_device	*dev;
-	struct net_device	*physindev;
-	struct net_device	*physoutdev;
 
 	union {
 		struct tcphdr	*th;
@@ -240,6 +245,7 @@ struct sk_buff {
 #ifdef CONFIG_NETFILTER_DEBUG
         unsigned int		nf_debug;
 #endif
+	struct nf_bridge_info	*nf_bridge;
 #endif /* CONFIG_NETFILTER */
 #if defined(CONFIG_HIPPI)
 	union {
@@ -1140,6 +1146,17 @@ static inline void nf_conntrack_get(struct nf_ct_info *nfct)
 {
 	if (nfct)
 		atomic_inc(&nfct->master->use);
+}
+
+static inline void nf_bridge_put(struct nf_bridge_info *nf_bridge)
+{
+	if (nf_bridge && atomic_dec_and_test(&nf_bridge->use))
+		kfree(nf_bridge);
+}
+static inline void nf_bridge_get(struct nf_bridge_info *nf_bridge)
+{
+	if (nf_bridge)
+		atomic_inc(&nf_bridge->use);
 }
 #endif
 
