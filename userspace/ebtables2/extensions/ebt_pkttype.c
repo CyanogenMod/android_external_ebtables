@@ -57,7 +57,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 
 	switch (c) {
 	case '1':
-		ebt_check_option(flags, 1);
+		ebt_check_option2(flags, 1);
 		if (ebt_check_inverse2(optarg))
 			ptinfo->invert = 1;
 		i = strtol(optarg, &end, 16);
