@@ -518,7 +518,7 @@ static void list_em(struct ebt_u_entries *entries)
 	printf("nr. of entries: %d \n", entries->nentries);
 
 	i = entries->nentries;
-	while (i >9) {
+	while (i > 9) {
 		space++;
 		i /= 10;
 	}
@@ -526,6 +526,7 @@ static void list_em(struct ebt_u_entries *entries)
 	for (i = 0; i < entries->nentries; i++) {
 		digits = 0;
 		// A little work to get nice rule numbers.
+		j = i + 1;
 		while (j > 9) {
 			digits++;
 			j /= 10;
@@ -969,11 +970,11 @@ static int flush_chains()
 		if ( !(counterchanges = (unsigned short *)
 		   malloc((oldnentries + 1) * sizeof(unsigned short))) )
 			print_memory();
-		cnt = counterchanges;
 	}
 	// delete the counters belonging to the specified chain,
 	// update counter_offset
 	i = -1;
+	cnt = counterchanges;
 	while (1) {
 		i++;
 		entries = nr_to_chain(i);
@@ -1511,7 +1512,7 @@ int main(int argc, char *argv[])
 	int c, i;
 	// this special one for the -Z option (we can have -Z <this> -L <that>)
 	int zerochain = -1;
-	int policy;
+	int policy = 0;
 	int rule_nr = -1;// used for -D chain number
 	struct ebt_u_target *t;
 	struct ebt_u_match *m;

@@ -155,7 +155,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
    unsigned int *flags, struct ebt_entry_match **match)
 {
 	struct ebt_ip_info *ipinfo = (struct ebt_ip_info *)(*match)->data;
-	char *end, *buffer;
+	char *end;
 	int i;
 
 	switch (c) {
@@ -193,7 +193,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		if (optind > argc)
 			print_error("Missing ip tos argument");
 		i = strtol(argv[optind - 1], &end, 16);
-		if (i < 0 || i > 255 || *buffer != '\0')
+		if (i < 0 || i > 255 || *end != '\0')
 			print_error("Problem with specified ip tos");
 		ipinfo->tos = i;
 		ipinfo->bitmask |= EBT_IP_TOS;
