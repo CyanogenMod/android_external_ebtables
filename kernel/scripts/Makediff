@@ -3,6 +3,8 @@
 # This diff should be vs a kernel patched with the
 # br-nf patch.
 
+# 6 June 2002: added ebt_snat.c, ebt_dnat.c files, removed ebt_nat.c file
+
 export FROM=linux
 export TO=ebt2.0pre7
 export FILE=ebtables-v2.0pre7_vs_2.4.18.diff
@@ -41,7 +43,8 @@ diff -urN /dev/null $TO/net/bridge/netfilter/ebt_arp.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_ip.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_vlan.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_log.c >> $FILE
-diff -urN /dev/null $TO/net/bridge/netfilter/ebt_nat.c >> $FILE
+diff -urN /dev/null $TO/net/bridge/netfilter/ebt_snat.c >> $FILE
+diff -urN /dev/null $TO/net/bridge/netfilter/ebt_dnat.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtables.c >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebtables.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_arp.h >> $FILE
