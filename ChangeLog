@@ -1,3 +1,10 @@
+20030402
+	* fixed check bug in ebt_ip.c (report from
+	  joe_judge_at_guardium.com).
+20030111
+	* fixed problem when removing a chain (report from
+	  ykphuah_at_greenpacket.com).
+	* Added --help list_extensions which, well, lists the extensions
 20021203
 	* changed the way to use the atomic operations. It's now possible
 	  to use the EBTABLES_ATOMIC_FILE environment variable, so it's no
