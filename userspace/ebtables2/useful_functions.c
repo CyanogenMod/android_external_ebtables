@@ -151,6 +151,8 @@ int ebt_invert = 0;
  */
 int ebt_check_inverse(const char option[])
 {
+	if (!option)
+		return ebt_invert;
 	if (strcmp(option, "!") == 0) {
 		if (ebt_invert == 1)
 			ebt_print_error("double use of '!' not allowed");
