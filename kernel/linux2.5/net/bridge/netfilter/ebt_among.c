@@ -85,7 +85,7 @@ static int get_ip_dst(const struct sk_buff *skb, uint32_t *addr)
 		    arph.ar_pln != sizeof(uint32_t) || arph.ar_hln != ETH_ALEN)
 			return -1;
 		if (skb_copy_bits(skb, sizeof(struct arphdr) +
-		    2 * ETH_ALEN + sizeof(uint32_t), addr, sizeof(addr)))
+		    2 * ETH_ALEN + sizeof(uint32_t), addr, sizeof(uint32_t)))
 			return -1;
 	}
 	return 0;
@@ -106,7 +106,7 @@ static int get_ip_src(const struct sk_buff *skb, uint32_t *addr)
 		    arph.ar_pln != sizeof(uint32_t) || arph.ar_hln != ETH_ALEN)
 			return -1;
 		if (skb_copy_bits(skb, sizeof(struct arphdr) +
-		    ETH_ALEN, addr, sizeof(addr)))
+		    ETH_ALEN, addr, sizeof(uint32_t)))
 			return -1;
 	}
 	return 0;
