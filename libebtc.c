@@ -892,6 +892,7 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 {
 	struct ebt_u_entries *entries = ebt_to_chain(replace);
 	struct ebt_cntchanges *cc = replace->counterchanges;
+	struct ebt_u_entry *next;
 	int i, j;
 
 	if (!entries) {
@@ -900,7 +901,26 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 				cc->type = CNT_ZERO;
 			cc = cc->next;
 		}
+		i = -1;
+		while (1) {
+			i++;
+			if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
+				continue;
+			entries = ebt_nr_to_chain(replace, i);
+			if (!entries) {
+				if (i < NF_BR_NUMHOOKS)
+					ebt_print_bug("i < NF_BR_NUMHOOKS");
+				break;
+			}
+			next = entries->entries;
+			while (next) {
+				next->cnt.bcnt = next->cnt.pcnt = 0;
+				next = next->next;
+			}
+		}
+			
 	} else {
+		next = entries->entries;
 		if (entries->nentries == 0)
 			return;
 
@@ -922,6 +942,10 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 					cc->type = CNT_ZERO;
 			}
 			cc = cc->next;
+		}
+		while (next) {
+			next->cnt.bcnt = next->cnt.pcnt = 0;
+			next = next->next;
 		}
 	}
 }
