@@ -300,8 +300,8 @@ static void list_em(struct ebt_u_entries *entries)
 		t->print(hlp, hlp->t);
 		if (replace->flags & LIST_C)
 			printf(", pcnt = %llu -- bcnt = %llu",
-			   replace->counters[entries->counter_offset + i].pcnt,
-			   replace->counters[entries->counter_offset + i].bcnt);
+			   hlp->cnt.pcnt,
+			   hlp->cnt.bcnt);
 		printf("\n");
 		hlp = hlp->next;
 	}
@@ -366,7 +366,6 @@ ATOMIC_ENV_VARIABLE "          : if set <FILE> (see above) will equal its value"
 	printf("\n");
 	if (table->help)
 		table->help(ebt_hooknames);
-	exit(0);
 }
 
 /* Execute command L */
@@ -659,7 +658,7 @@ print_zero:
 			i = -1;
 			if (optind < argc && argv[optind][0] != '-') {
 				if ((i = ebt_get_chainnr(replace, argv[optind])) == -1)
-					ebt_print_error2("Bad chain");
+					ebt_print_error2("Chain %s doesn't exist", argv[optind]);
 				optind++;
 			}
 			if (i != -1) {
@@ -1020,8 +1019,11 @@ check_extension:
 	if (!(table = ebt_find_table(replace->name)))
 		ebt_print_error2("Bad table name");
 
-	if (replace->command == 'h' && !(replace->flags & OPT_ZERO))
+	if (replace->command == 'h' && !(replace->flags & OPT_ZERO)) {
 		print_help();
+		if (exec_style == EXEC_STYLE_PRG)
+			exit(0);
+	}
 
 	/* Do the final checks */
 	if (replace->command == 'A' || replace->command == 'I' ||
