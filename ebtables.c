@@ -57,6 +57,7 @@ static struct option ebt_original_options[] =
 	{ "version"       , no_argument      , 0, 'V' },
 	{ "help"          , no_argument      , 0, 'h' },
 	{ "jump"          , required_argument, 0, 'j' },
+	{ "set-counter"   , required_argument, 0, 'c' },
 	{ "proto"         , required_argument, 0, 'p' },
 	{ "protocol"      , required_argument, 0, 'p' },
 	{ "db"            , required_argument, 0, 'b' },
@@ -298,10 +299,12 @@ static void list_em(struct ebt_u_entries *entries)
 		if (!t)
 			ebt_print_bug("Target '%s' not found", hlp->t->u.name);
 		t->print(hlp, hlp->t);
-		if (replace->flags & LIST_C)
-			printf(", pcnt = %llu -- bcnt = %llu",
-			   hlp->cnt.pcnt,
-			   hlp->cnt.bcnt);
+		if (replace->flags & LIST_C) {
+			if (replace->flags & LIST_X)
+				printf("-c %llu %llu", hlp->cnt.pcnt, hlp->cnt.bcnt);
+			else
+				printf(", pcnt = %llu -- bcnt = %llu", hlp->cnt.pcnt, hlp->cnt.bcnt);
+		}
 		printf("\n");
 		hlp = hlp->next;
 	}
@@ -467,10 +470,12 @@ void ebt_early_init_once()
 ({ebt_check_option(flags,mask);		\
  if (ebt_errormsg[0] != '\0')		\
 	return -1;})
-#define ebt_check_inverse2(option)		\
-({int __ret = ebt_check_inverse(option);	\
-if (ebt_errormsg[0] != '\0')			\
-	return -1;				\
+#define ebt_check_inverse2(option)				\
+({int __ret = ebt_check_inverse(option);			\
+if (ebt_errormsg[0] != '\0')					\
+	return -1;						\
+if (!optarg)							\
+	__ebt_print_error("Option without (mandatory) argument");	\
 __ret;})
 #define OPT_COMMANDS (replace->flags & OPT_COMMAND || replace->flags & OPT_ZERO)
 
@@ -486,6 +491,7 @@ __ret;})
 #define OPT_LOGICALIN	0x200
 #define OPT_LOGICALOUT	0x400
 #define OPT_KERNELDATA	0x800 /* This value is also defined in ebtablesd.c */
+#define OPT_COUNT	0x1000
 int do_command(int argc, char *argv[], int exec_style,
                struct ebt_u_replace *replace_)
 {
@@ -539,7 +545,7 @@ int do_command(int argc, char *argv[], int exec_style,
 
 	/* Getopt saves the day */
 	while ((c = getopt_long(argc, argv,
-	   "-A:D:I:N:E:X::L::Z::F::P:Vhi:o:j:p:s:d:t:M:", ebt_options, NULL)) != -1) {
+	   "-A:D:I:N:E:X::L::Z::F::P:Vhi:o:j:c:p:s:d:t:M:", ebt_options, NULL)) != -1) {
 		switch (c) {
 
 		case 'A': /* Add a rule */
@@ -730,6 +736,7 @@ print_zero:
 		case 'p': /* Net family protocol */
 		case 's': /* Source mac */
 		case 'd': /* Destination mac */
+		case 'c': /* Set counters */
 			if (!OPT_COMMANDS)
 				ebt_print_error2("No command specified");
 			if (replace->command != 'A' && replace->command != 'D' && replace->command != 'I')
@@ -836,6 +843,21 @@ print_zero:
 					ebt_print_error2("Problem with specified destination mac");
 				new_entry->bitmask |= EBT_DESTMAC;
 				break;
+			} else if (c == 'c') {
+				ebt_check_option2(&(replace->flags), OPT_COUNT);
+				if (ebt_check_inverse2(optarg))
+					ebt_print_error2("Unexpected '!' after -c");
+				if (optind >= argc)
+					ebt_print_error2("Option -c needs 2 arguments");
+
+				new_entry->cnt.pcnt = strtoull(optarg, &buffer, 10);
+				if (*buffer != '\0')
+					ebt_print_error2("Packet counter '%s' invalid", optarg)
+				new_entry->cnt.bcnt = strtoull(argv[optind], &buffer, 10);
+				if (*buffer != '\0')
+					ebt_print_error2("Packet counter '%s' invalid", argv[optind])
+				optind++;
+				break;
 			}
 			ebt_check_option2(&(replace->flags), OPT_PROTOCOL);
 			if (ebt_check_inverse2(optarg))
@@ -870,8 +892,6 @@ print_zero:
 			ebt_check_option2(&(replace->flags), LIST_C);
 			if (replace->command != 'L')
 				ebt_print_error("Use --Lc with -L");
-			if (replace->flags & LIST_X)
-				ebt_print_error2("--Lx is not compatible with --Lc");
 			replace->flags |= LIST_C;
 			break;
 		case 5  : /* Ln */
@@ -894,8 +914,6 @@ print_zero:
 			ebt_check_option2(&(replace->flags), LIST_X);
 			if (replace->command != 'L')
 				ebt_print_error2("Use --Lx with -L");
-			if (replace->flags & LIST_C)
-				ebt_print_error2("--Lx is not compatible with --Lc");
 			if (replace->flags & LIST_N)
 				ebt_print_error2("--Lx is not compatible with --Ln");
 			replace->flags |= LIST_X;
