@@ -1,26 +1,12 @@
 #!/bin/bash
 # used for making the incremental kernel 2.5.x diffs
 
-export FROM=linux
-export TO=linux_new
+export FROM=linux-old
+export TO=linux-2.5.53
 export FILE=file.diff
 
-# brouter support
-
-diff -urNp --exclude TAGS $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h > $FILE
-diff -urNp --exclude TAGS $FROM/include/linux/if_bridge.h $TO/include/linux/if_bridge.h >> $FILE
-diff -urNp --exclude TAGS $FROM/net/core/dev.c $TO/net/core/dev.c >> $FILE
-diff -urNp --exclude TAGS $FROM/net/bridge/br_input.c $TO/net/bridge/br_input.c >> $FILE
-diff -urNp --exclude TAGS $FROM/net/bridge/br_forward.c $TO/net/bridge/br_forward.c >> $FILE
-diff -urNp --exclude TAGS $FROM/net/bridge/br.c $TO/net/bridge/br.c >> $FILE
-diff -urNp --exclude TAGS $FROM/net/bridge/Makefile $TO/net/bridge/Makefile >> $FILE
-diff -urNp --exclude TAGS $FROM/include/linux/netfilter_bridge.h $TO/include/linux/netfilter_bridge.h >> $FILE
-
-diff -urNp --exclude TAGS $FROM/net/Config.in $TO/net/Config.in >> $FILE
-diff -urNp --exclude TAGS $FROM/MAINTAINERS $TO/MAINTAINERS >> $FILE
-
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/Makefile $TO/net/bridge/netfilter/Makefile >> $FILE
-diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/Config.in $TO/net/bridge/netfilter/Config.in >> $FILE
+diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/Kconfig $TO/net/bridge/netfilter/Kconfig >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebtable_filter.c $TO/net/bridge/netfilter/ebtable_filter.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebtable_nat.c $TO/net/bridge/netfilter/ebtable_nat.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/netfilter/ebtable_broute.c $TO/net/bridge/netfilter/ebtable_broute.c >> $FILE
