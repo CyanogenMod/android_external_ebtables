@@ -66,7 +66,7 @@ static void print_help()
 "   \"config\": configuration BPDU (=0)\n"
 "   \"tcn\"   : topology change notification BPDU (=0x80)\n"
 " Recognized control flag strings:\n"
-"   \"topology-change\"    : topology change flag (0x01)"
+"   \"topology-change\"    : topology change flag (0x01)\n"
 "   \"topology-change-ack\": topology change acknowledgement flag (0x80)");
 }
 
