@@ -63,16 +63,12 @@
       This document describes how <EM>iptables</EM> and
       <EM>ebtables</EM> filtering tables interact on a Linux-based bridge.<BR>
       Getting a bridging firewall consists of patching the kernel source
-      code with two patches.
-      The first patch adds <EM>ebtables</EM> support in the kernel.
-      The second patch is called "br-nf-bds" and makes
-      bridged IP frames/packets go through the <EM>iptables</EM> chains.
+      code with one or two patches.
+      Kernels 2.5.39 and above only need the "br-nf-bds" patch, since ebtables has been integrated in the 2.5.x series.
+      For other kernels, you need to first apply the patch that adds <EM>ebtables</EM> support in the kernel.
+      The "br-nf-bds" patch makes bridged IP frames/packets go through the <EM>iptables</EM> chains.
       <EM>Ebtables</EM> filters on the Ethernet layer, while <EM>iptables</EM>
       only filters IP packets.<BR>
-      It is possible to use <EM>ebtables</EM> without compiling the br-nf-bds
-      code into the kernel; and vice versa. The only reason why the br-nf-bds
-      patch has to be applied after the <EM>ebtables</EM> patch is because
-      some files are changed by both patches.<BR>
       The explanations below will use the TCP/IP Network Model.
       It should be noted that the br-nf-bds patch sometimes violates the
       TCP/IP Network
