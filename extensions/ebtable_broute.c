@@ -5,7 +5,7 @@
 
 static void print_help(char **hn)
 {
-	printf("Supported chain for the nat table:\n");
+	printf("Supported chain for the broute table:\n");
 	printf("%s\n",hn[NF_BR_BROUTING]);
 }
 
