@@ -1473,6 +1473,7 @@ int netif_receive_skb(struct sk_buff *skb)
 		ret = handle_bridge(skb, pt_prev);
 		if (br_handle_frame_hook(skb) == 0)
 			return ret;
+		pt_prev = NULL;
 	}
 #endif
 
