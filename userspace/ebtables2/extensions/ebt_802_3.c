@@ -127,15 +127,15 @@ static int compare(const struct ebt_entry_match *m1,
 
 static struct ebt_u_match _802_3_match = 
 {
-	EBT_802_3_MATCH,
-	sizeof(struct ebt_802_3_info),
-	print_help,
-	init,
-	parse,
-	final_check,
-	print,
-	compare,
-	opts
+	.name		= EBT_802_3_MATCH,
+	.size		= sizeof(struct ebt_802_3_info),
+	.help		= print_help,
+	.init		= init,
+	.parse		= parse,
+	.final_check	= final_check,
+	.print		= print,
+	.compare	= compare,
+	.extra_ops	= opts,
 };
 
 static void _init(void) __attribute__ ((constructor));

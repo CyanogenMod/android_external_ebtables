@@ -88,15 +88,15 @@ static int compare(const struct ebt_entry_target *t1,
 
 static struct ebt_u_target redirect_target =
 {
-	EBT_REDIRECT_TARGET,
-	sizeof(struct ebt_redirect_info),
-	print_help,
-	init,
-	parse,
-	final_check,
-	print,
-	compare,
-	opts
+	.name		= EBT_REDIRECT_TARGET,
+	.size		= sizeof(struct ebt_redirect_info),
+	.help		= print_help,
+	.init		= init,
+	.parse		= parse,
+	.final_check	= final_check,
+	.print		= print,
+	.compare	= compare,
+	.extra_ops	= opts,
 };
 
 static void _init(void) __attribute__ ((constructor));

@@ -183,28 +183,28 @@ static int compare(const struct ebt_entry_target *t1,
 
 static struct ebt_u_target snat_target =
 {
-	EBT_SNAT_TARGET,
-	sizeof(struct ebt_nat_info),
-	print_help_s,
-	init_s,
-	parse_s,
-	final_check_s,
-	print_s,
-	compare,
-	opts_s,
+	.name		= EBT_SNAT_TARGET,
+	.size		= sizeof(struct ebt_nat_info),
+	.help		= print_help_s,
+	.init		= init_s,
+	.parse		= parse_s,
+	.final_check	= final_check_s,
+	.print		= print_s,
+	.compare	= compare,
+	.extra_ops	= opts_s,
 };
 
 static struct ebt_u_target dnat_target =
 {
-	EBT_DNAT_TARGET,
-	sizeof(struct ebt_nat_info),
-	print_help_d,
-	init_d,
-	parse_d,
-	final_check_d,
-	print_d,
-	compare,
-	opts_d
+	.name		= EBT_DNAT_TARGET,
+	.size		= sizeof(struct ebt_nat_info),
+	.help		= print_help_d,
+	.init		= init_d,
+	.parse		= parse_d,
+	.final_check	= final_check_d,
+	.print		= print_d,
+	.compare	= compare,
+	.extra_ops	= opts_d,
 };
 
 static void _init(void) __attribute__ ((constructor));

@@ -118,15 +118,15 @@ static int compare(const struct ebt_entry_match *m1,
 
 static struct ebt_u_match pkttype_match =
 {
-	EBT_PKTTYPE_MATCH,
-	sizeof(struct ebt_pkttype_info),
-	print_help,
-	init,
-	parse,
-	final_check,
-	print,
-	compare,
-	opts
+	.name		= EBT_PKTTYPE_MATCH,
+	.size		= sizeof(struct ebt_pkttype_info),
+	.help		= print_help,
+	.init		= init,
+	.parse		= parse,
+	.final_check	= final_check,
+	.print		= print,
+	.compare	= compare,
+	.extra_ops	= opts,
 };
 
 static void _init(void) __attribute((constructor));

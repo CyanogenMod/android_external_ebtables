@@ -11,10 +11,8 @@ static void print_help(char **hn)
 static struct
 ebt_u_table table =
 {
-	"broute",
-	NULL,
-	print_help,
-	NULL
+	.name		= "broute",
+	.help		= print_help,
 };
 
 static void _init(void) __attribute__ ((constructor));
