@@ -876,7 +876,7 @@ static void print_help()
 "--out-if -o [!] name          : network output interface name\n"
 "--logical-in  [!] name        : logical bridge input interface name\n"
 "--logical-out [!] name        : logical bridge output interface name\n"
-"--modprobe -M                 : try to insert modules using this command\n"
+"--modprobe -M program         : try to insert modules using this program\n"
 "--version -V                  : print package version\n"
 "\n" ,
 	prog_name,
