@@ -34,10 +34,6 @@
 #include <netinet/ether.h>
 #include <asm/types.h>
 #include "include/ebtables_u.h"
-#include <dlfcn.h>
-#include <ctype.h>
-#include <stdarg.h>
-#include <limits.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
