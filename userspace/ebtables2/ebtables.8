@@ -21,7 +21,7 @@
 .\"     
 .\"
 .SH NAME
-ebtables(v.2.0) \- ethernet bridge packet table administration
+ebtables (v.2.0) \- ethernet bridge packet table administration
 .SH SYNOPSIS
 .BR "ebtables -[ADI] " "chain rule-specification [options]"
 .br
@@ -316,7 +316,7 @@ The ARP IP source address specification.
 .BR "--arp-ip-dst " "[!] \fIaddress\fP[/\fImask\fP]"
 The ARP IP destination address specification.
 .SS vlan
-Specify 802.1Q VLAN specific fields. These will only work if the protocol equals
+Specify 802.1Q Tag Control Information fields. These will only work if the protocol equals
 .BR 802_1Q .
 For more details see
 .BR "ebtables -h vlan" .
@@ -325,7 +325,10 @@ For more details see
 The VLAN identifier (decimal number from 0 to 4095).
 .TP
 .BR "--vlan-prio " "[!] \fIprio\fP"
-The VLAN priority type, this can be a decimal number from 0 to 7. The default value is 0.
+The VLAN user priority type, this can be a decimal number from 0 to 7. The default value is 0.
+.TP
+.BR "--vlan-encap " "[!] \fIprotocol\fP"
+The VLAN encapsulated protocol, this can be a hexadecimal number from 0000 to FFFF. The default value is 0.
 .SH WATCHER EXTENSION(S)
 Watchers are things that only look at frames passing by. These watchers only see the
 frame if the frame passes all the matches of the rule.
