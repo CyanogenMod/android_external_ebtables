@@ -75,7 +75,7 @@ static void init(struct ebt_entry_match *match)
 void parse_ip_address(char *address, uint32_t *addr, uint32_t *msk);
 
 /* defined in ebtables.c */
-int getmac_and_mask(char *from, char *to, char *mask);
+int get_mac_and_mask(char *from, char *to, char *mask);
 
 #define OPT_OPCODE 0x01
 #define OPT_HTYPE  0x02
@@ -208,7 +208,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		}
 		if (optind > argc)
 			print_error("Missing ARP MAC address argument");
-		if (getmac_and_mask(argv[optind - 1], maddr, mmask))
+		if (get_mac_and_mask(argv[optind - 1], maddr, mmask))
 			print_error("Problem with ARP MAC address argument");
 		break;
 
