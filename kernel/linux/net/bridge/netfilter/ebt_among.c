@@ -70,7 +70,7 @@ static int ebt_mac_wormhash_check_integrity(const struct ebt_mac_wormhash
 	return 0;
 }
 
-static void get_ip_dst(const struct sk_buff *skb, uint32_t * addr)
+static int get_ip_dst(const struct sk_buff *skb, uint32_t * addr)
 {
 	if (skb->mac.ethernet->h_proto == __constant_htons(ETH_P_IP))
 		*addr = skb->nh.iph->daddr;
@@ -81,19 +81,20 @@ static void get_ip_dst(const struct sk_buff *skb, uint32_t * addr)
 
 		/* Make sure the packet is long enough. */
 		if ((((*skb).nh.raw) + arp_len) > (*skb).tail)
-			return;
+			return -1;
 		/* IPv4 addresses are always 4 bytes. */
 		if (((*skb).nh.arph)->ar_pln != sizeof(uint32_t))
-			return;
+			return -1;
 
 		memcpy(addr, ((*skb).nh.raw) + sizeof(struct arphdr) +
 		       (2 * (((*skb).nh.arph)->ar_hln)) +
 		       (((*skb).nh.arph)->ar_pln), sizeof(uint32_t));
 
 	}
+	return 0;
 }
 
-static void get_ip_src(const struct sk_buff *skb, uint32_t * addr)
+static int get_ip_src(const struct sk_buff *skb, uint32_t * addr)
 {
 	if (skb->mac.ethernet->h_proto == __constant_htons(ETH_P_IP))
 		*addr = skb->nh.iph->saddr;
@@ -104,15 +105,16 @@ static void get_ip_src(const struct sk_buff *skb, uint32_t * addr)
 
 		/* Make sure the packet is long enough. */
 		if ((((*skb).nh.raw) + arp_len) > (*skb).tail)
-			return;
+			return -1;
 		/* IPv4 addresses are always 4 bytes. */
 		if (((*skb).nh.arph)->ar_pln != sizeof(uint32_t))
-			return;
+			return -1;
 
 		memcpy(addr, ((*skb).nh.raw) + sizeof(struct arphdr) +
 		       ((((*skb).nh.arph)->ar_hln)), sizeof(uint32_t));
 
 	}
+	return 0;
 }
 
 static int ebt_filter_among(const struct sk_buff *skb,
@@ -130,7 +132,8 @@ static int ebt_filter_among(const struct sk_buff *skb,
 
 	if (wh_src) {
 		smac = skb->mac.ethernet->h_source;
-		get_ip_src(skb, &sip);
+		if (get_ip_src(skb, &sip))
+			return EBT_NOMATCH;
 		if (!(info->bitmask & EBT_AMONG_SRC_NEG)) {
 			/* we match only if it contains */
 			if (!ebt_mac_wormhash_contains(wh_src, smac, sip))
@@ -144,7 +147,8 @@ static int ebt_filter_among(const struct sk_buff *skb,
 
 	if (wh_dst) {
 		dmac = skb->mac.ethernet->h_dest;
-		get_ip_dst(skb, &dip);
+		if (get_ip_dst(skb, &dip))
+			return EBT_NOMATCH;
 		if (!(info->bitmask & EBT_AMONG_DST_NEG)) {
 			/* we match only if it contains */
 			if (!ebt_mac_wormhash_contains(wh_dst, dmac, dip))
