@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+  <HEAD>
+    <TITLE>Ebtables (Ethernet Bridge Tables) Frequently Asked
+    Questions</TITLE>
+    <LINK rel="SHORTCUT ICON" href="">
+    <LINK rel="STYLESHEET" type="text/css" href="ebtables.css">
+    <META name="description" content=
+    "Ethernet Bridge Tables Frequently Asked Questions">
+    <META name="author" content="Nick Fedchik">
+    <META name="keywords" content=
+    "Linux, netfilter, firewall, bridge, brouter, ebtables, iptables">
+    <META name="keywords" content=
+    "FAQ, kernel, br-nf, br-nf-bds, ethernet, nat, chains, rules, tables">
+  </HEAD>
+  <BODY>
+    <DIV class="banner" align="center">
+      <H1>Ebtables (Ethernet Bridge Tables) Frequently Asked Questions</H1>
+    </DIV>
+    <A name="top"></A> 
+    <H2>Questions</H2>
+    <OL>
+      <LI><A href="#quiz0">Intro</A></LI>
+      <LI><A href="#quiz1">Installation</A></LI>
+      <LI><A href="#quiz2">Usage</A></LI>
+      <LI><A href="#quiz3">Other</A></LI>
+    </OL>
+    <H2>Answers</H2>
+    <OL>
+      <LI>
+        <B><A name="quiz0">Intro</A></B> 
+        <DL>
+          <DT>What is the ebtables?</DT>
+          <DD>The ebtables project is the Linux 2.4.x Link Layer
+          firewalling subsystem. It delivers for Linux the functionality of
+          Ethernet frame filtering, all kinds of frame NAT (Network Address
+          Translation) and frame matching. Currently ebtables is not a part
+          of 2.4.x kernels, but now in the &gt;=2.5.40 kernels.</DD>
+          <DT>Why do I use it?</DT>
+          <DD>Probably, to filter frames by MAC-address or frame type at
+          Link Layer inside Your Linux-based Ethernet bridge.</DD>
+        </DL>
+        <A class=navbar href="#top">[Back to the top]</A>
+        <HR>
+      </LI>
+      <LI>
+        <B><A name="quiz1">Installation</A></B> 
+        <DL>
+          <DT>What should I do to know before ebtables installation?</DT>
+          <DD>First step is to check what the kernel version will be used
+          with ebtables. If the kernel version above than 2.5.39 was
+          installed, then kernel sources need no to be patched by the
+          <B>ebtables_kernel</B> and <B>br-nf-bds</B> patches. Go to <A
+          href="http://sourceforge.net/projects/ebtables/">Ethernet bridge
+          tables</A> and download <B>br_nf_bds</B>, <B>ebtables_kernel</B>
+          and <B>ebtables</B> packages.</DD>
+          <DT>What is the "ebtables_kernel" package and why should I use
+          it?</DT>
+          <DD>
+            The <B>ebtables_kernel</B> package contains a patch against a
+            Linux kernel. It allows filtering on the Link Layer (OSI Layer
+            2). Well know that iptables works on the Network Layer (OSI
+            Layer 3) and on the upper layers. For a bridging firewall it is
+            important to be able to filter on Link Layer as well. Copy
+            patch file to the kernel source (usually it named
+            /usr/src/linux or /usr/src/linux-2.X.YY) and execute 
+<PRE>
+# cp ebtables-v2.0.003_vs_2.4.20.diff.gz /usr/src/linux
+# gunzip ebtables-v2.0.003_vs_2.4.20.diff.gz 
+# patch -p1 &lt; ebtables-v2.0.003_vs_2.4.20.diff
+</PRE>
+          </DD>
+          <DT>What is the "br-nf-bds" package and why should I use it?</DT>
+          <DD>
+            The <B>br-nf-bds</B> package contains a patch against Linux
+            kernel that is already patched with the <B>ebtables_kernel</B>
+            patch. It add ability of iptables usage on a bridge to make a
+            bridging firewall. The big part of this patch was complete by
+            Lennert Buytenhek. The bridge-nf code is automatically compiled
+            into the patched kernel if the bridge and netfilter support is
+            enabled. 
+<PRE>
+# cp bridge-nf-0.0.10-against-2.4.20.diff.gz /usr/src/linux
+# gunzip bridge-nf-0.0.10-against-2.4.20.diff.gz
+# patch -p1 &lt; bridge-nf-0.0.10-against-2.4.20.diff
+</PRE>
+          </DD>
+          <DT>What is the "ebtables" package and why should I use it?</DT>
+          <DD>
+            The <B>ebtables</B> package contains the ebtables userspace
+            tool. Namelly this ebtables binary is used to make filtering
+            rules for the Linux-based Ethernet bridge. The rules is applied
+            for bridged packets at Link Layer. The ebtables usage is very
+            similar to the iptables, so it should not be so hard. Of
+            course, there is a man page supplied. Just gunzip and untar the
+            package and read the INSTALL file.<BR>
+             
+<PRE>
+# make
+</PRE>
+            Put ebtables binary to the superuser binaries directory (f.e.
+            /usr/sbin) manually or 
+<PRE>
+# make install
+</PRE>
+          </DD>
+        </DL>
+        <A class=navbar href="#top">[Back to the top]</A>
+				<HR>
+      </LI>
+      <LI>
+        <B><A name="quiz2">Usage</A></B> 
+        <DL>
+          <DT>Can I drop the ARP packets in linux bridge box using the
+          ebtables?</DT>
+          <DD>Yes, it's possible to filter the ARP packets (same as any
+          other Ethernet frames) using linux bridge and ebtables together.
+          According to the rule target, the frame can be dropped, accepted,
+          passed to next rule, etc.<BR>
+           See the <A href="ebtables.8.html">ebtables manual page</A> for
+          details.</DD>
+          <DT>Can I use ebtables with iptables? Is there any problems to
+          use it together?</DT>
+          <DD>Yes, it's possible to use ebtables with iptables. Detailed
+          info about ebtables/iptables interaction is explained at the page
+          <A href="br_fw_ia.html">"ebtables/iptables interaction on a
+          Linux-based bridge"</A></DD>
+          <DT>Can ebtables to do a frame accounting on my bridge?</DT>
+          <DD>
+            Yes, it's possible to view bridged frames and bytes count by 
+<PRE>
+# ebtables -L --Lc
+</PRE>
+          </DD>
+        </DL>
+        <BR>
+         <A class=navbar href="#top">[Back to the top]</A>
+				<HR>
+      </LI>
+      <LI>
+        <B><A name="quiz3">Other</A></B><BR>
+        <DL>
+          <DT>I'm not a Linux system programer, but I need a feature, which
+          is not (yet) implemented in the ebtables. What should I do?</DT>
+          <DD>Contact by email to ebtables developers directly or subscribe
+          to the <A href= 
+          "https://lists.sourceforge.net/lists/listinfo/ebtables-user">ebtables
+          users mail list</A>. Then post short and clean description of
+          Your wanted feature to mail list.</DD>
+          <DT>I'm Linux system programmer and I can do any ebtables feature by
+          myself. What I should begin in that case?</DT>
+          <DD>Subscribe to the <A href= 
+          "https://lists.sourceforge.net/lists/listinfo/ebtables-devel">ebtables
+          developers mail list</A>. Learn the <A href= 
+          "ebtables-hacking-HOWTO.html">"Ebtables Hacking HOWTO"</A>.
+          Create Your account at SourceForge.net (if You still haven't it)
+          and inform the Project Admin about Your intention to join to
+          ebtables developers and to make a new ebtables feature. After
+          that You should be able to working with ebtables source code,
+          which is placed at SourceForge cvs repository. Now You can make
+          Your ebtables feature or anything else (to drink a cup of coffee,
+          f.e. ;).</DD>
+        </DL>
+        <BR>
+        <A class=navbar href="#top">[Back to the top]</A>
+      </LI>
+    </OL>
+    <HR>
+  </BODY>
+</HTML>
