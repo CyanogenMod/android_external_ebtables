@@ -45,16 +45,16 @@ static void print_help_common(const char *cas)
 "\tpair := index '=' action\n"
 "\taction := mac_addr\n"
 "\taction := mac_addr '+'\n"
-"\taction := '!'\n"
+"\taction := '_'\n"
 "where\n"
 "\tindex -- an integer [0..255]\n"
 "\tmac_addr -- a MAC address in format xx:xx:xx:xx:xx:xx\n"
-"If '!' at some index is specified, packets with last %s IP address byte\n"
+"If '_' at some index is specified, packets with last %s IP address byte\n"
 "equal to index are DROPped. If there is a MAC address, they are %1.1snatted\n"
 "to this and the target is CONTINUE. If this MAC is followed by '+', the\n"
 "target is ACCEPT.\n"
 "For example,\n"
-"--idnat-list 2=20:21:22:23:24:25,4=!,7=30:31:32:33:34:35,\n"
+"--idnat-list 2=20:21:22:23:24:25,4=_,7=30:31:32:33:34:35,\n"
 "is valid.\n"
 "The subnet MUST be specified. Only packets with 3 first bytes of their\n"
 "%s address are considered. --i%1.1snat-sub parameter must begin with\n"
@@ -168,7 +168,7 @@ static void parse_list(const char *arg, struct ebt_inat_info *info)
 				}
 				goto next;
 			}
-			if (c == '!') {
+			if (c == '_') {
 				target = EBT_DROP;
 				goto next;
 			}
@@ -176,7 +176,7 @@ static void parse_list(const char *arg, struct ebt_inat_info *info)
 				target = EBT_ACCEPT;
 				goto next;
 			}
-			print_error("Unexpected '%c' where hex digit, '!', '+', ',' or end of string expected", c);
+			print_error("Unexpected '%c' where hex digit, '_', '+', ',' or end of string expected", c);
 		}
 	next:
 		if (!c) break;
@@ -296,13 +296,13 @@ static void print_list(const struct ebt_inat_info *info)
 		if (info->a[i].enabled) {
 			printf("%d=", i);
 			if (info->a[i].target == EBT_DROP) {
-				printf("!");
+				printf("_");
 			}
 			else {
 				if (info->a[i].target == EBT_ACCEPT) {
 					printf("+");
 				}
-				printf("%s", ether_ntoa((struct ether_addr *)info->a[i].mac));
+				print_mac(info->a[i].mac);
 			}
 			printf(",");
 		}
@@ -347,28 +347,28 @@ static int compare(const struct ebt_entry_target *t1,
 
 static struct ebt_u_target isnat_target =
 {
-	EBT_ISNAT_TARGET,
-	sizeof(struct ebt_inat_info),
-	print_help_s,
-	init_s,
-	parse_s,
-	final_check_s,
-	print_s,
-	compare,
-	opts_s,
+	.name		= EBT_ISNAT_TARGET,
+	.size		= sizeof(struct ebt_inat_info),
+	.help		= print_help_s,
+	.init		= init_s,
+	.parse		= parse_s,
+	.final_check	= final_check_s,
+	.print		= print_s,
+	.compare	= compare,
+	.extra_ops	= opts_s,
 };
 
 static struct ebt_u_target idnat_target =
 {
-	EBT_IDNAT_TARGET,
-	sizeof(struct ebt_inat_info),
-	print_help_d,
-	init_d,
-	parse_d,
-	final_check_d,
-	print_d,
-	compare,
-	opts_d
+	.name		= EBT_IDNAT_TARGET,
+	.size		= sizeof(struct ebt_inat_info),
+	.help		= print_help_d,
+	.init		= init_d,
+	.parse		= parse_d,
+	.final_check	= final_check_d,
+	.print		= print_d,
+	.compare	= compare,
+	.extra_ops	= opts_d,
 };
 
 static void _init(void) __attribute__ ((constructor));
