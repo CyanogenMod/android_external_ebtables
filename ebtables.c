@@ -2133,7 +2133,7 @@ int main(int argc, char *argv[])
 					print_error("can't initialize ebtables "
 					"table %s", replace.name);
 			}
-			if (c == 10 && replace.nentries) {
+			if (replace.nentries) {
 				counterchanges = (unsigned short *)
 				   malloc(sizeof(unsigned short) * (replace.nentries + 1));
 				for (i = 0; i < replace.nentries; i++)
