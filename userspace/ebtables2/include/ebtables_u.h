@@ -175,7 +175,7 @@ void register_table(struct ebt_u_table *);
 void register_match(struct ebt_u_match *);
 void register_watcher(struct ebt_u_watcher *);
 void register_target(struct ebt_u_target *t);
-void get_table(struct ebt_u_replace *repl);
+int get_table(struct ebt_u_replace *repl);
 struct ebt_u_target *find_target(const char *name);
 struct ebt_u_match *find_match(const char *name);
 struct ebt_u_watcher *find_watcher(const char *name);
