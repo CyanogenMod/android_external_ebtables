@@ -39,10 +39,13 @@ const unsigned char msk_type_broadcast[ETH_ALEN] = {255,255,255,255,255,255};
 const unsigned char mac_type_bridge_group[ETH_ALEN] = {0x01,0x80,0xc2,0,0,0};
 const unsigned char msk_type_bridge_group[ETH_ALEN] = {255,255,255,255,255,255};
 
-int ebt_printstyle_mac;
 /*
- * flag = 2: byte always printed with 2 digits
+ * 0: default, print only 2 digits if necessary
+ * 2: always print 2 digits, a printed mac address
+ * then always has the same length
  */
+int ebt_printstyle_mac;
+
 void ebt_print_mac(const char *mac)
 {
 	if (ebt_printstyle_mac == 2) {
@@ -136,7 +139,16 @@ int ebt_get_mac_and_mask(char *from, char *to, char *mask)
 	return 0;
 }
 
+/*
+ * 0: default
+ * 1: the inverse '!' of the option has already been specified
+ */
 int ebt_invert = 0;
+
+/*
+ * Check if the inverse of the option is specified. This is used
+ * in the parse functions of the extensions and ebtables.c.
+ */
 int ebt_check_inverse(const char option[])
 {
 	if (strcmp(option, "!") == 0) {
@@ -149,6 +161,10 @@ int ebt_check_inverse(const char option[])
 	return ebt_invert;
 }
 
+/*
+ * Make sure the same option wasn't specified twice. This is used
+ * in the parse functions of the extensions and ebtables.c.
+ */
 void ebt_check_option(unsigned int *flags, unsigned int mask)
 {
 	if (*flags & mask)
@@ -156,7 +172,9 @@ void ebt_check_option(unsigned int *flags, unsigned int mask)
 	*flags |= mask;
 }
 
-/* put the ip string into 4 bytes */
+/*
+ * put the ip string into 4 bytes
+ */
 static int undot_ip(char *ip, unsigned char *ip2)
 {
 	char *p, *q, *end;
@@ -186,7 +204,9 @@ static int undot_ip(char *ip, unsigned char *ip2)
 	return 0;
 }
 
-/* put the mask into 4 bytes */
+/*
+ * put the mask into 4 bytes
+ */
 static int ip_mask(char *mask, unsigned char *mask2)
 {
 	char *end;
@@ -209,7 +229,9 @@ static int ip_mask(char *mask, unsigned char *mask2)
 	return 0;
 }
 
-/* set the ip mask and ip address */
+/*
+ * set the ip mask and ip address
+ */
 void ebt_parse_ip_address(char *address, uint32_t *addr, uint32_t *msk)
 {
 	char *p;
@@ -227,7 +249,9 @@ void ebt_parse_ip_address(char *address, uint32_t *addr, uint32_t *msk)
 	*addr = *addr & *msk;
 }
 
-/* transform the ip mask into a string ready for output */
+/*
+ * transform the ip mask into a string ready for output
+ */
 char *ebt_mask_to_dotted(uint32_t mask)
 {
 	int i;
