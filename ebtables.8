@@ -335,7 +335,7 @@ names of extensions and
 .B ebtables
 will try to write help about those extensions. E.g. ebtables -h snat log ip arp.
 .TP
-.BR "-b --db [" "y/n" "]"
+.BR "-b --db " [ "y/n" ]
 Enable (y) or disable (n) the database.
 .TP
 .BR "-j, --jump " "\fItarget\fP"
@@ -346,13 +346,13 @@ The target of the rule. This is one of the following values:
 or a target extension, see
 .BR "TARGET EXTENSIONS" .
 .TP
-.BR "--atomic " file
+.B --atomic file
 Let the command operate on the specified file. The data of the table to
 operate on will be extracted from the file and the result of the operation
 will be saved back into the file. If specified, this option should come
 before the command specification.
 .TP
-.BR "-M, --modprobe " "program"
+.B -M, --modprobe program
 When talking to the kernel, use this program to try to automatically load
 missing kernel modules.
 .SH MATCH EXTENSIONS
@@ -423,6 +423,12 @@ The encapsulated ethernet frame type/length, this can be a hexadecimal number fr
 Usually it's 0x0800 (IPv4). See also 
 .B /etc/ethertypes 
 file.
+.SS mark_m
+.TP
+.BR "--mark " "[!] \fIvalue\fP[/\fImask\fP]"
+Matches frames with the given unsigned mark value (if a mask is specified,
+the logical AND of the mark and the mask is taken before the comparison).
+
 .SH WATCHER EXTENSION(S)
 Watchers are things that only look at frames passing by. These watchers only see the
 frame if the frame passes all the matches of the rule.
@@ -524,6 +530,27 @@ The default target is ACCEPT. Making it CONTINUE could let you use
 multiple target extensions on the same frame. Making it DROP in the
 BROUTING chain will let the frames be routed. RETURN is also allowed. Note
 that using RETURN in a base chain will result in the CONTINUE behaviour.
+.TP
+.B mark
+The mark target can be used in every chain of every table. It is possible
+to use the marking of a frame/packet in both ebtables and iptables, 
+if the br-nf code is compiled into the kernel. Both put the marking at the
+same place. So, you can consider this fact as a feature, or as something to
+watch out for.
+.br
+.BR "--mark-target " "\fItarget\fP"
+.br
+Specifies the standard target. After marking the frame, the rule
+still has to give a standard target so
+.B ebtables
+knows what to do.
+The default target is ACCEPT. Making it CONTINUE can let you do other
+things with the frame in other rules of the chain.
+.br
+.BR "--set-mark " "\fIvalue\fP"
+.br
+Mark the frame with the specified unsigned value.
+.br
 .SH FILES
 .I /etc/ethertypes
 .SH BUGS
