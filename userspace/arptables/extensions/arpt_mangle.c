@@ -96,24 +96,27 @@ parse(int c, char **argv, int invert, unsigned int *flags,
 		break;
 	case MANGLE_DEVS:
 		if (e->arp.arhln_mask == 0)
-			exit_error(PARAMETER_PROBLEM, "no hln defined");
+			exit_error(PARAMETER_PROBLEM, "no --h-length defined");
 		if (e->arp.invflags & ARPT_INV_ARPHLN)
 			exit_error(PARAMETER_PROBLEM,
-				   "! hln not allowed for --mangle-mac-s");
+				   "! --h-length not allowed for "
+				   "--mangle-mac-s");
 		if (e->arp.arhln != 6)
-			exit_error(PARAMETER_PROBLEM, "only hln=6 supported");
+			exit_error(PARAMETER_PROBLEM, "only --h-length 6 "
+						      "supported");
 		macaddr = ether_aton(argv[optind-1]);
 		memcpy(mangle->src_devaddr, macaddr, e->arp.arhln);
 		mangle->flags |= ARPT_MANGLE_SDEV;
 		break;
 	case MANGLE_DEVT:
 		if (e->arp.arhln_mask == 0)
-			exit_error(PARAMETER_PROBLEM, "no hln defined");
+			exit_error(PARAMETER_PROBLEM, "no --h-length defined");
 		if (e->arp.invflags & ARPT_INV_ARPHLN)
 			exit_error(PARAMETER_PROBLEM,
 				   "! hln not allowed for --mangle-mac-d");
 		if (e->arp.arhln != 6)
-			exit_error(PARAMETER_PROBLEM, "only hln=6 supported");
+			exit_error(PARAMETER_PROBLEM, "only --h-length 6 "
+						      "supported");
 		macaddr = ether_aton(argv[optind-1]);
 		memcpy(mangle->tgt_devaddr, macaddr, e->arp.arhln);
 		mangle->flags |= ARPT_MANGLE_TDEV;
