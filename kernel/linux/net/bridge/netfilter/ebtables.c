@@ -154,7 +154,7 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 {
 	int i, nentries;
 	struct ebt_entry *point;
-	struct ebt_counter *counter_base;
+	struct ebt_counter *counter_base, *cb_base;
 	struct ebt_entry_target *t;
 	int verdict, sp = 0;
 	struct ebt_chainstack *cs;
@@ -163,6 +163,8 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 	struct ebt_table_info *private = table->private;
 
 	read_lock_bh(&table->lock);
+	cb_base = COUNTER_BASE(private->counters, private->nentries, \
+	   cpu_number_map(smp_processor_id()));
 	if (private->chainstack)
 		cs = private->chainstack[cpu_number_map(smp_processor_id())];
 	else
@@ -170,8 +172,6 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 	chaininfo = private->hook_entry[hook];
 	nentries = private->hook_entry[hook]->nentries;
 	point = (struct ebt_entry *)(private->hook_entry[hook]->data);
-	#define cb_base COUNTER_BASE(private->counters, private->nentries, \
-	   cpu_number_map(smp_processor_id()))
 	counter_base = cb_base + private->hook_entry[hook]->counter_offset;
 	// base for chain jumps
 	base = (char *)chaininfo;
@@ -342,9 +342,12 @@ ebt_check_match(struct ebt_entry_match *m, struct ebt_entry *e,
 	struct ebt_match *match;
 	int ret;
 
+	if (((char *)m) + m->match_size + sizeof(struct ebt_entry_match) >
+	   ((char *)e) + e->watchers_offset)
+		return -EINVAL;
 	m->u.name[EBT_FUNCTION_MAXNAMELEN - 1] = '\0';
 	match = find_match_lock(m->u.name, &ret, &ebt_mutex);
-	if (!match) 
+	if (!match)
 		return ret;
 	m->u.match = match;
 	if (match->me)
@@ -368,9 +371,12 @@ ebt_check_watcher(struct ebt_entry_watcher *w, struct ebt_entry *e,
 	struct ebt_watcher *watcher;
 	int ret;
 
+	if (((char *)w) + w->watcher_size + sizeof(struct ebt_entry_watcher) >
+	   ((char *)e) + e->target_offset)
+		return -EINVAL;
 	w->u.name[EBT_FUNCTION_MAXNAMELEN - 1] = '\0';
 	watcher = find_watcher_lock(w->u.name, &ret, &ebt_mutex);
-	if (!watcher) 
+	if (!watcher)
 		return ret;
 	w->u.watcher = watcher;
 	if (watcher->me)
@@ -613,9 +619,10 @@ ebt_check_entry(struct ebt_entry *e, struct ebt_table_info *newinfo,
 			ret = -EFAULT;
 			goto cleanup_watchers;
 		}
-	} else if (t->u.target->check &&
-	   t->u.target->check(name, hookmask, e, t->data,
-	   t->target_size) != 0) {
+	} else if ((e->target_offset + t->target_size +
+	   sizeof(struct ebt_entry_target) > e->next_offset) ||
+	   (t->u.target->check &&
+	   t->u.target->check(name, hookmask, e, t->data, t->target_size) != 0)){
 		if (t->u.target->me)
 			__MOD_DEC_USE_COUNT(t->u.target->me);
 		ret = -EFAULT;
@@ -635,7 +642,7 @@ ebt_cleanup_entry(struct ebt_entry *e, unsigned int *cnt)
 {
 	struct ebt_entry_target *t;
 
-	if (e->bitmask == 0)
+	if ((e->bitmask & EBT_ENTRY_OR_ENTRIES) == 0)
 		return 0;
 	// we're done
 	if (cnt && (*cnt)-- == 0)
@@ -667,7 +674,8 @@ int check_chainloops(struct ebt_entries *chain, struct ebt_cl_stack *cl_s,
 			// put back values of the time when this chain was called
 			e = cl_s[chain_nr].cs.e;
 			if (cl_s[chain_nr].from != -1)
-				nentries = cl_s[cl_s[chain_nr].from].cs.chaininfo->nentries;
+				nentries =
+				cl_s[cl_s[chain_nr].from].cs.chaininfo->nentries;
 			else
 				nentries = chain->nentries;
 			pos = cl_s[chain_nr].cs.n;
@@ -703,6 +711,7 @@ int check_chainloops(struct ebt_entries *chain, struct ebt_cl_stack *cl_s,
 				BUGPRINT("loop\n");
 				return -1;
 			}
+			// this can't be 0, so the above test is correct
 			cl_s[i].cs.n = pos + 1;
 			pos = 0;
 			cl_s[i].cs.e = ((void *)e + e->next_offset);
@@ -808,7 +817,7 @@ static int translate_table(struct ebt_replace *repl,
 					vfree(newinfo->chainstack[--i]);
 				vfree(newinfo->chainstack);
 				newinfo->chainstack = NULL;
-				break;
+				return -ENOMEM;
 			}
 		}
 
@@ -848,7 +857,6 @@ static int translate_table(struct ebt_replace *repl,
 	//   beginning of a chain. This can only occur in chains that
 	//   are not accessible from any base chains, so we don't care.
 
-	// we just don't trust anything
 	repl->name[EBT_TABLE_MAXNAMELEN - 1] = '\0';
 	// used to know what we need to clean up if something goes wrong
 	i = 0;
@@ -893,7 +901,7 @@ static int do_replace(void *user, unsigned int len)
 	// used to be able to unlock earlier
 	struct ebt_table_info *table;
 
- 	if (copy_from_user(&tmp, user, sizeof(tmp)) != 0)
+	if (copy_from_user(&tmp, user, sizeof(tmp)) != 0)
 		return -EFAULT;
 
 	if (len != sizeof(tmp) + tmp.entries_size) {
@@ -948,7 +956,7 @@ static int do_replace(void *user, unsigned int len)
 
 	t = find_table_lock(tmp.name, &ret, &ebt_mutex);
 	if (!t)
-		goto free_unlock;
+		goto free_iterate;
 
 	// the table doesn't like it
 	if (t->check && (ret = t->check(newinfo, tmp.valid_hooks)))
@@ -1002,6 +1010,7 @@ static int do_replace(void *user, unsigned int len)
 
 free_unlock:
 	up(&ebt_mutex);
+free_iterate:
 	EBT_ENTRY_ITERATE(newinfo->entries, newinfo->entries_size,
 	   ebt_cleanup_entry, NULL);
 free_counterstmp:
@@ -1216,7 +1225,6 @@ static int update_counters(void *user, unsigned int len)
 	}
 
 	hlp.name[EBT_TABLE_MAXNAMELEN - 1] = '\0';
-
 	t = find_table_lock(hlp.name, &ret, &ebt_mutex);
 	if (!t)
 		goto free_tmp;
@@ -1341,7 +1349,7 @@ static int copy_everything_to_user(struct ebt_table *t, void *user,
 		counterstmp = (struct ebt_counter *)
 		   vmalloc(nentries * sizeof(struct ebt_counter));
 		if (!counterstmp) {
-			BUGPRINT("Couldn't copy counters, out of memory\n");
+			MEMPRINT("Couldn't copy counters, out of memory\n");
 			return -ENOMEM;
 		}
 		write_lock_bh(&t->lock);
