@@ -215,7 +215,7 @@ parse (int c,
 static void
 final_check (const struct ebt_u_entry *entry,
 	     const struct ebt_entry_match *match,
-	     const char *name, unsigned int hook, unsigned int time)
+	     const char *name, unsigned int hookmask, unsigned int time)
 {
 
 	struct ebt_vlan_info *vlaninfo =
