@@ -84,13 +84,13 @@ void parse_ip_address(char *address, uint32_t *addr, uint32_t *msk)
 	if ((p = strrchr(address, '/')) != NULL) {
 		*p = '\0';
 		if (ip_mask(p + 1, (unsigned char *)msk))
-			print_error("Problem with the ip mask");
+			print_error("Problem with the IP mask");
 	}
 	else
 		*msk = 0xFFFFFFFF;
 
 	if (undot_ip(address, (unsigned char *)addr))
-		print_error("Problem with the ip address");
+		print_error("Problem with the IP address");
 	*addr = *addr & *msk;
 }
 

@@ -95,7 +95,7 @@ static struct ebt_u_target redirect_target =
 	final_check,
 	print,
 	compare,
-	opts,
+	opts
 };
 
 static void _init(void) __attribute__ ((constructor));
