@@ -26,6 +26,7 @@ static void hexdump(const void *mem, int howmany)
 	printf("\n");
 	const unsigned char *p = mem;
 	int i;
+
 	for (i = 0; i < howmany; i++) {
 		if (i % 32 == 0) {
 			printf("\n%04x: ", i);
@@ -46,7 +47,7 @@ static void print_help()
 " xx:xx:xx:xx:xx:xx[=ip.ip.ip.ip],yy:yy:yy:yy:yy:yy[=ip.ip.ip.ip]"
 ",...,zz:zz:zz:zz:zz:zz[=ip.ip.ip.ip][,]\n"
 "Things in brackets are optional.\n"
-"If you want to allow two (or more) IP addresses to one MAC address, you \n"
+"If you want to allow two (or more) IP addresses to one MAC address, you\n"
 "can specify two (or more) pairs witch the same MAC, e.g.\n"
 " 00:00:00:fa:eb:fe=153.19.120.250,00:00:00:fa:eb:fe=192.168.0.1\n"
 	);
@@ -67,6 +68,7 @@ static struct ebt_mac_wormhash *new_wormhash(int n)
 	    n * sizeof(struct ebt_mac_wormhash_tuple);
 	struct ebt_mac_wormhash *result =
 	    (struct ebt_mac_wormhash *) malloc(size);
+
 	memset(result, 0, size);
 	result->poolsize = n;
 	return result;
@@ -77,6 +79,7 @@ static void copy_wormhash(struct ebt_mac_wormhash *d,
 {
 	int dpoolsize = d->poolsize;
 	int dsize, ssize, amount;
+
 	dsize = ebt_mac_wormhash_size(d);
 	ssize = ebt_mac_wormhash_size(s);
 	amount = dsize < ssize ? dsize : ssize;
@@ -97,6 +100,7 @@ static int read_until(const char **pp, const char *delimiters,
 	int count = 0;
 	int ret = 0;
 	char c;
+
 	while (1) {
 		c = **pp;
 		if (!c) {
@@ -125,6 +129,7 @@ static int fcmp(const void *va, const void *vb) {
 	const struct ebt_mac_wormhash_tuple *b = vb;
 	int ca = ((const unsigned char*)a->cmp)[7];
 	int cb = ((const unsigned char*)b->cmp)[7];
+
 	return ca - cb;
 }
 
@@ -132,6 +137,7 @@ static void index_table(struct ebt_mac_wormhash *wh)
 {
 	int ipool, itable;
 	int c;
+
 	for (itable = 0; itable <= 256; itable++) {
 		wh->table[itable] = wh->poolsize;
 	}
@@ -161,6 +167,7 @@ static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 	int nmacs = 0;
 	int i;
 	char token[4];
+
 	if (!(workcopy = new_wormhash(1024))) {
 		print_memory();
 	}
@@ -336,6 +343,7 @@ static void final_check(const struct ebt_u_entry *entry,
 static void wormhash_debug(const struct ebt_mac_wormhash *wh)
 {
 	int i;
+
 	printf("poolsize: %d\n", wh->poolsize);
 	for (i = 0; i <= 256; i++) {
 		printf("%02x ", wh->table[i]);
@@ -351,8 +359,10 @@ static void wormhash_printout(const struct ebt_mac_wormhash *wh)
 {
 	int i;
 	unsigned char *ip;
+
 	for (i = 0; i < wh->poolsize; i++) {
 		const struct ebt_mac_wormhash_tuple *p;
+
 		p = (const struct ebt_mac_wormhash_tuple *)(&wh->pool[i]);
 		print_mac(((const char *) &p->cmp[0]) + 2);
 		if (p->ip) {
@@ -389,6 +399,7 @@ static int compare_wh(const struct ebt_mac_wormhash *aw,
 		      const struct ebt_mac_wormhash *bw)
 {
 	int as, bs;
+
 	as = ebt_mac_wormhash_size(aw);
 	bs = ebt_mac_wormhash_size(bw);
 	if (as != bs)
