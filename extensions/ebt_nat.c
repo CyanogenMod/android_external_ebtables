@@ -205,7 +205,7 @@ static struct ebt_u_target dnat_target =
 	final_check_d,
 	print_d,
 	compare,
-	opts_d,
+	opts_d
 };
 
 static void _init(void) __attribute__ ((constructor));
