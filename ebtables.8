@@ -265,6 +265,10 @@ The target of the rule. This is one of the following values:
 .BR CONTINUE ,
 or a target extension, see
 .BR "TARGET EXTENSIONS" .
+.TP
+.BR "-M, --modprobe " "\fIcommand\fP"
+When talking to the kernel, use this
+.IR command " to try to automatically load missing kernel modules."
 .SH MATCH EXTENSIONS
 .B ebtables
 extensions are precompiled into the userspace tool. So there is no need
