@@ -87,7 +87,7 @@ void print_mac_and_mask(const char *mac, const char *mask);
 	uint32_t _tmp2;				 \
 	char *_tmp;				 \
 	_tmp2 = strtoul(s, &_tmp, 0);		 \
-	if (_tmp)				 \
+	if (*_tmp != '\0')			 \
 		return -1;			 \
 	if (size == 2) {			 \
 		if (_tmp2 >= (1 << 16))		 \
@@ -132,6 +132,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 	long int i;
 	char *end = NULL;
 
+	if (c < 'a' || c > ('a' + STP_NUMOPS - 1))
+		return 0;
 	flag = 1 << (c - 'a');
 	check_option(flags, flag);
 	if (check_inverse(optarg))
@@ -219,7 +221,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			print_error("Bad STP config sender address");
 		break;
 	default:
-		print_error("This shouldn't happen");
+		print_error("stp match: this shouldn't happen");
 	}
 	return 1;
 }
