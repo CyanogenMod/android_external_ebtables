@@ -85,7 +85,6 @@ struct ebt_entry_match
 		char name[EBT_FUNCTION_MAXNAMELEN];
 		struct ebt_match *match;
 	} u;
-	unsigned int version;
 	/* size of data */
 	unsigned int match_size;
 	unsigned char data[0];
@@ -97,7 +96,6 @@ struct ebt_entry_watcher
 		char name[EBT_FUNCTION_MAXNAMELEN];
 		struct ebt_watcher *watcher;
 	} u;
-	unsigned int version;
 	/* size of data */
 	unsigned int watcher_size;
 	unsigned char data[0];
@@ -109,7 +107,6 @@ struct ebt_entry_target
 		char name[EBT_FUNCTION_MAXNAMELEN];
 		struct ebt_target *target;
 	} u;
-	unsigned int version;
 	/* size of data */
 	unsigned int target_size;
 	unsigned char data[0];
@@ -179,14 +176,7 @@ struct ebt_replace
 #define EBT_SO_GET_INIT_ENTRIES (EBT_SO_GET_INIT_INFO+1)
 #define EBT_SO_GET_MAX          (EBT_SO_GET_INIT_ENTRIES+1)
 
-#define NR_MINORS 8
-#define VERSIONIZE(major,minor) ((major << NR_MINORS) + minor)
-
 #ifdef __KERNEL__
-
-extern void ebt_print_string(const char *fmt, ...);
-#define PRINT_BUFFER_LENGTH 1024
-extern int ebt_check_version(unsigned int u,unsigned int k, const char *n);
 
 /* return values for match() functions */
 #define EBT_MATCH 0
@@ -196,15 +186,13 @@ struct ebt_match
 {
 	struct list_head list;
 	const char name[EBT_FUNCTION_MAXNAMELEN];
-	unsigned int version;
 	/* 0 == it matches */
 	int (*match)(const struct sk_buff *skb, const struct net_device *in,
 	   const struct net_device *out, const void *matchdata,
 	   unsigned int datalen);
 	/* 0 == let it in */
 	int (*check)(const char *tablename, unsigned int hookmask,
-	   const struct ebt_entry *e, void *matchdata, unsigned int datalen,
-	   unsigned int version);
+	   const struct ebt_entry *e, void *matchdata, unsigned int datalen);
 	void (*destroy)(void *matchdata, unsigned int datalen);
 	struct module *me;
 };
@@ -213,14 +201,12 @@ struct ebt_watcher
 {
 	struct list_head list;
 	const char name[EBT_FUNCTION_MAXNAMELEN];
-	unsigned int version;
 	void (*watcher)(const struct sk_buff *skb, const struct net_device *in,
 	   const struct net_device *out, const void *watcherdata,
 	   unsigned int datalen);
 	/* 0 == let it in */
 	int (*check)(const char *tablename, unsigned int hookmask,
-	   const struct ebt_entry *e, void *watcherdata, unsigned int datalen,
-	   unsigned int version);
+	   const struct ebt_entry *e, void *watcherdata, unsigned int datalen);
 	void (*destroy)(void *watcherdata, unsigned int datalen);
 	struct module *me;
 };
@@ -229,15 +215,13 @@ struct ebt_target
 {
 	struct list_head list;
 	const char name[EBT_FUNCTION_MAXNAMELEN];
-	unsigned int version;
 	/* returns one of the standard verdicts */
 	int (*target)(struct sk_buff **pskb, unsigned int hooknr,
 	   const struct net_device *in, const struct net_device *out,
 	   const void *targetdata, unsigned int datalen);
 	/* 0 == let it in */
 	int (*check)(const char *tablename, unsigned int hookmask,
-	   const struct ebt_entry *e, void *targetdata, unsigned int datalen,
-	   unsigned int version);
+	   const struct ebt_entry *e, void *targetdata, unsigned int datalen);
 	void (*destroy)(void *targetdata, unsigned int datalen);
 	struct module *me;
 };

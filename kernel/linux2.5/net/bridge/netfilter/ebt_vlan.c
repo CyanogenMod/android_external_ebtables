@@ -42,8 +42,10 @@ MODULE_LICENSE("GPL");
 #define EXIT_ON_MISMATCH(_MATCH_,_MASK_) {if (!((info->_MATCH_ == _MATCH_)^!!(info->invflags & _MASK_))) return EBT_NOMATCH;}
 
 static int
-ebt_filter_vlan(const struct sk_buff *skb, const struct net_device *in,
-   const struct net_device *out, const void *data, unsigned int datalen)
+ebt_filter_vlan(const struct sk_buff *skb,
+		const struct net_device *in,
+		const struct net_device *out,
+		const void *data, unsigned int datalen)
 {
 	struct ebt_vlan_info *info = (struct ebt_vlan_info *) data;
 	struct vlan_ethhdr frame;
@@ -84,11 +86,10 @@ ebt_filter_vlan(const struct sk_buff *skb, const struct net_device *in,
 	return EBT_MATCH;
 }
 
-static struct ebt_match filter_vlan;
 static int
-ebt_check_vlan(const char *tablename, unsigned int hooknr,
-   const struct ebt_entry *e, void *data, unsigned int datalen,
-   unsigned int version)
+ebt_check_vlan(const char *tablename,
+	       unsigned int hooknr,
+	       const struct ebt_entry *e, void *data, unsigned int datalen)
 {
 	struct ebt_vlan_info *info = (struct ebt_vlan_info *) data;
 
@@ -99,10 +100,6 @@ ebt_check_vlan(const char *tablename, unsigned int hooknr,
 		     datalen, sizeof(struct ebt_vlan_info));
 		return -EINVAL;
 	}
-
-	if (ebt_check_version(version, filter_vlan.version,
-			      filter_vlan.name))
-		return -EINVAL;
 
 	/* Is it 802.1Q frame checked? */
 	if (e->ethproto != __constant_htons(ETH_P_8021Q)) {
@@ -177,7 +174,6 @@ static struct ebt_match filter_vlan = {
 	.match		= ebt_filter_vlan,
 	.check		= ebt_check_vlan,
 	.me		= THIS_MODULE,
-	.version	= VERSIONIZE(1,0),
 };
 
 static int __init init(void)
