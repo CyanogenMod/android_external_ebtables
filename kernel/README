@@ -1,6 +1,13 @@
+---
 Here are the source code and patches for the kernel files ebtables
 changes/creates.
 
 Bart De Schuymer,
 June 1, 2002
+---
+All kernel code in linux/ is tagged like this example:
+ebtables_kernel-2-0-pre7
+
+June 1, 2002
+---
 

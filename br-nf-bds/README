@@ -9,3 +9,9 @@ Changes in the policy will be mentioned in this file.
 Bart De Schuymer,
 June 1, 2002
 ---
+All kernel code in linux/ is tagged like this example:
+br_nf_bds-0-0-8
+
+June 1, 2002
+---
+
