@@ -6,7 +6,7 @@
  *	Lennert Buytenhek               <buytenh@gnu.org>
  *	Bart De Schuymer		<bart.de.schuymer@pandora.be>
  *
- *	$Id: br_netfilter.c,v 1.3 2002/10/19 14:33:23 bdschuym Exp $
+ *	$Id: br_netfilter.c,v 1.4 2002/10/21 17:38:16 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -253,8 +253,9 @@ static unsigned int br_nf_pre_routing(unsigned int hook, struct sk_buff **pskb,
 #ifdef CONFIG_NETFILTER_DEBUG
 	skb->nf_debug ^= (1 << NF_IP_PRE_ROUTING);
 #endif
+ 	if ((nf_bridge = nf_bridge_alloc(skb)) == NULL)
+		return NF_DROP;
 
-	nf_bridge = skb->nf_bridge;
 	if (skb->pkt_type == PACKET_OTHERHOST) {
 		skb->pkt_type = PACKET_HOST;
 		nf_bridge->mask |= BRNF_PKT_TYPE;
@@ -503,7 +504,6 @@ static unsigned int br_nf_post_routing(unsigned int hook, struct sk_buff **pskb,
 	}
 
 	memcpy(nf_bridge->hh, skb->data - 16, 16);
-	nf_bridge->mask |= BRNF_COPY_HEADER;	
 
 	NF_HOOK(PF_INET, NF_IP_POST_ROUTING, skb, NULL,
 		bridge_parent(skb->dev), br_dev_queue_push_xmit);
@@ -545,8 +545,8 @@ static unsigned int ipv4_sabotage_out(unsigned int hook, struct sk_buff **pskb,
 		struct sk_buff *skb = *pskb;
 		struct nf_bridge_info *nf_bridge;
 
-		if (!skb->nf_bridge)
-			nf_bridge_alloc(skb);
+		if (!skb->nf_bridge && !nf_bridge_alloc(skb))
+			return NF_DROP;
 
 		nf_bridge = skb->nf_bridge;
 
