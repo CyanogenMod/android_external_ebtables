@@ -20,5 +20,7 @@ WHAT GETS INSTALLED?
 - the userspace program ebtables is compiled and the executable is copied
   by default to /sbin/ebtables. If you want to put the executable
   somewhere else, include BINPATH=<<path>>.
+- you can prefix these paths with a base directory using the option
+  DESTDIR=<<prefix>>.
 
 That's all
