@@ -27,6 +27,11 @@ ETHERTYPESPATH:=/etc/
 endif
 ETHERTYPESFILE:=$(ETHERTYPESPATH)ethertypes
 
+ifeq ($(BINPATH),)
+BINPATH:=/sbin/
+endif
+BINFILE:=$(BINPATH)ebtables
+
 PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DPROGNAME=\"$(PROGNAME)\" \
 	-DPROGDATE=\"$(PROGDATE)\" \
@@ -57,10 +62,10 @@ $(ETHERTYPESFILE): ethertypes
 
 .PHONY: exec
 exec: ebtables
-	install -m 0755 -o root -g root $< /sbin/ebtables
+	install -m 0755 -o root -g root $< $(BINFILE)
 
 .PHONY: install
-install: $(MANDIR)/man8/ebtables.8 ebtables $(ETHERTYPESFILE) exec
+install: $(MANDIR)/man8/ebtables.8 $(ETHERTYPESFILE) exec
 
 .PHONY: clean
 clean:
