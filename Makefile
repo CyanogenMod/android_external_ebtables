@@ -21,13 +21,13 @@ else
 KERNEL_INCLUDES:=include/
 endif
 
-ETHERTYPESFILE1:="/etc/ethertypes"
-ETHERTYPESFILE2:="/usr/local/etc/ethertypes"
+#ETHERTYPESFILE:="/etc/ethertypes"
+ETHERTYPESFILE:="/usr/local/etc/ethertypes"
 
 PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DPROGNAME=\"$(PROGNAME)\" \
 	-DPROGDATE=\"$(PROGDATE)\" \
-	-D_PATH_ETHERTYPES1=\"$(ETHERTYPESFILE1)\"
+	-D_PATH_ETHERTYPES=\"$(ETHERTYPESFILE)\"
 
 
 all: ebtables
@@ -36,7 +36,7 @@ communication.o: communication.c include/ebtables_u.h
 	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
 
 getethertype.o: getethertype.c include/ethernetdb.h
-	$(CC) $(CFLAGS) -c -o $@ $< -Iinclude/
+	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -Iinclude/
 
 ebtables.o: ebtables.c include/ebtables_u.h
 	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
