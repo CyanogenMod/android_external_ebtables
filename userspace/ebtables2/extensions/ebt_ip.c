@@ -207,9 +207,9 @@ parse_port_range(const char *protocol, const char *portstring, uint16_t *ports)
 static void print_port_range(uint16_t *ports)
 {
 	if (ports[0] == ports[1])
-		printf("%d ", ntohs(ports[0]));
+		printf("%d ", ports[0]);
 	else
-		printf("%d:%d ", ntohs(ports[0]), ntohs(ports[1]));
+		printf("%d:%d ", ports[0], ports[1]);
 }
 
 static void print_help()
