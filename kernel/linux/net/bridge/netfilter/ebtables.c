@@ -19,6 +19,7 @@
 #include <linux/sched.h>
 #include <linux/tty.h>
 
+#include <linux/kmod.h>
 #include <linux/module.h>
 #include <linux/vmalloc.h>
 #include <linux/skbuff.h>
@@ -195,6 +196,76 @@ letscontinue:
 	return NF_DROP;
 }
 
+/* If it succeeds, returns element and locks mutex */
+static inline void *
+find_inlist_lock_noload(struct list_head *head,
+			const char *name,
+			int *error,
+			struct semaphore *mutex)
+{
+	void *ret;
+
+	*error = down_interruptible(mutex);
+	if (*error != 0)
+		return NULL;
+
+	ret = list_named_find(head, name);
+	if (!ret) {
+		*error = -ENOENT;
+		up(mutex);
+	}
+	return ret;
+}
+
+#ifndef CONFIG_KMOD
+#define find_inlist_lock(h,n,p,e,m) find_inlist_lock_noload((h),(n),(e),(m))
+#else
+static void *
+find_inlist_lock(struct list_head *head,
+		 const char *name,
+		 const char *prefix,
+		 int *error,
+		 struct semaphore *mutex)
+{
+	void *ret;
+
+	ret = find_inlist_lock_noload(head, name, error, mutex);
+	if (!ret) {
+		char modulename[EBT_FUNCTION_MAXNAMELEN + strlen(prefix) + 1];
+		strcpy(modulename, prefix);
+		strcat(modulename, name);
+		request_module(modulename);
+		ret = find_inlist_lock_noload(head, name, error, mutex);
+	}
+
+	return ret;
+}
+#endif
+
+static inline struct ebt_table *
+find_table_lock(const char *name, int *error, struct semaphore *mutex)
+{
+	return find_inlist_lock(&ebt_tables, name, "ebtable_", error, mutex);
+}
+
+static inline struct ebt_match *
+find_match_lock(const char *name, int *error, struct semaphore *mutex)
+{
+	return find_inlist_lock(&ebt_matches, name, "ebt_", error, mutex);
+}
+
+static inline struct ebt_watcher *
+find_watcher_lock(const char *name, int *error, struct semaphore *mutex)
+{
+	return find_inlist_lock(&ebt_watchers, name, "ebt_", error, mutex);
+}
+
+static inline struct ebt_target *
+find_target_lock(const char *name, int *error, struct semaphore *mutex)
+{
+	return find_inlist_lock(&ebt_targets, name, "ebt_", error, mutex);
+}
+
 static inline int
 ebt_check_match(struct ebt_entry_match *m, struct ebt_entry *e,
    const char *name, unsigned int hook, unsigned int *cnt)
@@ -203,25 +274,20 @@ ebt_check_match(struct ebt_entry_match *m, struct ebt_entry *e,
 	int ret;
 
 	m->u.name[EBT_FUNCTION_MAXNAMELEN - 1] = '\0';
-	ret = down_interruptible(&ebt_mutex);
-	if (ret != 0)
-		return -EFAULT;
-	if (!(match = (struct ebt_match *)
-	   list_named_find(&ebt_matches, m->u.name))) {
-		up(&ebt_mutex);
-		return -ENOENT;
-	}
+	match = find_match_lock(m->u.name, &ret, &ebt_mutex);
+	if (!match) 
+		return ret;
 	m->u.match = match;
-	if (match->check &&
-	   match->check(name, hook, e, m->data,
-	   m->match_size) != 0) {
-		BUGPRINT("match->check failed\n");
-		up(&ebt_mutex);
-		return -EINVAL;
-	}
 	if (match->me)
 		__MOD_INC_USE_COUNT(match->me);
 	up(&ebt_mutex);
+	if (match->check &&
+	   match->check(name, hook, e, m->data, m->match_size) != 0) {
+		BUGPRINT("match->check failed\n");
+		if (match->me)
+			__MOD_DEC_USE_COUNT(match->me);
+		return -EINVAL;
+	}
 	(*cnt)++;
 	return 0;
 }
@@ -233,26 +299,20 @@ ebt_check_watcher(struct ebt_entry_watcher *w, struct ebt_entry *e,
 	struct ebt_watcher *watcher;
 	int ret;
 
-	ret = down_interruptible(&ebt_mutex);
-	if (ret != 0)
-		return -EFAULT;
-	w->u.name[EBT_FUNCTION_MAXNAMELEN - 1] = '\0';
-	if (!(watcher = (struct ebt_watcher *)
-	   list_named_find(&ebt_watchers, w->u.name))) {
-		up(&ebt_mutex);
-		return -ENOENT;
-	}
+	watcher = find_watcher_lock(w->u.name, &ret, &ebt_mutex);
+	if (!watcher) 
+		return ret;
 	w->u.watcher = watcher;
-	if (watcher->check &&
-	   watcher->check(name, hook, e, w->data,
-	   w->watcher_size) != 0) {
-		BUGPRINT("watcher->check failed\n");
-		up(&ebt_mutex);
-		return -EINVAL;
-	}
 	if (watcher->me)
 		__MOD_INC_USE_COUNT(watcher->me);
 	up(&ebt_mutex);
+	if (watcher->check &&
+	   watcher->check(name, hook, e, w->data, w->watcher_size) != 0) {
+		BUGPRINT("watcher->check failed\n");
+		if (watcher->me)
+			__MOD_DEC_USE_COUNT(watcher->me);
+		return -EINVAL;
+	}
 	(*cnt)++;
 	return 0;
 }
@@ -402,16 +462,9 @@ ebt_check_entry(struct ebt_entry *e, struct ebt_table_info *newinfo,
 	if (ret != 0)
 		goto cleanup_watchers;
 	t = (struct ebt_entry_target *)(((char *)e) + e->target_offset);
-	ret = down_interruptible(&ebt_mutex);
-	if (ret != 0)
+	target = find_target_lock(t->u.name, &ret, &ebt_mutex);
+	if (!target) 
 		goto cleanup_watchers;
-	t->u.name[EBT_FUNCTION_MAXNAMELEN - 1] = '\0';
-	if (!(target = (struct ebt_target *)
-	   list_named_find(&ebt_targets, t->u.name))) {
-		ret = -ENOENT;
-		up(&ebt_mutex);
-		goto cleanup_watchers;
-	}
 	if (target->me)
 		__MOD_INC_USE_COUNT(target->me);
 	up(&ebt_mutex);
@@ -545,7 +598,6 @@ static int translate_table(struct ebt_replace *repl,
 	ret = EBT_ENTRY_ITERATE(newinfo->entries, newinfo->entries_size,
 	   ebt_check_entry, newinfo, repl->name, &i, repl->valid_hooks);
 	if (ret != 0) {
-//		BUGPRINT("ebt_check_entry gave fault back\n");
 		EBT_ENTRY_ITERATE(newinfo->entries, newinfo->entries_size,
 		   ebt_cleanup_entry, &i);
 	}
@@ -641,17 +693,9 @@ static int do_replace(void *user, unsigned int len)
 	if (ret != 0)
 		goto free_counterstmp;
 
-	ret = down_interruptible(&ebt_mutex);
-
-	if (ret != 0)
-		goto free_cleanup;
-
-	if (!(t = (struct ebt_table *)list_named_find(&ebt_tables, tmp.name))) {
-		ret = -ENOENT;
-		// give some help to the poor user
-		print_string("The table is not present, try insmod\n");
+	t = find_table_lock(tmp.name, &ret, &ebt_mutex);
+	if (!t)
 		goto free_unlock;
-	}
 
 	// the table doesn't like it
 	if (t->check && (ret = t->check(newinfo, tmp.valid_hooks)))
@@ -701,7 +745,6 @@ static int do_replace(void *user, unsigned int len)
 
 free_unlock:
 	up(&ebt_mutex);
-free_cleanup:
 	EBT_ENTRY_ITERATE(newinfo->entries, newinfo->entries_size,
 	   ebt_cleanup_entry, NULL);
 free_counterstmp:
@@ -913,14 +956,10 @@ static int update_counters(void *user, unsigned int len)
 	}
 
 	hlp.name[EBT_TABLE_MAXNAMELEN - 1] = '\0';
-	ret = down_interruptible(&ebt_mutex);
-	if (ret != 0)
-		goto free_tmp;
 
-	if (!(t = (struct ebt_table *)list_named_find(&ebt_tables, hlp.name))) {
-		ret = -EINVAL;
-		goto unlock_mutex;
-	}
+	t = find_table_lock(hlp.name, &ret, &ebt_mutex);
+	if (!t)
+		goto free_tmp;
 
 	if (hlp.num_counters != t->private->nentries) {
 		BUGPRINT("Wrong nr of counters\n");
@@ -1093,15 +1132,9 @@ static int do_ebt_get_ctl(struct sock *sk, int cmd, void *user, int *len)
 	if (copy_from_user(&tmp, user, sizeof(tmp)))
 		return -EFAULT;
 
-	ret = down_interruptible(&ebt_mutex);
-	if (ret != 0)
+	t = find_table_lock(tmp.name, &ret, &ebt_mutex);
+	if (!t)
 		return ret;
-
-	if (!(t = (struct ebt_table *)list_named_find(&ebt_tables, tmp.name))) {
-		print_string("Table not found, try insmod\n");
-		up(&ebt_mutex);
-		return -EINVAL;
-	}
 
 	switch(cmd) {
 	case EBT_SO_GET_INFO:
