@@ -561,6 +561,24 @@ The destination port or port range for ip protocols 6 (TCP) and
 17 (UDP). The flag
 .B --ip-dport
 is an alias for this option.
+.SS limit
+This module matches at a limited rate using a token bucket filter.
+A rule using this extension will match until this limit is reached.
+It can be used with the
+.B --log
+watcher
+to give limited logging, for example. Its use is the same as the limit
+match of iptables.
+.TP
+.BR "--limit " "[\fIvalue\fP]"
+Maximum average matching rate: specified as a number, with an optional
+`/second', `/minute', `/hour', or `/day' suffix; the default is 3/hour.
+.TP
+.BR "--limit-burst " "[\fInumber\fP]"
+Maximum initial number of packets to match: this number gets recharged by
+one every time the limit specified above is not reached, up to this
+number; the default is 5.
+.SS pkttype
 .SS mark_m
 .TP
 .BR "--mark " "[!] [\fIvalue\fP][/\fImask\fP]"
