@@ -226,12 +226,10 @@ ebt_check_vlan(const char *tablename,
 }
 
 static struct ebt_match filter_vlan = {
-	{NULL, NULL},
-	EBT_VLAN_MATCH,
-	ebt_filter_vlan,
-	ebt_check_vlan,
-	NULL,
-	THIS_MODULE
+	.name		= EBT_VLAN_MATCH,
+	.match		= ebt_filter_vlan,
+	.check		= ebt_check_vlan,
+	.me		= THIS_MODULE
 };
 
 /*

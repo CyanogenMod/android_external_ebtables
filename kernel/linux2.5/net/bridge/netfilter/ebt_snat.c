@@ -44,8 +44,10 @@ static int ebt_target_snat_check(const char *tablename, unsigned int hookmask,
 
 static struct ebt_target snat =
 {
-	{NULL, NULL}, EBT_SNAT_TARGET, ebt_target_snat, ebt_target_snat_check,
-	NULL, THIS_MODULE
+	.name		= EBT_SNAT_TARGET,
+	.target		= ebt_target_snat,
+	.check		= ebt_target_snat_check,
+	.me		= THIS_MODULE
 };
 
 static int __init init(void)

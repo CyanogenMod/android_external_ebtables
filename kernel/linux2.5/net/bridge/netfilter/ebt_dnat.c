@@ -45,8 +45,10 @@ static int ebt_target_dnat_check(const char *tablename, unsigned int hookmask,
 
 static struct ebt_target dnat =
 {
-	{NULL, NULL}, EBT_DNAT_TARGET, ebt_target_dnat, ebt_target_dnat_check,
-	NULL, THIS_MODULE
+	.name		= EBT_DNAT_TARGET,
+	.target		= ebt_target_dnat,
+	.check		= ebt_target_dnat_check,
+	.me		= THIS_MODULE
 };
 
 static int __init init(void)

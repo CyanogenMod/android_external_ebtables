@@ -101,8 +101,10 @@ static int ebt_ip_check(const char *tablename, unsigned int hookmask,
 
 static struct ebt_match filter_ip =
 {
-	{NULL, NULL}, EBT_IP_MATCH, ebt_filter_ip, ebt_ip_check, NULL,
-	THIS_MODULE
+	.name		= EBT_IP_MATCH,
+	.match		= ebt_filter_ip,
+	.check		= ebt_ip_check,
+	.me		= THIS_MODULE
 };
 
 static int __init init(void)

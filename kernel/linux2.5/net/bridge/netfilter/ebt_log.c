@@ -80,8 +80,10 @@ static void ebt_log(const struct sk_buff *skb, const struct net_device *in,
 
 static struct ebt_watcher log =
 {
-	{NULL, NULL}, EBT_LOG_WATCHER, ebt_log, ebt_log_check, NULL,
-	THIS_MODULE
+	.name		= EBT_LOG_WATCHER,
+	.watcher	= ebt_log,
+	.check		= ebt_log_check,
+	.me		= THIS_MODULE
 };
 
 static int __init init(void)

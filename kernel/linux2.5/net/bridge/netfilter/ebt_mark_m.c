@@ -41,8 +41,10 @@ static int ebt_mark_check(const char *tablename, unsigned int hookmask,
 
 static struct ebt_match filter_mark =
 {
-	{NULL, NULL}, EBT_MARK_MATCH, ebt_filter_mark, ebt_mark_check, NULL,
-	THIS_MODULE
+	.name		= EBT_MARK_MATCH,
+	.match		= ebt_filter_mark,
+	.check		= ebt_mark_check,
+	.me		= THIS_MODULE
 };
 
 static int __init init(void)
