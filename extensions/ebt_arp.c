@@ -284,41 +284,16 @@ static void print(const struct ebt_u_entry *entry,
 		printf("%s ", mask_to_dotted(arpinfo->dmsk));
 	}
 	if (arpinfo->bitmask & EBT_ARP_SRC_MAC) {
-		int verdict;
 		printf("--arp-mac-src ");
 		if (arpinfo->invflags & EBT_ARP_SRC_MAC)
 			printf("! ");
-		for (i = 0; i < 6; i++)
-			printf("%x%s", ((unsigned char *)&arpinfo->smaddr)[i],
-			   (i == 5) ? "" : ":");
-		verdict = 0;
-		for (i = 0; i < 6; i++)
-			verdict = (arpinfo->smmsk[i] ^ 0xFF);
-		if (verdict != 0) {
-			printf("%s", "/");
-			for (i = 0; i < 6; i++)
-				printf("%x%s", ((unsigned char *)&arpinfo->smmsk)[i],
-				   (i == 5) ? "" : ":");
-			printf("%s", " ");
-		}
+		print_mac_and_mask(arpinfo->smaddr, arpinfo->smmsk);
 	}
 	if (arpinfo->bitmask & EBT_ARP_DST_MAC) {
-		int verdict;
 		printf("--arp-mac-dst ");
 		if (arpinfo->invflags & EBT_ARP_DST_MAC)
 			printf("! ");
-		for (i = 0; i < 6; i++)
-			printf("%x%s", ((unsigned char *)&arpinfo->dmaddr)[i],
-			   (i == 5) ? "" : ":");
-		verdict = 0;
-		for (i = 0; i < 6; i++)
-			verdict = (arpinfo->dmmsk[i] ^ 0xFF);
-		if (verdict != 0) {
-			printf("%s", "/");
-			for (i = 0; i < 6; i++)
-				printf("%x%s", ((unsigned char *)&arpinfo->dmmsk)[i],
-				   (i == 5) ? "" : ":");
-		}
+		print_mac_and_mask(arpinfo->dmaddr, arpinfo->dmmsk);
 	}
 }
 
