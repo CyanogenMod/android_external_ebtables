@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_input.c,v 1.1 2002/06/01 19:24:03 bdschuym Exp $
+ *	$Id: br_input.c,v 1.2 2002/08/22 17:49:34 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -23,6 +23,7 @@
     defined(CONFIG_BRIDGE_EBT_BROUTE_MODULE)
 #include <linux/netfilter.h>
 #endif
+
 unsigned char bridge_ula[6] = { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x00 };
 
 static int br_pass_frame_up_finish(struct sk_buff *skb)
@@ -170,9 +171,11 @@ err_nolock:
 handle_special_frame:
 	if (!dest[5]) {
 		br_stp_handle_bpdu(skb);
+		read_unlock(&br->lock);
 		return 0;
 	}
 
+	read_unlock(&br->lock);
 	kfree_skb(skb);
 	return 0;
 }

@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br.c,v 1.1 2002/07/29 22:21:14 bdschuym Exp $
+ *	$Id: br.c,v 1.2 2002/08/22 17:49:34 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
