@@ -2,12 +2,13 @@
 # Used to make incremental diffs for ebtables userspace
 # 31 July 2002, added mark match/target
 
-export FROM=ebtables-v2.0pre10
-export TO=ebtables-v2.0-rc1.001
-export FILE=ebtables-v2.0-rc1.001.diff
+export FROM=/ebtables-cvs/ebtables2/userspace/ebtables2/
+export TO=ebtables-v2.0.2
+export FILE=iets.diff
 
 diff -urN $FROM/Makefile $TO/Makefile > $FILE
 diff -urN $FROM/ebtables.c $TO/ebtables.c >> $FILE
+diff -urN $FROM/getethertype.c $TO/getethertype.c >> $FILE
 diff -urN $FROM/communication.c $TO/communication.c >> $FILE
 diff -urN $FROM/extensions/ebt_redirect.c $TO/extensions/ebt_redirect.c >> $FILE
 diff -urN $FROM/extensions/ebtable_broute.c $TO/extensions/ebtable_broute.c >> $FILE
@@ -28,4 +29,4 @@ diff -urN $FROM/ChangeLog $TO/ChangeLog >> $FILE
 diff -urN $FROM/ebtables.8 $TO/ebtables.8 >> $FILE
 diff -urN $FROM/ethertypes $TO/ethertypes >> $FILE
 diff -urN $FROM/include/ebtables_u.h $TO/include/ebtables_u.h >> $FILE
-
+diff -urN $FROM/include/ethernetdb.h $TO/include/ethernetdb.h >> $FILE
