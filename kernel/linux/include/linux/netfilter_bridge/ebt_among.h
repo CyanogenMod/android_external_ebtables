@@ -4,9 +4,11 @@
 #define EBT_AMONG_DST 0x01
 #define EBT_AMONG_SRC 0x02
 
-/* Write-once-read-many hash table, used for checking if a given
- * MAC address belongs to a set or not. It remembers up to 256
- * addresses.
+/* Grzegorz Borowiak <grzes@gnu.univ.gda.pl> 2003
+ * 
+ * Write-once-read-many hash table, used for checking if a given
+ * MAC address belongs to a set or not and possibly for checking
+ * if it is related with a given IPv4 address.
  *
  * The hash value of an address is its last byte.
  * 
@@ -53,20 +55,31 @@ struct ebt_mac_wormhash_tuple
 {
 	int next_ofs;
 	uint32_t cmp[2];
+	uint32_t ip;
 };
 
 struct ebt_mac_wormhash
 {
 	int table[256];
-	struct ebt_mac_wormhash_tuple pool[256];
+	int poolsize;
+	struct ebt_mac_wormhash_tuple pool[0];
 };
+
+#define ebt_mac_wormhash_size(x) ((x) ? sizeof(struct ebt_mac_wormhash) + (x)->poolsize * sizeof(struct ebt_mac_wormhash_tuple) : 0)
 
 struct ebt_among_info
 {
-	uint32_t bitmask;
-	struct ebt_mac_wormhash wh_dst;
-	struct ebt_mac_wormhash wh_src;
+	int wh_dst_ofs;
+	int wh_src_ofs;
+	int bitmask;
 };
+
+#define EBT_AMONG_DST_NEG 0x1
+#define EBT_AMONG_SRC_NEG 0x2
+
+#define ebt_among_wh_dst(x) ((x)->wh_dst_ofs ? (struct ebt_mac_wormhash*)((char*)(x) + (x)->wh_dst_ofs) : NULL)
+#define ebt_among_wh_src(x) ((x)->wh_src_ofs ? (struct ebt_mac_wormhash*)((char*)(x) + (x)->wh_src_ofs) : NULL)
+
 #define EBT_AMONG_MATCH "among"
 
 #endif
