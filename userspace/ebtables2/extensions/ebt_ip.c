@@ -218,7 +218,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 }
 
 static void final_check(const struct ebt_u_entry *entry,
-   const struct ebt_entry_match *match, const char *name, unsigned int hook_mask)
+   const struct ebt_entry_match *match, const char *name,
+   unsigned int hook_mask, unsigned int time)
 {
 	if (entry->bitmask & EBT_NOPROTO || entry->bitmask & EBT_802_3 ||
 	   entry->ethproto != ETH_P_IP)

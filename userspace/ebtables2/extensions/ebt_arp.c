@@ -75,9 +75,8 @@ void parse_ip_address(char *address, __u32 *addr, __u32 *msk);
 #define OPT_PTYPE  0x04
 #define OPT_IP_S   0x08
 #define OPT_IP_D   0x10
-static int parse(int c, char **argv, int argc,
-	        const struct ebt_u_entry *entry, unsigned int *flags,
-	        struct ebt_entry_match **match)
+static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
+   unsigned int *flags, struct ebt_entry_match **match)
 {
 	struct ebt_arp_info *arpinfo = (struct ebt_arp_info *)(*match)->data;
 	int i;
@@ -177,7 +176,8 @@ static int parse(int c, char **argv, int argc,
 }
 
 static void final_check(const struct ebt_u_entry *entry,
-const struct ebt_entry_match *match, const char *name, unsigned int hook_mask)
+   const struct ebt_entry_match *match, const char *name,
+   unsigned int hook_mask, unsigned int time)
 {
 	if (entry->bitmask & EBT_NOPROTO || entry->bitmask & EBT_802_3 ||
 	   (entry->ethproto != ETH_P_ARP && entry->ethproto != ETH_P_RARP))

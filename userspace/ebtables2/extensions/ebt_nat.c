@@ -136,22 +136,24 @@ static int parse_d(int c, char **argv, int argc,
 }
 
 static void final_check_s(const struct ebt_u_entry *entry,
-   const struct ebt_entry_target *target, const char *name, unsigned int hook_mask)
+   const struct ebt_entry_target *target, const char *name,
+   unsigned int hook_mask, unsigned int time)
 {
 	if (!(hook_mask & (1 << NF_BR_POST_ROUTING)) || strcmp(name, "nat"))
 		print_error("Wrong chain for snat");
-	if (to_source_supplied == 0)
+	if (time == 0 && to_source_supplied == 0)
 		print_error("No snat address supplied");
 }
 
 static void final_check_d(const struct ebt_u_entry *entry,
-   const struct ebt_entry_target *target, const char *name, unsigned int hook_mask)
+   const struct ebt_entry_target *target, const char *name,
+   unsigned int hook_mask, unsigned int time)
 {
 	if (((hook_mask & ~((1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_LOCAL_OUT))) ||
 	   strcmp(name, "nat")) &&
 	   ((hook_mask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute")))
 		print_error("Wrong chain for dnat");
-	if (to_dest_supplied == 0)
+	if (time == 0 && to_dest_supplied == 0)
 		print_error("No dnat address supplied");
 }
 

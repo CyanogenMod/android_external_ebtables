@@ -119,7 +119,7 @@ struct ebt_u_match
 	        struct ebt_entry_match **match);
 	void (*final_check)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_match *match,
-	   const char *name, unsigned int hook_mask);
+	   const char *name, unsigned int hook_mask, unsigned int time);
 	void (*print)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_match *match);
 	int (*compare)(const struct ebt_entry_match *m1,
@@ -146,7 +146,7 @@ struct ebt_u_watcher
 	   struct ebt_entry_watcher **watcher);
 	void (*final_check)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_watcher *watch, const char *name,
-	   unsigned int hook_mask);
+	   unsigned int hook_mask, unsigned int time);
 	void (*print)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_watcher *watcher);
 	int (*compare)(const struct ebt_entry_watcher *w1,
@@ -170,7 +170,7 @@ struct ebt_u_target
 	   struct ebt_entry_target **target);
 	void (*final_check)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_target *target, const char *name,
-	   unsigned int hook_mask);
+	   unsigned int hook_mask, unsigned int time);
 	void (*print)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_target *target);
 	int (*compare)(const struct ebt_entry_target *t1,
