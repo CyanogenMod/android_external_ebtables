@@ -1,3 +1,10 @@
+20020830
+	* updated the kernel files for 2.4.20-pre5 and 2.5.32
+	* last big cleanup of kernel and userspace code just finished
+20020820
+	* ARP module bugfix
+	* IP module bugfix
+	* nat module bugfix
 20020730
 	* other things done before 2.0-rc1 that I can think of,
 	  including kernel:
