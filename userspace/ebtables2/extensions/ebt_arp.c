@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
+#include "../include/ethernetdb.h"
 #include <linux/netfilter_bridge/ebt_arp.h>
 
 #define ARP_OPCODE '1'
@@ -133,9 +134,14 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			print_error("Missing ARP protocol type argument");
 		i = strtol(argv[optind - 1], &end, 16);
 		if (i < 0 || i >= (0x1 << 16) || *end !='\0') {
-			if (name_to_number (argv[optind - 1], &proto) == -1)
+			struct ethertypeent *ent;
+
+			ent = getethertypebyname(argv[optind - 1]);
+			if (!ent)
 				print_error("Problem with specified ARP "
 				            "protocol type");
+			proto = ent->e_ethertype;
+
 		} else
 			proto = i;
 		arpinfo->ptype = htons(proto);
@@ -190,7 +196,6 @@ static void print(const struct ebt_u_entry *entry,
 {
 	struct ebt_arp_info *arpinfo = (struct ebt_arp_info *)match->data;
 	int i;
-	char name[21];
 
 	if (arpinfo->bitmask & EBT_ARP_OPCODE) {
 		int opcode = ntohs(arpinfo->opcode);
@@ -209,13 +214,16 @@ static void print(const struct ebt_u_entry *entry,
 		printf("%d ", ntohs(arpinfo->htype));
 	}
 	if (arpinfo->bitmask & EBT_ARP_PTYPE) {
+		struct ethertypeent *ent;
+
 		printf("--arp-ptype ");
 		if (arpinfo->invflags & EBT_ARP_PTYPE)
 			printf("! ");
-		if (number_to_name(ntohs(arpinfo->ptype), name))
+		ent = getethertypebynumber(ntohs(arpinfo->ptype));
+		if (!ent)
 			printf("0x%x ", ntohs(arpinfo->ptype));
 		else
-			printf("%s ", name);
+			printf("%s ", ent->e_name);
 	}
 	if (arpinfo->bitmask & EBT_ARP_SRC_IP) {
 		printf("--arp-ip-src ");
