@@ -1863,7 +1863,7 @@ int main(int argc, char *argv[])
 				int udc_nr;
 
 				if (!optarg && (optind >= argc ||
-				   (argv[optind][0] != '-'
+				   (argv[optind][0] == '-'
 				    && strcmp(argv[optind], "!")))) {
 					delete_all_user_chains();
 					break;
