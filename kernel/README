@@ -17,7 +17,10 @@ July 31, 2002
 ---
 Added the linux2.5 directory, which contains files that are different
 between the 2.4 patch (linux/) and the 2.5 patch (linux2.5).
+Added the br-nf-bds2.5 directory, containing the different files for
+the 2.5 patch
+The repository should now contain files compilable against 2.4.20-pre4 and
+2.5.31.
 
 August 23, 2002
 ---
-
