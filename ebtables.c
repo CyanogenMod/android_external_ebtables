@@ -1451,6 +1451,33 @@ int getmac_and_mask(char *from, char *to, char *mask)
 	return 0;
 }
 
+void do_final_checks(struct ebt_u_entry *e, struct ebt_u_entries *entries)
+{
+	struct ebt_u_match_list *m_l;
+	struct ebt_u_watcher_list *w_l;
+	struct ebt_u_target *t;
+	struct ebt_u_match *m;
+	struct ebt_u_watcher *w;
+
+	m_l = e->m_list;
+	w_l = e->w_list;
+	while (m_l) {
+		m = find_match(m_l->m->u.name);
+		m->final_check(e, m_l->m, replace.name,
+		   entries->hook_mask, 1);
+		m_l = m_l->next;
+	}
+	while (w_l) {
+		w = find_watcher(w_l->w->u.name);
+		w->final_check(e, w_l->w, replace.name,
+		   entries->hook_mask, 1);
+		w_l = w_l->next;
+	}
+	t = find_target(e->t->u.name);
+	t->final_check(e, e->t, replace.name,
+	   entries->hook_mask, 1);
+}
+
 int check_inverse(const char option[])
 {
 	if (strcmp(option, "!") == 0) {
@@ -1490,9 +1517,9 @@ int main(int argc, char *argv[])
 	struct ebt_u_target *t;
 	struct ebt_u_match *m;
 	struct ebt_u_watcher *w;
-	struct ebt_u_match_list *m_l;
+ 	struct ebt_u_match_list *m_l;
 	struct ebt_u_watcher_list *w_l;
-	struct ebt_u_entries *entries;
+ 	struct ebt_u_entries *entries;
 	const char *modprobe = NULL;
 
 	// initialize the table name, OPT_ flags, selected hook and command
@@ -1850,6 +1877,8 @@ int main(int argc, char *argv[])
 						print_error("Return target"
 						" only for user defined chains");
 				}
+				if (i != NUM_STANDARD_TARGETS)
+					break;
 				if ((i = get_hooknr(optarg)) != -1) {
 						if (i < NF_BR_NUMHOOKS)
 							print_error("don't jump"
@@ -2003,19 +2032,18 @@ int main(int argc, char *argv[])
 		while (m_l) {
 			m = (struct ebt_u_match *)(m_l->m);
 			m->final_check(new_entry, m->m, replace.name,
-			   entries->hook_mask);
+			   entries->hook_mask, 0);
 			m_l = m_l->next;
 		}
 		while (w_l) {
 			w = (struct ebt_u_watcher *)(w_l->w);
 			w->final_check(new_entry, w->w, replace.name,
-			   entries->hook_mask);
+			   entries->hook_mask, 0);
 			w_l = w_l->next;
 		}
 		t->final_check(new_entry, t->t, replace.name,
-		   entries->hook_mask);
+		   entries->hook_mask, 0);
 	}
-	
 	// so, the extensions can work with the host endian
 	// the kernel does not have to do this ofcourse
 	new_entry->ethproto = htons(new_entry->ethproto);
@@ -2037,6 +2065,29 @@ int main(int argc, char *argv[])
 	} else if (replace.command == 'A' || replace.command == 'I') {
 		add_rule(rule_nr);
 		check_for_loops();
+		// do the final_check(), for all entries
+		// needed when adding a rule that has a chain target
+		i = -1;
+		while (1) {
+			struct ebt_u_entry *e;
+
+			i++;
+			entries = nr_to_chain(i);
+			if (!entries) {
+				if (i < NF_BR_NUMHOOKS)
+					continue;
+				else
+					break;
+			}
+			e = entries->entries;
+			while (e) {
+				// userspace extensions use host endian
+				e->ethproto = ntohs(e->ethproto);
+				do_final_checks(e, entries);
+				e->ethproto = htons(e->ethproto);
+				e = e->next;
+			}
+		}
 	} else if (replace.command == 'D')
 		delete_rule(rule_nr);
 	// commands -N, -E, -X fall through
@@ -2048,6 +2099,5 @@ int main(int argc, char *argv[])
 
 	if (counterchanges)
 		deliver_counters(&replace, counterchanges);
-//	list_rules();
 	return 0;
 }

@@ -59,7 +59,8 @@ static int parse(int c, char **argv, int argc,
 }
 
 static void final_check(const struct ebt_u_entry *entry,
-   const struct ebt_entry_target *target, const char *name, unsigned int hook_mask)
+   const struct ebt_entry_target *target, const char *name,
+   unsigned int hook_mask, unsigned int time)
 {
 	if ( ((hook_mask & ~(1 << NF_BR_PRE_ROUTING)) || strcmp(name, "nat")) &&
 	   ((hook_mask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute")) )

@@ -193,7 +193,7 @@ parse (int c, char **argv, int argc,
 static void
 final_check (const struct ebt_u_entry *entry,
 	     const struct ebt_entry_match *match,
-	     const char *name, unsigned int hook_mask)
+	     const char *name, unsigned int hook_mask, unsigned int time)
 {
 	/*
 	 * Is any proto supplied there? Or specified proto isn't 802.1Q?
