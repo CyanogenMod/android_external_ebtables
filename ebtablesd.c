@@ -348,7 +348,6 @@ continue_read:
 			goto write_msg;
 		}
 		optind = 1;
-printf("jak: ntot = %d, offset = %d, base = %d\n", ntot, offset, base);
 		do_command(argc, argv, EXEC_STYLE_DAEMON, &replace[table_nr]);
 		ebt_reinit_extensions();
 write_msg:
