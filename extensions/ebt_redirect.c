@@ -50,16 +50,17 @@ static int parse(int c, char **argv, int argc,
 
 static void final_check(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target, const char *name,
-   unsigned int hook_mask, unsigned int time)
+   unsigned int hookmask, unsigned int time)
 {
 	struct ebt_redirect_info *redirectinfo =
 	   (struct ebt_redirect_info *)target->data;
 
 	if (BASE_CHAIN && redirectinfo->target == EBT_RETURN)
-		print_error("--redirect-target RETURN not allowed on base chain");
+		print_error("--redirect-target RETURN not allowed on "
+		            "base chain");
 	CLEAR_BASE_CHAIN_BIT;
-	if ( ((hook_mask & ~(1 << NF_BR_PRE_ROUTING)) || strcmp(name, "nat")) &&
-	   ((hook_mask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute")) )
+	if ( ((hookmask & ~(1 << NF_BR_PRE_ROUTING)) || strcmp(name, "nat")) &&
+	   ((hookmask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute")) )
 		print_error("Wrong chain for redirect");
 }
 

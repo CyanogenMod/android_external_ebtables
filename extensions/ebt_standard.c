@@ -27,7 +27,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 
 static void final_check(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target, const char *name,
-   unsigned int hook_mask, unsigned int time)
+   unsigned int hookmask, unsigned int time)
 {
 }
 
