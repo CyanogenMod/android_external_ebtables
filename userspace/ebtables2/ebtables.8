@@ -462,6 +462,27 @@ to explicitly load them with a -m option like in
 .BR iptables .
 However, these
 extensions deal with functionality supported by supplemental kernel modules.
+.SS arp
+Specify arp fields. These will only work if the protocol equals
+.BR ARP " or " RARP .
+.TP
+.BR "--arp-opcode " "[!] \fIopcode\fP"
+The (r)arp opcode (decimal or a string, for more details see
+.BR "ebtables -h arp" ).
+.TP
+.BR "--arp-htype " "[!] \fIhardware type\fP"
+The hardware type, this can be a decimal or the string "Ethernet". This
+is normally Ethernet (value 1).
+.TP
+.BR "--arp-ptype " "[!] \fIprotocol type\fP"
+The protocol type for which the (r)arp is used (hexadecimal or the string "IPv4").
+This is normally IPv4 (0x0800).
+.TP
+.BR "--arp-ip-src " "[!] \fIaddress\fP[/\fImask\fP]"
+The ARP IP source address specification.
+.TP
+.BR "--arp-ip-dst " "[!] \fIaddress\fP[/\fImask\fP]"
+The ARP IP destination address specification.
 .SS ip
 Specify ip fields. These will only work if the protocol equals
 .BR IPv4 .
@@ -500,27 +521,15 @@ The destination port or port range for ip protocols 6 (TCP) and
 17 (UDP). The flag
 .B --ip-dport
 is an alias for this option.
-.SS arp
-Specify arp fields. These will only work if the protocol equals
-.BR ARP " or " RARP .
+.SS mark_m
 .TP
-.BR "--arp-opcode " "[!] \fIopcode\fP"
-The (r)arp opcode (decimal or a string, for more details see
-.BR "ebtables -h arp" ).
-.TP
-.BR "--arp-htype " "[!] \fIhardware type\fP"
-The hardware type, this can be a decimal or the string "Ethernet". This
-is normally Ethernet (value 1).
-.TP
-.BR "--arp-ptype " "[!] \fIprotocol type\fP"
-The protocol type for which the (r)arp is used (hexadecimal or the string "IPv4").
-This is normally IPv4 (0x0800). 
-.TP
-.BR "--arp-ip-src " "[!] \fIaddress\fP[/\fImask\fP]"
-The ARP IP source address specification.
-.TP
-.BR "--arp-ip-dst " "[!] \fIaddress\fP[/\fImask\fP]"
-The ARP IP destination address specification.
+.BR "--mark " "[!] [\fIvalue\fP][/\fImask\fP]"
+Matches frames with the given unsigned mark value. If a mark value and
+mask is specified, the logical AND of the mark value of the frame and
+the user-specified mask is taken before comparing it with the user-specified
+mark value. If only a mask is specified (start with '/') the logical AND
+of the mark value of the frame and the user-specified mark is taken and
+the result is compared with zero.
 .SS vlan
 Specify 802.1Q Tag Control Information fields.
 The protocol rule specification (frame type) should be set to
@@ -540,15 +549,6 @@ Specified as hexadecimal
 number from 0x0000 to 0xFFFF or as a symbolic name
 from
 .BR /etc/ethertypes .
-.SS mark_m
-.TP
-.BR "--mark " "[!] [\fIvalue\fP][/\fImask\fP]"
-Matches frames with the given unsigned mark value. If a mark value and 
-mask is specified, the logical AND of the mark value of the frame and
-the user-specified mask is taken before comparing it with the user-specified
-mark value. If only a mask is specified (start with '/') the logical AND
-of the mark value of the frame and the user-specified mark is taken and
-the result is compared with zero.
 
 .SS WATCHER-EXTENSION(S)
 Watchers are things that only look at frames passing by. These watchers only
@@ -582,20 +582,85 @@ the rule. The default is no ip information logging.
 will log the (r)arp information when a frame made by the (r)arp protocols
 matches the rule. The default is no (r)arp information logging.
 .SS TARGET EXTENSIONS
+.SS
+.B dnat
+The
+.B dnat
+target can only be used in the
+.BR BROUTING " chain of the " broute " table and the "
+.BR PREROUTING " and " OUTPUT " chains of the " nat " table."
+It specifies that the destination mac address has to be changed.
 .TP
+.BR "--to-destination " "\fIaddress\fP"
+.br
+The flag
+.B --to-dst
+is an alias for this option.
+.TP
+.BR "--dnat-target " "\fItarget\fP"
+.br
+Specifies the standard target. After doing the dnat, the rule still has to
+give a standard target so
+.B ebtables
+knows what to do.
+The default target is ACCEPT. Making it CONTINUE could let you use
+multiple target extensions on the same frame. Making it DROP only makes
+sense in the BROUTING chain but using the redirect target is more logical
+there. RETURN is also allowed. Note
+that using RETURN in a base chain is not allowed.
+.SS
+.B mark
+The mark target can be used in every chain of every table. It is possible
+to use the marking of a frame/packet in both ebtables and iptables,
+if the br-nf code is compiled into the kernel. Both put the marking at the
+same place. So, you can consider this fact as a feature, or as something to
+watch out for.
+.TP
+.BR "--set-mark " "\fIvalue\fP"
+.br
+Mark the frame with the specified unsigned value.
+.TP
+.BR "--mark-target " "\fItarget\fP"
+.br
+Specifies the standard target. After marking the frame, the rule
+still has to give a standard target so
+.B ebtables
+knows what to do.
+The default target is ACCEPT. Making it CONTINUE can let you do other
+things with the frame in other rules of the chain.
+.SS
+.B redirect
+The
+.B redirect
+target will change the MAC target address to that of the bridge device the
+frame arrived on. This target can only be used in the
+.BR BROUTING " chain of the " broute " table and the "
+.BR PREROUTING " chain of the " nat " table."
+.TP
+.BR "--redirect-target " "\fItarget\fP"
+.br
+Specifies the standard target. After doing the MAC redirect, the rule
+still has to give a standard target so
+.B ebtables
+knows what to do.
+The default target is ACCEPT. Making it CONTINUE could let you use
+multiple target extensions on the same frame. Making it DROP in the
+BROUTING chain will let the frames be routed. RETURN is also allowed. Note
+that using RETURN in a base chain is not allowed.
+.SS
 .B snat
 The
 .B snat
 target can only be used in the
 .BR POSTROUTING " chain of the " nat " table."
 It specifies that the source mac address has to be changed.
-.br
+.TP
 .BR "--to-source " "\fIaddress\fP"
 .br
 The flag
 .B --to-src
 is an alias for this option.
-.br
+.TP
 .BR "--snat-target " "\fItarget\fP"
 .br
 Specifies the standard target. After doing the snat, the rule still has 
@@ -606,71 +671,6 @@ The default target is ACCEPT. Making it CONTINUE could let you use
 multiple target extensions on the same frame. Making it DROP doesn't
 make sense, but you could do that too. RETURN is also allowed. Note
 that using RETURN in a base chain is not allowed.
-.TP
-.B dnat
-The
-.B dnat
-target can only be used in the
-.BR BROUTING " chain of the " broute " table and the "
-.BR PREROUTING " and " OUTPUT " chains of the " nat " table."
-It specifies that the destination mac address has to be changed.
-.br
-.BR "--to-destination " "\fIaddress\fP"
-.br
-The flag
-.B --to-dst
-is an alias for this option.
-.br
-.BR "--dnat-target " "\fItarget\fP"
-.br
-Specifies the standard target. After doing the dnat, the rule still has to
-give a standard target so
-.B ebtables
-knows what to do.
-The default target is ACCEPT. Making it CONTINUE could let you use 
-multiple target extensions on the same frame. Making it DROP only makes
-sense in the BROUTING chain but using the redirect target is more logical
-there. RETURN is also allowed. Note
-that using RETURN in a base chain is not allowed.
-.TP
-.B redirect
-The
-.B redirect
-target will change the MAC target address to that of the bridge device the
-frame arrived on. This target can only be used in the
-.BR BROUTING " chain of the " broute " table and the "
-.BR PREROUTING " chain of the " nat " table."
-.br
-.BR "--redirect-target " "\fItarget\fP"
-.br
-Specifies the standard target. After doing the MAC redirect, the rule
-still has to give a standard target so
-.B ebtables
-knows what to do.
-The default target is ACCEPT. Making it CONTINUE could let you use 
-multiple target extensions on the same frame. Making it DROP in the
-BROUTING chain will let the frames be routed. RETURN is also allowed. Note
-that using RETURN in a base chain is not allowed.
-.TP
-.B mark
-The mark target can be used in every chain of every table. It is possible
-to use the marking of a frame/packet in both ebtables and iptables, 
-if the br-nf code is compiled into the kernel. Both put the marking at the
-same place. So, you can consider this fact as a feature, or as something to
-watch out for.
-.br
-.BR "--mark-target " "\fItarget\fP"
-.br
-Specifies the standard target. After marking the frame, the rule
-still has to give a standard target so
-.B ebtables
-knows what to do.
-The default target is ACCEPT. Making it CONTINUE can let you do other
-things with the frame in other rules of the chain.
-.br
-.BR "--set-mark " "\fIvalue\fP"
-.br
-Mark the frame with the specified unsigned value.
 .br
 .SH FILES
 .I /etc/ethertypes
