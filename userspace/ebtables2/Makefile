@@ -1,8 +1,8 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGVERSION:="2.0.1"
-PROGDATE:="October 2002"
+PROGVERSION:=2.0.1
+PROGDATE:=October\ 2002
 
 MANDIR?=/usr/local/man
 CFLAGS:=-Wall -Wunused
@@ -21,8 +21,11 @@ else
 KERNEL_INCLUDES:=include/
 endif
 
-#ETHERTYPESFILE:="/etc/ethertypes"
-ETHERTYPESFILE:="/usr/local/etc/ethertypes"
+ifneq ($(ETHERTYPESPATH),)
+ETHERTYPESFILE:=$(ETHERTYPESPATH)ethertypes
+else
+ETHERTYPESFILE:=/usr/local/etc/ethertypes
+endif
 
 PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DPROGNAME=\"$(PROGNAME)\" \
@@ -48,7 +51,7 @@ $(MANDIR)/man8/ebtables.8: ebtables.8
 	mkdir -p $(@D)
 	install -m 0644 -o root -g root $< $@
 
-/etc/ethertypes: ethertypes
+$(ETHERTYPESFILE): ethertypes
 	mkdir -p $(@D)
 	install -m 0644 -o root -g root $< $@
 
@@ -57,7 +60,7 @@ exec: ebtables
 	install -m 0755 -o root -g root $< /sbin/ebtables
 
 .PHONY: install
-install: $(MANDIR)/man8/ebtables.8 ebtables /etc/ethertypes exec
+install: $(MANDIR)/man8/ebtables.8 ebtables $(ETHERTYPESFILE) exec
 
 .PHONY: clean
 clean:
