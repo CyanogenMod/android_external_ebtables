@@ -1,4 +1,4 @@
-.TH EBTABLES 8  "18 January 2004"
+.TH EBTABLES 8  "22 November 2004"
 .\"
 .\" Man page written by Bart De Schuymer <bdschuym@pandora.be>
 .\" It is based on the iptables man page.
@@ -673,7 +673,8 @@ from
 
 .SS WATCHER-EXTENSION(S)
 Watchers are things that only look at frames passing by. These watchers only
-see the frame if the frame matches the rule.
+see the frame if the frame matches the rule. Watchers see the packet before the
+target is executed.
 .SS log
 The fact that the log module is a watcher lets us log stuff while giving a target
 by choice. Note that the log module therefore is not a target.
@@ -685,23 +686,78 @@ settings: log-prefix="", no arp logging, no ip logging, log-level=info.
 .TP
 .B --log-level "\fIlevel\fP"
 .br
-defines the logging level. For the possible values: ebtables -h log.
+Defines the logging level. For the possible values: ebtables -h log.
 The default level is 
 .IR info .
 .TP
 .BR --log-prefix " \fItext\fP"
 .br
-defines the prefix to be printed before the logging information.
+Defines the prefix to be printed before the logging information.
 .TP
 .B --log-ip 
 .br
-will log the ip information when a frame made by the ip protocol matches 
+Will log the ip information when a frame made by the ip protocol matches 
 the rule. The default is no ip information logging.
 .TP
 .B --log-arp
 .br
-will log the (r)arp information when a frame made by the (r)arp protocols
+Will log the (r)arp information when a frame made by the (r)arp protocols
 matches the rule. The default is no (r)arp information logging.
+.SS ulog
+The ulog watcher passes the packet to a userspace
+logging daemon using netlink multicast sockets. This differs
+from the log watcher in the sense that the complete packet is
+sent to userspace instead of a descriptive text and that
+netlink multicast sockets are used instead of the syslog.
+This watcher enables parsing of packets with userspace programs, the
+physical bridge in and out ports are also included in the netlink messages.
+The ulog watcher module accepts 2 parameters when the module is loaded
+into the kernel (e.g. with modprobe):
+.B nlbufsiz
+specifies how big the buffer for each netlink multicast
+group is. E.g. If you say nlbufsiz=8192, up to eight kB of packets will
+get accumulated in the kernel until they are sent to userspace. It is
+not possible to allocate more than 128kB. Please also keep in mind that
+this buffer size is allocated for each nlgroup you are using, so the
+total kernel memory usage increases by that factor. The default is 4096.
+.B flushtimeout
+specifies after how many hundredths of a second the queue should be
+flushed, even if it is not full yet. The default is 10 (one tenth of
+a second).
+.TP
+.B "--ulog"
+.br
+Use the default settings: ulog-prefix="", ulog-nlgroup=1,
+ulog-cprange=4096, ulog-qthreshold=1.
+.TP
+.B --ulog-prefix "\fItext\fP"
+.br
+Defines the prefix included with the packets sent to userspace.
+.TP
+.BR --ulog-nlgroup " \fIgroup\fP"
+.br
+Defines which netlink group number to use (a number from 1 to 32).
+Make sure the netlink group numbers used for the iptables ULOG
+target differ from those used for the ebtables ulog watcher.
+The default group number is 1.
+.TP
+.BR --ulog-cprange " \fIrange\fP"
+.br
+Defines the maximum copy range to userspace, for packets matching the
+rule. The default range is 0, which means the maximum copy range is
+given by
+.BR nlbufsiz .
+A maximum copy range larger than
+128*1024 is meaningless as the packets sent to userspace have an upper
+size limit of 128*1024.
+.TP
+.BR --ulog-qthreshold " \fIthreshold\fP"
+.br
+Queue at most threshold number of packets before sending them to
+userspace with a netlink socket. Note that packets can be sent to
+userspace before the queue is full, this happens when the ulog
+kernel timer goes off (the frequency of this timer depends on
+.BR flushtimeout .
 .SS TARGET EXTENSIONS
 .SS
 .B arpreply
