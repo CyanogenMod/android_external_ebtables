@@ -55,7 +55,7 @@
         <EM>iptables</EM></A>
       </LI>
       <LI>
-        <A HREF="#section10">Using the <EM>iptables</EM> physdev match module for kernel 2.5</A>
+        <A HREF="#section10">Using the <EM>iptables</EM> physdev match module for kernel 2.6</A>
       </LI>
       <LI>
         <A HREF="#section11">Detailed IP packet flow</A>
@@ -68,9 +68,8 @@
     <P>
       This document describes how <EM>iptables</EM> and
       <EM>ebtables</EM> filtering tables interact on a Linux-based bridge.<BR>
-      Getting a bridging firewall consists of patching the kernel source
-      code with one or two patches. Since kernel 2.5.39 (resp. 2.5.44), <EM>ebtables</EM> (resp. <EM>br-nf</EM>)
-      is in the standard 2.5 kernel releases.
+      Getting a bridging firewall on a 2.4.x kernel consists of patching the kernel source
+      code. The 2.6 kernel contains the <EM>ebtables</EM> and <EM>br-nf</EM> code, so it doesn't have to be patched.
       Because the demand was high, patches for the 2.4 kernel are still available at the <EM>ebtables</EM> homepage.
       The <EM>br-nf</EM> code makes bridged IP frames/packets go through the <EM>iptables</EM> chains.
       <EM>Ebtables</EM> filters on the Ethernet layer, while <EM>iptables</EM>
@@ -190,7 +189,7 @@
       BROUTING chain quite well:
     </P>
     <DIV CLASS="note">
-      A brouter is a device which
+      A brouter is a device that
       bridges some frames/packets (i.e. forwards based on Link layer
       information) and routes other frames/packets (i.e. forwards based
       on Network layer information). The bridge/route decision is
@@ -201,7 +200,7 @@
       to act as a normal router for IP traffic between 2
       networks, while bridging specific traffic (NetBEUI, ARP,
       whatever) between those networks. The IP routing
-      table does not use the bridge logical device and the box has
+      table does not use the bridge logical device, instead the box has
       IP addresses assigned to the physical network devices that
       also happen to be bridge ports (bridge enslaved NICs).<BR>
       The default decision in the BROUTING chain is bridging.
@@ -229,7 +228,7 @@
      <BR>
      <IMG SRC="bridge2d.png">
     <P>
-      <I><B>Figure 2d.</B> Incoming frames' chain traversal</I><BR>
+      <I><B>Figure 2d.</B> Incoming frame's chain traversal</I><BR>
     </P>
     <P>
       Otherwise the frame should possibly be sent onto another side
@@ -242,7 +241,7 @@
      <BR>
      <IMG SRC="bridge2e.png">
     <P>
-      <I><B>Figure 2e.</B> Forwarded frames' chain traversal</I><BR>
+      <I><B>Figure 2e.</B> Forwarded frame's chain traversal</I><BR>
     </P>
     <P>
       Locally originated frames will, after the bridging decision, traverse
@@ -290,11 +289,11 @@
     </P>
     <P>
       Note that the iptables nat OUTPUT chain is situated after the
-      routing decision. As commented in the previous section,
+      routing decision. As commented in the previous section (when discussing ebtables nat),
       this is too late for DNAT. This is solved by rerouting the
       IP packet if it has been DNAT'ed, before continuing. For clarity:
       this is standard behaviour of the Linux kernel, not something
-      caused by our code.
+      caused by our code. 
     </P>
     <P>
       Figures 3a and 3b give a clear view where the
@@ -334,14 +333,14 @@
     <P>
       This assumes that the routing decision sends the packet to
       a bridge interface. If the routing decision sends the
-      packet to a physical network card, this is what happens:
+      packet to non-bridge interface, this is what happens:
     </P>
     <P>
       <IMG SRC="bridge3d.png">
     </P>
     <P>
       <I><B>Figure 3d.</B> Bridge/router routes packet to a
-      physical interface (simplistic view)</I><BR>
+      non-bridge interface (simplistic view)</I><BR>
     </P>
     <P>
       Figures 3c and 3d assume the IP packet arrived on a bridge port.
@@ -406,7 +405,7 @@
       knowing when a box on the eth0 side changes its source IP
       address to that of a box on the eth1 side, except by
       looking at the MAC source address (and then still...). With
-      the <EM>br-nf</EM> code you can use eth0 and eth1 in your
+      the iptables <EM>physdev</EM> module you can use eth0 and eth1 in your
       <EM>iptables</EM> rules and therefore catch these attempts.
     </P>
     <P CLASS="case">
@@ -596,12 +595,13 @@ echo '1' &gt; /proc/sys/net/ipv4/ip_forward
     </P>
     <A NAME="section10"></A>
     <P CLASS="section">
-      10. Using the <EM>iptables</EM> physdev match module for kernel 2.5
+      10. Using the <EM>iptables</EM> physdev match module for kernel 2.6
     </P>
     <P>
-      The 2.5 standard kernel contains an <EM>iptables</EM> match module
+      The 2.6 standard kernel contains an <EM>iptables</EM> match module
       called <EM>physdev</EM> which has to be used to match the bridge's
-      physical in and out ports. Its usage is simple:</P>
+      physical in and out ports. Its basic usage is simple (see the iptables
+      man page for more details):</P>
       <PRE>iptables -m physdev --physdev-in &lt;bridge-port&gt;</PRE><P>
       and</P>
       <PRE>iptables -m physdev --physdev-out &lt;bridge-port&gt;</PRE>
@@ -617,8 +617,8 @@ echo '1' &gt; /proc/sys/net/ipv4/ip_forward
     <HR>
 <PRE>
 Released under the GNU Free Documentation License.
-Copyright (c) 2002 Bart De Schuymer &lt;bdschuym@pandora.be&gt;,
-                   Nick Fedchik &lt;nick@fedchik.org.ua&gt;.
+Copyright (c) 2002-2003 Bart De Schuymer &lt;bdschuym@pandora.be&gt;,
+                        Nick Fedchik &lt;nick@fedchik.org.ua&gt;.
 </PRE>
     <BR>
      <BR>
@@ -631,7 +631,7 @@ Copyright (c) 2002 Bart De Schuymer &lt;bdschuym@pandora.be&gt;,
     license, see <A HREF= "http://www.gnu.org/licenses/fdl.txt">"GNU Free Documentation License"</A>.</SMALL> <BR>
      <BR>
     <P>
-      Last updated August 13, 2003.
+      Last updated November 9, 2003.
     </P>
   </BODY>
 </HTML>
