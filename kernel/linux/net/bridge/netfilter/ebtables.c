@@ -97,7 +97,7 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
    const struct net_device *in, const struct net_device *out,
    struct ebt_table *table)
 {
-	int i, nentries;
+	int i, j, nentries;
 	struct ebt_entry *point;
 	struct ebt_counter *counter_base;
 	struct ebt_entry_target *t;
@@ -133,24 +133,23 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 		      (point->logical_out), &out->br_port->br->dev), EBT_ILOGICALOUT))
 
 		) {
-			char hlpmac[6];
-			int j;
-
 			if (point->bitmask & EBT_SOURCEMAC) {
+				verdict = 0;
 				for (j = 0; j < 6; j++)
-					hlpmac[j] = ((**pskb).mac.ethernet)->
-					   h_source[j] & point->sourcemsk[j];
-				if (FWINV(!!memcmp(point->sourcemac, hlpmac,
-				   ETH_ALEN), EBT_ISOURCE) )
+					verdict |= (((**pskb).mac.ethernet)->
+					   h_source[j] ^ point->sourcemac[j]) &
+					   point->sourcemsk[j];
+				if (FWINV(!!verdict, EBT_ISOURCE) )
 					goto letscontinue;
 			}
 
 			if (point->bitmask & EBT_DESTMAC) {
+				verdict = 0;
 				for (j = 0; j < 6; j++)
-					hlpmac[j] = ((**pskb).mac.ethernet)->
-					   h_dest[j] & point->destmsk[j];
-				if (FWINV(!!memcmp(point->destmac, hlpmac,
-				   ETH_ALEN), EBT_IDEST) )
+					verdict |= (((**pskb).mac.ethernet)->
+					   h_dest[j] ^ point->destmac[j]) &
+					   point->destmsk[j];
+				if (FWINV(!!verdict, EBT_IDEST) )
 					goto letscontinue;
 			}
 
@@ -185,12 +184,9 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 			}
 			if (verdict == EBT_RETURN) {
 letsreturn:
-				if (sp == 0) {
-					BUGPRINT("return target on base chain\n");
-					read_unlock_bh(&table->lock);
-					// No oopsen, hopefully
-					return NF_DROP;
-				}
+				if (sp == 0)
+					// act like this is EBT_CONTINUE
+					goto letscontinue;
 				sp--;
 				// put all the local variables right
 				i = cs[sp].n;
