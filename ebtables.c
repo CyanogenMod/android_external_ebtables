@@ -2127,7 +2127,13 @@ int main(int argc, char *argv[])
 					print_error("can't initialize ebtables "
 					"table %s", replace.name);
 			}
-			replace.num_counters = 0;
+			if (c == 10 && replace.nentries) {
+				counterchanges = (unsigned short *)
+				   malloc(sizeof(unsigned short) * (replace.nentries + 1));
+				for (i = 0; i < replace.nentries; i++)
+					counterchanges[i] = CNT_NORM;
+				counterchanges[i] = CNT_END;
+			}
 			if (c == 11)
 				break;
 		case 9 : // atomic
