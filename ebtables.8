@@ -179,10 +179,8 @@ are put on zero. This can be used in conjunction with the -L command (see above)
 This will cause the rule counters to be printed on the screen before they are put on zero.
 .TP
 .B "-P, --policy"
-Set the policy for the chain to the given target. The policy is either
-.B ACCEPT
-, either
-.BR DROP .
+Set the policy for the chain to the given target. The policy can be
+.BR ACCEPT ", " DROP " or " RETURN .
 .TP
 .B "-N, --new-chain"
 Create a new user-defined chain by the given name. The number of
