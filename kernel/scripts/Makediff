@@ -7,6 +7,7 @@
 # 31 July 2002: added mark match/target, bridge/br.c, bridge/Makefile;
 #               deleted netsyms
 # 20 August 2002: deleted br_db
+# 10 September 2002: added br_forward.c
 
 export FROM=linux
 export TO=ebt2.0-rc2
@@ -14,6 +15,11 @@ export FILE=ebtables-v2.0-rc2_vs_2.4.20-pre4.diff
 
 echo "ebtables-v2.0-rc2-dev - 21 August 2002" >$FILE
 echo >>$FILE
+echo "*** deal with NETFILTER_DEBUG ***" >>$FILE
+echo >>$FILE
+
+diff -urNp --exclude TAGS $FROM/net/bridge/br_forward.c $TO/net/bridge/br_forward.c >> $FILE
+
 echo "*** modifications for brouter support ***" >>$FILE
 echo >>$FILE
 

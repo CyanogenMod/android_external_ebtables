@@ -2,6 +2,7 @@
 # used for making the incremental kernel diffs
 # 31 July 2002: added mark match/target, bridge/br.c, bridge/Makefile;
 #               deleted netsyms
+# 10 September 2002: added br_forward.c
 
 export FROM=linux
 export TO=ebt2.0-rc1
@@ -13,6 +14,7 @@ diff -urN $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h > $FILE
 diff -urN $FROM/include/linux/if_bridge.h $TO/include/linux/if_bridge.h >> $FILE
 diff -urN $FROM/net/core/dev.c $TO/net/core/dev.c >> $FILE
 diff -urN $FROM/net/bridge/br_input.c $TO/net/bridge/br_input.c >> $FILE
+diff -urN $FROM/net/bridge/br_forward.c $TO/net/bridge/br_forward.c >> $FILE
 diff -urN $FROM/net/bridge/br.c $TO/net/bridge/br.c >> $FILE
 diff -urN $FROM/net/bridge/Makefile $TO/net/bridge/Makefile >> $FILE
 diff -urN $FROM/include/linux/netfilter_bridge.h $TO/include/linux/netfilter_bridge.h >> $FILE

@@ -8,12 +8,19 @@
 #               deleted netsyms
 # 20 August 2002: deleted br_db
 # 23 August 2002: made this file for patches vs 2.5, added Config.help
+# 10 September 2002: added br_forward.c
 
 export FROM=linux
 export TO=ebt2.0-rc2-dev
 export FILE=ebtables-v2.0-rc2-dev_vs_2.5.31.diff
 
 echo "ebtables-v2.0-rc2-dev - 23 August 2002" >$FILE
+echo >>$FILE
+echo "*** deal with NETFILTER_DEBUG ***" >>$FILE
+echo >>$FILE
+
+diff -urNp --exclude TAGS $FROM/net/bridge/br_forward.c $TO/net/bridge/br_forward.c >> $FILE
+
 echo >>$FILE
 echo "*** modifications for brouter support ***" >>$FILE
 echo >>$FILE
