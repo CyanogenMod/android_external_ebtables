@@ -368,7 +368,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 }
 
 // talk with kernel to receive the kernel's table
-void get_table(struct ebt_u_replace *u_repl)
+int get_table(struct ebt_u_replace *u_repl)
 {
 	int i, j, k, hook;
 	socklen_t optlen;
@@ -380,9 +380,7 @@ void get_table(struct ebt_u_replace *u_repl)
 	optlen = sizeof(struct ebt_replace);
 	strcpy(repl.name, u_repl->name);
 	if (getsockopt(sockfd, IPPROTO_IP, EBT_SO_GET_INFO, &repl, &optlen))
-		print_error("The %s table is not supported by the kernel,"
-		  " consider recompiling your kernel or try insmod ebt_%s",
-		  repl.name, repl.name);
+		return -1;
 
 	if ( !(repl.entries = (char *) malloc(repl.entries_size)) )
 		print_memory();
@@ -418,6 +416,7 @@ void get_table(struct ebt_u_replace *u_repl)
 	   &hook, &i, &j, &k, &u_e, u_repl, u_repl->valid_hooks);
 	if (k != u_repl->nentries)
 		print_bug("Wrong total nentries");
+	return 0;
 }
 
 void get_dbinfo(struct brdb_dbinfo *nr)
@@ -425,7 +424,7 @@ void get_dbinfo(struct brdb_dbinfo *nr)
 	socklen_t optlen = sizeof(struct brdb_dbinfo);
 
 	get_sockfd();
-	
+
 	if (getsockopt(sockfd, IPPROTO_IP, BRDB_SO_GET_DBINFO, nr, &optlen))
 		print_error("Sorry, br_db code probably not in kernel, "
 		            "try insmod br_db");
