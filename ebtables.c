@@ -2108,7 +2108,13 @@ int main(int argc, char *argv[])
 			strcpy(replace.filename, optarg);
 			// get the information from the file
 			get_table(&replace);
-			replace.num_counters = 0;
+                        if (replace.nentries) {
+                                counterchanges = (unsigned short *)
+                                   malloc(sizeof(unsigned short) * (replace.nentries + 1));
+				for (i = 0; i < replace.nentries; i++)
+                                        counterchanges[i] = CNT_NORM;
+                                counterchanges[i] = CNT_END;
+                        }
 			free(replace.filename);
 			replace.filename = NULL;
 			break;
