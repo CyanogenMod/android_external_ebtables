@@ -1,3 +1,11 @@
+/* ebt_among
+ *
+ * Authors:
+ * Grzegorz Borowiak <grzes@gnu.univ.gda.pl>
+ *
+ * August, 2003
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,8 +16,6 @@
 #include "../include/ethernetdb.h"
 #include <linux/if_ether.h>
 #include <linux/netfilter_bridge/ebt_among.h>
-
-#define NODEBUG
 
 #define AMONG_DST '1'
 #define AMONG_SRC '2'
@@ -69,6 +75,8 @@ static struct ebt_mac_wormhash *new_wormhash(int n)
 	struct ebt_mac_wormhash *result =
 	    (struct ebt_mac_wormhash *) malloc(size);
 
+	if (!result)
+		ebt_print_memory();
 	memset(result, 0, size);
 	result->poolsize = n;
 	return result;
@@ -181,54 +189,53 @@ static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 		for (i = 0; i < 5; i++) {
 			if (read_until(&pc, ":", token, 2) < 0
 			    || token[0] == 0) {
-				ebt_print_error("MAC parse error: %.20s",
-						anchor);
+				ebt_print_error("MAC parse error: %.20s", anchor);
+				return NULL;
 			}
 			mac[i] = strtol(token, &endptr, 16);
 			if (*endptr) {
-				ebt_print_error("MAC parse error: %.20s",
-						anchor);
+				ebt_print_error("MAC parse error: %.20s", anchor);
+				return NULL;
 			}
 			pc++;
 		}
 		if (read_until(&pc, "=,", token, 2) == -2 || token[0] == 0) {
 			ebt_print_error("MAC parse error: %.20s", anchor);
+			return NULL;
 		}
 		mac[i] = strtol(token, &endptr, 16);
 		if (*endptr) {
 			ebt_print_error("MAC parse error: %.20s", anchor);
+			return NULL;
 		}
 		if (*pc == '=') {
 			/* an IP follows the MAC; collect similarly to MAC */
 			pc++;
 			anchor = pc;
 			for (i = 0; i < 3; i++) {
-				if (read_until(&pc, ".", token, 3) < 0
-				    || token[0] == 0) {
-					ebt_print_error
-					    ("IP parse error: %.20s",
-					     anchor);
+				if (read_until(&pc, ".", token, 3) < 0 || token[0] == 0) {
+					ebt_print_error("IP parse error: %.20s", anchor);
+					return NULL;
 				}
 				ip[i] = strtol(token, &endptr, 10);
 				if (*endptr) {
-					ebt_print_error
-					    ("IP parse error: %.20s",
-					     anchor);
+					ebt_print_error("IP parse error: %.20s", anchor);
+					return NULL;
 				}
 				pc++;
 			}
-			if (read_until(&pc, ",", token, 3) == -2
-			    || token[0] == 0) {
-				ebt_print_error("IP parse error: %.20s",
-					    anchor);
+			if (read_until(&pc, ",", token, 3) == -2 || token[0] == 0) {
+				ebt_print_error("IP parse error: %.20s", anchor);
+				return NULL;
 			}
 			ip[3] = strtol(token, &endptr, 10);
 			if (*endptr) {
-				ebt_print_error("IP parse error: %.20s",
-					    anchor);
+				ebt_print_error("IP parse error: %.20s", anchor);
+				return NULL;
 			}
 			if (*(uint32_t*)ip == 0) {
 				ebt_print_error("Illegal IP 0.0.0.0");
+				return NULL;
 			}
 		} else {
 			/* no IP, we set it to 0.0.0.0 */
@@ -260,6 +267,7 @@ static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 		/* but first assert :-> */
 		if (*pc != ',') {
 			ebt_print_error("Something went wrong; no comma...\n");
+			return NULL;
 		}
 		pc++;
 
@@ -295,30 +303,33 @@ static int parse(int c, char **argv, int argc,
 	switch (c) {
 	case AMONG_DST:
 	case AMONG_SRC:
-		if (ebt_check_inverse(optarg)) {
+		if (c == AMONG_DST) {
+			ebt_check_option2(flags, OPT_DST);
+		} else {
+			ebt_check_option2(flags, OPT_SRC);
+		}
+		if (ebt_check_inverse2(optarg)) {
 			if (c == AMONG_DST)
 				info->bitmask |= EBT_AMONG_DST_NEG;
 			else
 				info->bitmask |= EBT_AMONG_SRC_NEG;
 		}
-		if (optind > argc)
-			ebt_print_error("No MAC list specified\n");
-		wh = create_wormhash(argv[optind - 1]);
-		old_size = sizeof(struct ebt_entry_match) +
-				(**match).match_size;
-		h = malloc((new_size =
-			    old_size + ebt_mac_wormhash_size(wh)));
+		wh = create_wormhash(optarg);
+		if (ebt_errormsg[0] != '\0')
+			break;
+
+		old_size = sizeof(struct ebt_entry_match) + (**match).match_size;
+		h = malloc((new_size = old_size + ebt_mac_wormhash_size(wh)));
+		if (!h)
+			ebt_print_memory();
 		memcpy(h, *match, old_size);
-		memcpy((char *) h + old_size, wh,
-		       ebt_mac_wormhash_size(wh));
+		memcpy((char *) h + old_size, wh, ebt_mac_wormhash_size(wh));
 		h->match_size = new_size - sizeof(struct ebt_entry_match);
 		info = (struct ebt_among_info *) h->data;
 		if (c == AMONG_DST) {
-			ebt_check_option(flags, OPT_DST);
 			info->wh_dst_ofs =
 			    old_size - sizeof(struct ebt_entry_match);
 		} else {
-			ebt_check_option(flags, OPT_SRC);
 			info->wh_src_ofs =
 			    old_size - sizeof(struct ebt_entry_match);
 		}

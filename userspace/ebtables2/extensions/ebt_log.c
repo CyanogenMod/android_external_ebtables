@@ -1,3 +1,11 @@
+/* ebt_log
+ *
+ * Authors:
+ * Bart De Schuymer <bdschuym@pandora.be>
+ *
+ * April, 2002
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -103,35 +111,43 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 
 	switch (c) {
 	case LOG_PREFIX:
-		ebt_check_option(flags, OPT_PREFIX);
+		ebt_check_option2(flags, OPT_PREFIX);
+		if (ebt_check_inverse(optarg))
+			ebt_print_error2("Unexpected `!' after --log-prefix");
 		if (strlen(optarg) > sizeof(loginfo->prefix) - 1)
-			ebt_print_error("Prefix too long");
+			ebt_print_error2("Prefix too long");
 		strcpy(loginfo->prefix, optarg);
 		break;
 
 	case LOG_LEVEL:
-		ebt_check_option(flags, OPT_LEVEL);
+		ebt_check_option2(flags, OPT_LEVEL);
 		i = strtol(optarg, &end, 16);
 		if (*end != '\0' || i < 0 || i > 7)
 			loginfo->loglevel = name_to_loglevel(optarg);
 		else
 			loginfo->loglevel = i;
 		if (loginfo->loglevel == 9)
-			ebt_print_error("Problem with the log-level");
+			ebt_print_error2("Problem with the log-level");
 		break;
 
 	case LOG_IP:
-		ebt_check_option(flags, OPT_IP);
+		ebt_check_option2(flags, OPT_IP);
+		if (ebt_check_inverse(optarg))
+			ebt_print_error2("Unexpected `!' after --log-ip");
 		loginfo->bitmask |= EBT_LOG_IP;
 		break;
 
 	case LOG_ARP:
-		ebt_check_option(flags, OPT_ARP);
+		ebt_check_option2(flags, OPT_ARP);
+		if (ebt_check_inverse(optarg))
+			ebt_print_error2("Unexpected `!' after --log-arp");
 		loginfo->bitmask |= EBT_LOG_ARP;
 		break;
 
 	case LOG_LOG:
-		ebt_check_option(flags, OPT_LOG);
+		ebt_check_option2(flags, OPT_LOG);
+		if (ebt_check_inverse(optarg))
+			ebt_print_error2("Unexpected `!' after --log");
 		break;
 	default:
 		return 0;
@@ -143,7 +159,6 @@ static void final_check(const struct ebt_u_entry *entry,
    const struct ebt_entry_watcher *watcher, const char *name,
    unsigned int hookmask, unsigned int time)
 {
-	return;
 }
 
 static void print(const struct ebt_u_entry *entry,

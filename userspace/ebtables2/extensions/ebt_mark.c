@@ -1,3 +1,11 @@
+/* ebt_mark
+ *
+ * Authors:
+ * Bart De Schuymer <bdschuym@pandora.be>
+ *
+ * July, 2002
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,15 +57,15 @@ static int parse(int c, char **argv, int argc,
 
 	switch (c) {
 	case MARK_TARGET:
-		ebt_check_option(flags, OPT_MARK_TARGET);
+		ebt_check_option2(flags, OPT_MARK_TARGET);
 		if (FILL_TARGET(optarg, markinfo->target))
-			ebt_print_error("Illegal --mark-target target");
+			ebt_print_error2("Illegal --mark-target target");
 		break;
 	case MARK_SETMARK:
-		ebt_check_option(flags, OPT_MARK_SETMARK);
+		ebt_check_option2(flags, OPT_MARK_SETMARK);
 		markinfo->mark = strtoul(optarg, &end, 0);
 		if (*end != '\0' || end == optarg)
-			ebt_print_error("Bad MARK value '%s'", optarg);
+			ebt_print_error2("Bad MARK value '%s'", optarg);
 		mark_supplied = 1;
                 break;
 	 default:
@@ -73,11 +81,10 @@ static void final_check(const struct ebt_u_entry *entry,
 	struct ebt_mark_t_info *markinfo =
 	   (struct ebt_mark_t_info *)target->data;
 
-	if (time == 0 && mark_supplied == 0)
+	if (time == 0 && mark_supplied == 0) {
 		ebt_print_error("No mark value supplied");
-	if (BASE_CHAIN && markinfo->target == EBT_RETURN)
-		ebt_print_error("--mark-target RETURN not allowed on base "
-				"chain");
+	} else if (BASE_CHAIN && markinfo->target == EBT_RETURN)
+		ebt_print_error("--mark-target RETURN not allowed on base chain");
 }
 
 static void print(const struct ebt_u_entry *entry,

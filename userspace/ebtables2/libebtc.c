@@ -1,4 +1,3 @@
-
 /*
  * libebtc.c, January 2004
  *
@@ -260,8 +259,8 @@ void ebt_reinit_extensions()
 			strcpy(m->m->u.name, m->name);
 			m->m->match_size = EBT_ALIGN(m->size);
 			m->used = 0;
-			m->flags = 0;
 		}
+		m->flags = 0; /* An error can occur before used is set, while flags is changed. */
 		m->init(m->m);
 	}
 	for (w = ebt_watchers; w; w = w->next) {
@@ -273,8 +272,8 @@ void ebt_reinit_extensions()
 			strcpy(w->w->u.name, w->name);
 			w->w->watcher_size = EBT_ALIGN(w->size);
 			w->used = 0;
-			w->flags = 0;
 		}
+		w->flags = 0;
 		w->init(w->w);
 	}
 	for (t = ebt_targets; t; t = t->next) {
@@ -286,8 +285,8 @@ void ebt_reinit_extensions()
 			strcpy(t->t->u.name, t->name);
 			t->t->target_size = EBT_ALIGN(t->size);
 			t->used = 0;
-			t->flags = 0;
 		}
+		t->flags = 0;
 		t->init(t->t);
 	}
 }
@@ -777,6 +776,38 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 	}
 }
 
+static int check_and_change_rule_number(struct ebt_u_replace *replace,
+   struct ebt_u_entry *new_entry, int *begin, int *end)
+{
+	struct ebt_u_entries *entries = ebt_to_chain(replace);
+
+	if (*begin < 0)
+		*begin += entries->nentries + 1;
+	if (*end < 0)
+		*end += entries->nentries + 1;
+
+	if (*begin < 0 || *begin > *end || *end > entries->nentries) {
+		ebt_print_error("Sorry, wrong rule numbers");
+		return -1;
+	}
+
+	if ((*begin * *end == 0) && (*begin + *end != 0))
+		ebt_print_bug("begin and end should be either both zero, "
+			      "either both non-zero");
+	if (*begin != 0 && *end != 0) {
+		(*begin)--;
+		(*end)--;
+	} else {
+		*begin = ebt_check_rule_exists(replace, new_entry);
+		*end = *begin;
+		if (*begin == -1) {
+			ebt_print_error("Sorry, rule does not exist");
+			return -1;
+		}
+	}
+	return 0;
+}
+
 /* Delete a rule or rules
  * begin == end == 0: delete the rule corresponding to new_entry
  *
@@ -792,30 +823,8 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 	struct ebt_cntchanges *cc = replace->counterchanges;
 	struct ebt_cntchanges **prev_cc =  &(replace->counterchanges);
 
-	if (begin < 0)
-		begin += entries->nentries + 1;
-	if (end < 0)
-		end += entries->nentries + 1;
-
-	if (begin < 0 || begin > end || end > entries->nentries) {
-		ebt_print_error("Sorry, wrong rule numbers");
+	if (check_and_change_rule_number(replace, new_entry, &begin, &end))
 		return;
-	}
-
-	if ((begin * end == 0) && (begin + end != 0))
-		ebt_print_bug("begin and end should be either both zero, "
-			      "either both non-zero");
-	if (begin != 0 && end != 0) {
-		begin--;
-		end--;
-	} else {
-		begin = ebt_check_rule_exists(replace, new_entry);
-		end = begin;
-		if (begin == -1) {
-			ebt_print_error("Sorry, rule does not exist");
-			return;
-		}
-	}
 
 	/* We're deleting rules */
 	nr_deletes = end - begin + 1;
@@ -883,6 +892,64 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 				break;
 		} else 
 			entries->counter_offset -= nr_deletes;
+	}
+}
+
+/* Change the counters of a rule or rules
+ * begin == end == 0: change counters of the rule corresponding to new_entry
+ *
+ * The first rule has rule nr 1, the last rule has rule nr -1, etc.
+ * This function expects the ebt_{match,watcher,target} members of new_entry
+ * to contain pointers to ebt_u_{match,watcher,target}. */
+void ebt_change_counters(struct ebt_u_replace *replace,
+		     struct ebt_u_entry *new_entry, int begin, int end,
+		     struct ebt_counter *cnt)
+{
+	int i, j;
+	struct ebt_u_entry *u_e;
+	struct ebt_u_entries *entries = ebt_to_chain(replace);
+	struct ebt_cntchanges *cc = replace->counterchanges;
+	struct ebt_cntchanges **prev_cc =  &(replace->counterchanges);
+
+	if (check_and_change_rule_number(replace, new_entry, &begin, &end))
+		return;
+
+	for (i = 0; i < replace->selected_chain; i++) {
+		if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
+			continue;
+		j = ebt_nr_to_chain(replace, i)->nentries;
+		while (j) {
+			if (cc->type != CNT_DEL)
+				j--;
+			prev_cc = &(cc->next);
+			cc = cc->next;
+		}
+	}
+	i = begin;
+	while (i) {
+		if (cc->type != CNT_DEL)
+			i--;
+		prev_cc = &(cc->next);
+		cc = cc->next;
+	}
+	i = end - begin + 1;
+	while (i) {
+		if (cc->type != CNT_DEL) {
+			i--;
+			/* A -C after a -A remains a -A */
+			if (cc->type != CNT_ADD && cc->type != CNT_OWRITE)
+				cc->type = CNT_CHANGE;
+		}
+		prev_cc = &(cc->next);
+		cc = cc->next;
+	}
+	u_e = entries->entries;
+	for (i = 0; i < begin; i++)
+		u_e = u_e->next;
+	i = end - begin + 1;
+	while(i--) {
+		u_e->cnt = *cnt;
+		u_e = u_e->next;
 	}
 }
 

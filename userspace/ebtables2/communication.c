@@ -362,6 +362,7 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 			old++;
 			/* We've set a new counter */
 			new++;
+			next = next->next;
 		} else if (cc->type == CNT_DEL) {
 			/* Don't use this old counter */
 			old++;
@@ -373,9 +374,9 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 				old++;
 				new++;
 			}
+			next = next->next;
 		}
 		cc = cc->next;
-		next = next->next;
 	}
 
 	free(u_repl->counters);

@@ -1,3 +1,11 @@
+/* ebt_ulog
+ *
+ * Authors:
+ * Bart De Schuymer <bdschuym@pandora.be>
+ *
+ * November, 2004
+ */
+
 #define __need_time_t
 #define __need_suseconds_t
 #include <stdio.h>
@@ -65,59 +73,54 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 	uloginfo = (struct ebt_ulog_info *)(*watcher)->data;
 	switch (c) {
 	case ULOG_PREFIX:
-		if (ebt_check_inverse(optarg))
+		if (ebt_check_inverse2(optarg))
 			goto inverse_invalid;
-		ebt_check_option(flags, OPT_PREFIX);
+		ebt_check_option2(flags, OPT_PREFIX);
 		if (strlen(optarg) > EBT_ULOG_PREFIX_LEN - 1)
 			ebt_print_error("Prefix too long for ulog-prefix");
 		strcpy(uloginfo->prefix, optarg);
 		break;
 
 	case ULOG_NLGROUP:
-		if (ebt_check_inverse(optarg))
+		if (ebt_check_inverse2(optarg))
 			goto inverse_invalid;
-		ebt_check_option(flags, OPT_NLGROUP);
+		ebt_check_option2(flags, OPT_NLGROUP);
 		i = strtoul(optarg, &end, 10);
 		if (*end != '\0')
-			ebt_print_error("Problem with ulog-nlgroup: %s", optarg);
+			ebt_print_error2("Problem with ulog-nlgroup: %s", optarg);
 		if (i < 1 || i > EBT_ULOG_MAXNLGROUPS)
-			ebt_print_error("the ulog-nlgroup number must be "
-			                "between 1 and 32");
+			ebt_print_error2("the ulog-nlgroup number must be between 1 and 32");
 		uloginfo->nlgroup = i - 1;
 		break;
 
 	case ULOG_CPRANGE:
-		if (ebt_check_inverse(optarg))
+		if (ebt_check_inverse2(optarg))
 			goto inverse_invalid;
-		ebt_check_option(flags, OPT_CPRANGE);
+		ebt_check_option2(flags, OPT_CPRANGE);
 		i = strtoul(optarg, &end, 10);
 		if (*end != '\0') {
 			if (strcasecmp(optarg, CP_NO_LIMIT_S))
-				ebt_print_error("Problem with ulog-cprange: "
-				                "%s", optarg);
+				ebt_print_error2("Problem with ulog-cprange: %s", optarg);
 			i = CP_NO_LIMIT_N;
 		}
 		uloginfo->cprange = i;
 		break;
 
 	case ULOG_QTHRESHOLD:
-		if (ebt_check_inverse(optarg))
+		if (ebt_check_inverse2(optarg))
 			goto inverse_invalid;
-		ebt_check_option(flags, OPT_QTHRESHOLD);
+		ebt_check_option2(flags, OPT_QTHRESHOLD);
 		i = strtoul(optarg, &end, 10);
 		if (*end != '\0')
-			ebt_print_error("Problem with ulog-qthreshold: %s",
-			                optarg);
+			ebt_print_error2("Problem with ulog-qthreshold: %s", optarg);
 		if (i > EBT_ULOG_MAX_QLEN)
-			ebt_print_error("ulog-qthreshold argument %d exceeds "
-			                "the maximum of %d", i,
-			                EBT_ULOG_MAX_QLEN);
+			ebt_print_error2("ulog-qthreshold argument %d exceeds the maximum of %d", i, EBT_ULOG_MAX_QLEN);
 		uloginfo->qthreshold = i;
 		break;
 	case ULOG_ULOG:
-		if (ebt_check_inverse(optarg))
+		if (ebt_check_inverse2(optarg))
 			goto inverse_invalid;
-		ebt_check_option(flags, OPT_ULOG);
+		ebt_check_option2(flags, OPT_ULOG);
 		break;
 
 	default:
@@ -127,14 +130,13 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 
 inverse_invalid:
 	ebt_print_error("The use of '!' makes no sense for the ulog watcher");
-	return 0;
+	return 1;
 }
 
 static void final_check(const struct ebt_u_entry *entry,
    const struct ebt_entry_watcher *watcher, const char *name,
    unsigned int hookmask, unsigned int time)
 {
-	return;
 }
 
 static void print(const struct ebt_u_entry *entry,

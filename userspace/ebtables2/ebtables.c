@@ -58,6 +58,7 @@ static struct option ebt_original_options[] =
 	{ "help"          , no_argument      , 0, 'h' },
 	{ "jump"          , required_argument, 0, 'j' },
 	{ "set-counter"   , required_argument, 0, 'c' },
+	{ "change-counter", required_argument, 0, 'C' },
 	{ "proto"         , required_argument, 0, 'p' },
 	{ "protocol"      , required_argument, 0, 'p' },
 	{ "db"            , required_argument, 0, 'b' },
@@ -442,6 +443,33 @@ static int parse_delete_rule(const char *argv, int *rule_nr, int *rule_nr_end)
 	return 0;
 }
 
+static int parse_change_counters_rule(int argc, char **argv, int *rule_nr, int *rule_nr_end)
+{
+	char *buffer;
+
+	if (optind + 1 >= argc || (argv[optind][0] == '-' && (argv[optind][1] < '0' || argv[optind][1] > '9')) ||
+	    (argv[optind + 1][0] == '-' && (argv[optind + 1][1] < '0'  && argv[optind + 1][1] > '9')))
+		ebt_print_error2("The command -C needs at least 3 arguments");
+	if (optind + 2 < argc && (argv[optind + 2][0] != '-' || (argv[optind][1] >= '0' && argv[optind][1] <= '9'))) {
+		if (optind + 3 != argc)
+			ebt_print_error2("No extra options allowed with -C start_nr[:end_nr] pcnt bcnt");
+		if (parse_delete_rule(argv[optind], rule_nr, rule_nr_end))
+			ebt_print_error2("Something is wrong with the rule number specification '%s'", argv[optind]);
+		optind++;
+	}
+
+	new_entry->cnt.pcnt = strtoull(argv[optind], &buffer, 10);
+	if (*buffer != '\0')
+		ebt_print_error2("Packet counter '%s' invalid", argv[optind])
+	optind++;
+	new_entry->cnt.bcnt = strtoull(argv[optind], &buffer, 10);
+	if (*buffer != '\0')
+		ebt_print_error2("Packet counter '%s' invalid", argv[optind])
+
+	optind++;
+	return 0;
+}
+
 static int parse_iface(char *iface, char *option)
 {
 	char *c;
@@ -464,19 +492,6 @@ void ebt_early_init_once()
 	ebt_iterate_targets(merge_target);
 }
 
-#define ebt_print_error2(format, args...) {__ebt_print_error(format, ##args); \
-   return -1;}
-#define ebt_check_option2(flags,mask)	\
-({ebt_check_option(flags,mask);		\
- if (ebt_errormsg[0] != '\0')		\
-	return -1;})
-#define ebt_check_inverse2(option)				\
-({int __ret = ebt_check_inverse(option);			\
-if (ebt_errormsg[0] != '\0')					\
-	return -1;						\
-if (!optarg)							\
-	__ebt_print_error("Option without (mandatory) argument");	\
-__ret;})
 #define OPT_COMMANDS (replace->flags & OPT_COMMAND || replace->flags & OPT_ZERO)
 
 #define OPT_COMMAND	0x01
@@ -545,11 +560,12 @@ int do_command(int argc, char *argv[], int exec_style,
 
 	/* Getopt saves the day */
 	while ((c = getopt_long(argc, argv,
-	   "-A:D:I:N:E:X::L::Z::F::P:Vhi:o:j:c:p:s:d:t:M:", ebt_options, NULL)) != -1) {
+	   "-A:D:C:I:N:E:X::L::Z::F::P:Vhi:o:j:c:p:s:d:t:M:", ebt_options, NULL)) != -1) {
 		switch (c) {
 
 		case 'A': /* Add a rule */
 		case 'D': /* Delete a rule */
+		case 'C': /* Change counters */
 		case 'P': /* Define policy */
 		case 'I': /* Insert a rule */
 		case 'N': /* Make a user defined chain */
@@ -614,8 +630,11 @@ int do_command(int argc, char *argv[], int exec_style,
 				if (optind != argc - 1)
 					ebt_print_error2("No extra options allowed with -D start_nr[:end_nr]");
 				if (parse_delete_rule(argv[optind], &rule_nr, &rule_nr_end))
-					ebt_print_error2("Problem with the specified rule number(s)");
+					ebt_print_error2("Problem with the specified rule number(s) '%s'", argv[optind]);
 				optind++;
+			} else if (c == 'C') {
+				if (parse_change_counters_rule(argc, argv, &rule_nr, &rule_nr_end))
+					return -1;
 			} else if (c == 'I') {
 				if (optind >= argc || (argv[optind][0] == '-' && (argv[optind][1] < '0' || argv[optind][1] > '9')))
 					ebt_print_error2("No rulenr for -I specified");
@@ -996,8 +1015,11 @@ print_zero:
 		default:
 			/* Is it a target option? */
 			t = (struct ebt_u_target *)new_entry->t;
-			if ((t->parse(c - t->option_offset, argv, argc, new_entry, &t->flags, &t->t)))
+			if ((t->parse(c - t->option_offset, argv, argc, new_entry, &t->flags, &t->t))) {
+				if (ebt_errormsg[0] != '\0')
+					return -1;
 				goto check_extension;
+			}
 
 			/* Is it a match_option? */
 			for (m = ebt_matches; m; m = m->next)
@@ -1005,6 +1027,8 @@ print_zero:
 					break;
 
 			if (m != NULL) {
+				if (ebt_errormsg[0] != '\0')
+					return -1;
 				if (m->used == 0) {
 					ebt_add_match(new_entry, m);
 					m->used = 1;
@@ -1019,6 +1043,8 @@ print_zero:
 
 			if (w == NULL)
 				ebt_print_error2("Unknown argument: '%s', %c, '%c'", argv[optind - 1], (char)optopt, (char)c);
+			if (ebt_errormsg[0] != '\0')
+				return -1;
 			if (w->used == 0) {
 				ebt_add_watcher(new_entry, w);
 				w->used = 1;
@@ -1045,7 +1071,7 @@ check_extension:
 
 	/* Do the final checks */
 	if (replace->command == 'A' || replace->command == 'I' ||
-	   replace->command == 'D') {
+	   replace->command == 'D' || replace->command == 'C') {
 		/* This will put the hook_mask right for the chains */
 		ebt_check_for_loops(replace);
 		if (ebt_errormsg[0] != '\0')
@@ -1135,9 +1161,16 @@ check_extension:
 		}
 		/* Don't reuse the added rule */
 		new_entry = NULL;
-	} else if (replace->command == 'D')
-delete_the_rule: /* This needs to be followed by a check on ebt_errormsg[0] */
+	} else if (replace->command == 'D') {
+delete_the_rule:
 		ebt_delete_rule(replace, new_entry, rule_nr, rule_nr_end);
+		if (ebt_errormsg[0] != '\0')
+			return -1;
+	} else if (replace->command == 'C') {
+		ebt_change_counters(replace, new_entry, rule_nr, rule_nr_end, &(new_entry->cnt));
+		if (ebt_errormsg[0] != '\0')
+			return -1;
+	}
 	/* Commands -N, -E, -X, --atomic-commit, --atomic-commit, --atomic-save,
 	 * --init-table fall through */
 
