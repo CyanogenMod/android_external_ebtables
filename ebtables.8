@@ -26,27 +26,27 @@
 .SH NAME
 ebtables (v.2.0) \- Ethernet bridge frame table administration
 .SH SYNOPSIS
-.BR "ebtables [-t table] -[ADI] " "chain rule-specification [match-extensions] [watcher-extensions] TARGET"
+.BR "ebtables " [ "-t table" ] " -" [ ADI ] " chain rule-specification " [ match-extensions "] [" watcher-extensions ] " TARGET"
 .br
-.BR "ebtables [-t table] -P " "chain " "ACCEPT | DROP | RETURN"
+.BR "ebtables " [ "-t table" ] " -P chain ACCEPT " | " DROP " | " RETURN"
 .br
-.BR "ebtables [-t table] -F [" "chain" "]"
+.BR "ebtables " [ "-t table" ] " -F " [ chain ]
 .br
-.BR "ebtables [-t table] -Z [" "chain" "]"
+.BR "ebtables " [ "-t table" ] " -Z " [ chain ]
 .br
-.BR "ebtables [-t table] -L [-Z] [" chain "] [ [" --Ln "] [" --Lc "] ] " | " [" --Lx "]"
+.BR "ebtables " [ "-t table" ] " -L " [ -Z "] [" " chain" "] [ [ [" --Ln "] [" --Lc "] ] | [" --Lx "] ] [" --Lmac2 "]"
 .br
-.BR "ebtables [-t table] -[NX] " chain
+.BR "ebtables " [ "-t table" ] " -" [ NX ] " chain"
 .br
-.BR "ebtables [-t table] -E " "old-chain-name new-chain-name"
+.BR "ebtables " [ "-t table" ] " -E old-chain-name new-chain-name"
 .br
-.BR "ebtables [-t table] --init-table"
+.BR "ebtables " [ "-t table" ] " --init-table"
 .br
-.BR "ebtables [-t table] [--atomic-file file] --atomic-commit
+.BR "ebtables " [ "-t table" "] [" "--atomic-file file" ] " --atomic-commit"
 .br
-.BR "ebtables [-t table] [--atomic-file file] --atomic-init"
+.BR "ebtables " [ "-t table" "] [" "--atomic-file file" ] " --atomic-init"
 .br
-.BR "ebtables [-t table] [--atomic-file file] --atomic-save"
+.BR "ebtables " [ "-t table" "] [" "--atomic-file file" ] " --atomic-save"
 .br
 .SH DESCRIPTION
 .B ebtables
@@ -240,8 +240,14 @@ option is incompatible with both of the other
 .B "--Ln"
 and
 .B "--Lc"
-chain listing options, 
-.B "-L."
+chain listing options.
+.br
+.B "--Lmac2"
+.br
+Shows all MAC addresses with the same length, adding leading zeroes
+if necessary. The default representation omits zeroes in the addresses
+when they are not needed.
+.br
 All necessary
 .B ebtables
 commands for making the current list of
@@ -252,7 +258,7 @@ chains will be listed, when no chain name is
 supplied for the
 .B "-L"
 command while using the
-.B "-Lx"
+.B "--Lx"
 option.
 .TP
 .B "-N, --new-chain"
@@ -488,6 +494,12 @@ The ARP IP source address specification.
 .TP
 .BR "--arp-ip-dst " "[!] \fIaddress\fP[/\fImask\fP]"
 The ARP IP destination address specification.
+.TP
+.BR "--arp-mac-src " "[!] \fIaddress\fP[/\fImask\fP]"
+The ARP MAC source address specification.
+.TP
+.BR "--arp-mac-dst " "[!] \fIaddress\fP[/\fImask\fP]"
+The ARP MAC destination address specification.
 .SS ip
 Specify ip fields. These will only work if the protocol equals
 .BR IPv4 .
@@ -535,6 +547,14 @@ the user-specified mask is taken before comparing it with the user-specified
 mark value. If only a mask is specified (start with '/') the logical AND
 of the mark value of the frame and the user-specified mark is taken and
 the result is compared with zero.
+.SS pkttype
+.TP
+.BR "--pkttype-type " "[!] \fItype\fP"
+Matches on the Ethernet "class" of the frame, which is determined by the
+generic networking code. Possible values: broadcast (MAC destination is
+broadcast address), multicast (MAC destination is multicast address),
+host (MAC destination is the receiving network device) or otherhost
+(none of the above).
 .SS vlan
 Specify 802.1Q Tag Control Information fields.
 The protocol rule specification (frame type) should be set to
