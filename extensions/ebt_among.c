@@ -9,9 +9,7 @@
 #include <linux/if_ether.h>
 #include <linux/netfilter_bridge/ebt_among.h>
 
-/*
-#define DEBUG
-*/
+//#define DEBUG
 
 #define AMONG_DST '1'
 #define AMONG_SRC '2'
@@ -33,7 +31,7 @@ static void hexdump(const void *mem, int howmany)
 		if (i % 32 == 0) {
 			printf("\n%04x: ", i);
 		}
-		printf("%2.2x ", p[i]);
+		printf("%2.2x%c", p[i], ". "[i%4==3]);
 	}
 	printf("\n");
 }
@@ -46,11 +44,11 @@ static void print_help()
 "--among-dst list                : matches if ether dst is in list\n"
 "--among-src list                : matches if ether src is in list\n"
 "list has form:\n"
-"\txx:xx:xx:xx:xx:xx,yy:yy:yy:yy:yy:yy,...,zz:zz:zz:zz:zz:zz\n"
-"i.e. MAC addresses separated by commas, without spaces.\n"
-"Optional comma can be included after the last MAC address, i.e.:\n"
-"\txx:xx:xx:xx:xx:xx,yy:yy:yy:yy:yy:yy,...,zz:zz:zz:zz:zz:zz,\n"
-"Each list can contain up to 256 addresses.\n"
+" xx:xx:xx:xx:xx:xx[=ip.ip.ip.ip],yy:yy:yy:yy:yy:yy[=ip.ip.ip.ip],...,zz:zz:zz:zz:zz:zz[=ip.ip.ip.ip][,]\n"
+"Things in brackets are optional.\n"
+"If you want to allow two (or more) IP addresses to one MAC address, you can\n"
+"specify two (or more) pairs witch the same MAC, e.g.\n"
+" 00:00:00:fa:eb:fe=153.19.120.250,00:00:00:fa:eb:fe=192.168.0.1\n"
 	);
 }
 
@@ -61,75 +59,165 @@ static void init(struct ebt_entry_match *match)
 	memset(amonginfo, 0, sizeof(struct ebt_among_info));
 }
 
-static int fill_mac(char *mac, const char *string)
+static struct ebt_mac_wormhash *new_wormhash(int n)
 {
-	char xnum[3];
-	const char *p = string;
-	int i = 0;
-	int j = 0;
-	while (1) {
-		if (isxdigit(*p)) {
-			xnum[j] = *p;
-			j++;
-			if (j >= 3) {
-				/* 3 or more hex digits for a single byte */
-				return -3;
-			}
-		}
-		else {
-			xnum[j] = 0;
-			j = 0;
-			mac[i] = strtol(xnum, 0, 16);
-			i++;
-			if (i >= 6) {
-				if (*p == ':') {
-					/* MAC address too long */
-					return -2;
-				}
-				else {
-					return 0;
-				}
-			}
-			else {
-				if (*p != ':') {
-					/* MAC address too short */
-					return -1;
-				}
-			}
-		}
-		p++;
-	}
-		
+	int size = sizeof(struct ebt_mac_wormhash) + n * sizeof(struct ebt_mac_wormhash_tuple);
+	struct ebt_mac_wormhash *result = (struct ebt_mac_wormhash *)malloc(size);
+	memset(result, 0, size);
+	result->poolsize = n;
+	return result;
 }
 
-static void fill_wormhash(struct ebt_mac_wormhash *wh, const char *arg)
+static void copy_wormhash(struct ebt_mac_wormhash *d, const struct ebt_mac_wormhash *s)
+{
+	int dpoolsize = d->poolsize;
+	int dsize, ssize, amount;
+	dsize = ebt_mac_wormhash_size(d);
+	ssize = ebt_mac_wormhash_size(s);
+	amount = dsize < ssize ? dsize : ssize;
+	memcpy(d, s, amount);
+	d->poolsize = dpoolsize;
+}
+
+/* Returns:
+ * -1 when '\0' reached
+ * -2 when `n' bytes read and no delimiter found
+ *  0 when no less than `n' bytes read and delimiter found
+ * if `destbuf' is not NULL, it is filled by read bytes and ended with '\0'
+ * *pp is set on the first byte not copied to `destbuf'
+ */
+static int read_until(const char **pp, const char *delimiters, char *destbuf, int n)
+{
+	int count = 0;
+	int ret = 0;
+	char c;
+	while (1) {
+		c = **pp;
+		if (!c) {
+			ret = -1;
+			break;
+		}
+		if (strchr(delimiters, c)) {
+			ret = 0;
+			break;
+		}
+		if (count == n) {
+			ret = -2;
+			break;
+		}
+		if (destbuf) destbuf[count++] = c;
+		(*pp)++;
+	}
+	if (destbuf) destbuf[count] = 0;
+	return ret;
+}
+
+static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 {
 	const char *pc = arg;
 	const char *anchor;
-	char mac[6];
+	char *endptr;
+	struct ebt_mac_wormhash *workcopy, *result, *h;
+	unsigned char mac[6];
+	unsigned char ip[4];
 	int index;
 	int nmacs = 0;
-	char *base = (char*)wh;
-	memset(wh, 0, sizeof(struct ebt_mac_wormhash));
+	int i;
+	char token[4];
+	if (!(workcopy = new_wormhash(1024))) {
+		print_error("memory problem");
+	}
 	while (1) {
+		/* remember current position, we'll need it on error */
 		anchor = pc;
-		while (*pc && *pc != ',') pc++;
-		while (*pc && *pc == ',') pc++;
-		if (fill_mac(mac, anchor)) {
-			print_error("problem with MAC %20s...", anchor);
+
+		/* collect MAC; all its bytes are followed by ':' (colon), except for
+		 * the last one which can be followed by ',' (comma), '=' or '\0' */
+		for (i = 0; i < 5; i++) {
+			if (read_until(&pc, ":", token, 2) < 0 || token[0] == 0) {
+				print_error("MAC parse error: %.20s", anchor);
+			}
+			mac[i] = strtol(token, &endptr, 16);
+			if (*endptr) {
+				print_error("MAC parse error: %.20s", anchor);
+			}
+			pc++;
 		}
+		if (read_until(&pc, "=,", token, 2) == -2 || token[0] == 0) {
+			print_error("MAC parse error: %.20s", anchor);
+		}
+		mac[i] = strtol(token, &endptr, 16);
+		if (*endptr) {
+			print_error("MAC parse error: %.20s", anchor);
+		}
+		if (*pc == '=') {
+			/* an IP follows the MAC; collect similarly to MAC */
+			pc++;
+			anchor = pc;
+			for (i = 0; i < 3; i++) {
+				if (read_until(&pc, ".", token, 3) < 0 || token[0] == 0) {
+					print_error("IP parse error: %.20s", anchor);
+				}
+				ip[i] = strtol(token, &endptr, 10);
+				if (*endptr) {
+					print_error("IP parse error: %.20s", anchor);
+				}
+				pc++;
+			}
+			if (read_until(&pc, ",", token, 3) == -2 || token[0] == 0) {
+				print_error("IP parse error: %.20s", anchor);
+			}
+			ip[3] = strtol(token, &endptr, 10);
+			if (*endptr) {
+				print_error("IP parse error: %.20s", anchor);
+			}
+		}
+		else {
+			/* no IP, we set it to 0.0.0.0 */
+			memset(ip, 0, 4);
+		}
+		
+		/* we have collected MAC and IP, so we add an entry */
 		index = (unsigned char)mac[5];
-		memcpy(((char*)wh->pool[nmacs].cmp)+2, mac, 6);
-		wh->pool[nmacs].next_ofs = wh->table[index];
-		wh->table[index] = ((const char*)&wh->pool[nmacs]) - base;
+		memcpy(((char*)workcopy->pool[nmacs].cmp)+2, mac, 6);
+		workcopy->pool[nmacs].ip = *(const uint32_t*)ip;
+		workcopy->pool[nmacs].next_ofs = workcopy->table[index];
+		workcopy->table[index] = ((const char*)&workcopy->pool[nmacs]) - (const char*)workcopy;
 		nmacs++;
-		if (*pc && nmacs >= 256) {
-			print_error("--among-src/--among-dst list can contain no more than 256 addresses\n");
+		
+		/* re-allocate memory if needed */
+		if (*pc && nmacs >= workcopy->poolsize) {
+			if (!(h = new_wormhash(nmacs * 2))) {
+				print_error("memory problem");
+			}
+			copy_wormhash(h, workcopy);
+			free(workcopy);
+			workcopy = h;
 		}
+		
+		/* check if end of string was reached */
+		if (!*pc) {
+			break;
+		}
+		
+		/* now `pc' points to comma if we are here; increment this to the next char */
+		/* but first assert :-> */
+		if (*pc != ',') {
+			print_error("Something went wrong; no comma...\n");
+		}
+		pc++;
+		
+		/* again check if end of string was reached; we allow an ending comma */
 		if (!*pc) {
 			break;
 		}
 	}
+	if (!(result = new_wormhash(nmacs))) {
+		print_error("memory problem");
+	}
+	copy_wormhash(result, workcopy);
+	free(workcopy);
+	return result;
 }
 
 #define OPT_DST 0x01
@@ -137,24 +225,39 @@ static void fill_wormhash(struct ebt_mac_wormhash *wh, const char *arg)
 static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
    unsigned int *flags, struct ebt_entry_match **match)
 {
-	struct ebt_among_info *amonginfo = (struct ebt_among_info *)(*match)->data;
+	struct ebt_among_info *info = (struct ebt_among_info *)(*match)->data;
 	struct ebt_mac_wormhash *wh;
+	struct ebt_entry_match *h;
+	int new_size, old_size;
 
 	switch (c) {
 	case AMONG_DST:
 	case AMONG_SRC:
-		if (c == AMONG_DST) {
-			check_option(flags, OPT_DST);
-			wh = &amonginfo->wh_dst;
-			amonginfo->bitmask |= EBT_AMONG_DST;
-		} else {
-			check_option(flags, OPT_SRC);
-			wh = &amonginfo->wh_src;
-			amonginfo->bitmask |= EBT_AMONG_SRC;
+		if (check_inverse(optarg)) {
+			if (c == AMONG_DST)
+				info->bitmask |= EBT_AMONG_DST_NEG;
+			else
+				info->bitmask |= EBT_AMONG_SRC_NEG;
 		}
 		if (optind > argc)
 			print_error("No MAC list specified\n");
-		fill_wormhash(wh, argv[optind - 1]);
+		wh = create_wormhash(argv[optind - 1]);
+		old_size = sizeof(struct ebt_entry_match) + (**match).match_size;
+		h = malloc((new_size = old_size + ebt_mac_wormhash_size(wh)));
+		memcpy(h, *match, old_size);
+		memcpy((char*)h + old_size, wh, ebt_mac_wormhash_size(wh));
+		h->match_size = new_size - sizeof(struct ebt_entry_match);
+		info = (struct ebt_among_info *)h->data;
+		if (c == AMONG_DST) {
+			check_option(flags, OPT_DST);
+			info->wh_dst_ofs = old_size - sizeof(struct ebt_entry_match);
+		} else {
+			check_option(flags, OPT_SRC);
+			info->wh_src_ofs = old_size - sizeof(struct ebt_entry_match);
+		}
+		free(*match);
+		*match = h;
+		free(wh);
 		break;
 	default:
 		return 0;
@@ -172,12 +275,18 @@ static void wormhash_printout(const struct ebt_mac_wormhash *wh)
 {
 	int i;
 	int offset;
+	unsigned char *ip;
 	for (i = 0; i < 256; i++) {
 		const struct ebt_mac_wormhash_tuple *p;
 		offset = wh->table[i];
 		while (offset) {
 			p = (const struct ebt_mac_wormhash_tuple*)((const char*)wh + offset);
-			printf("%s,", ether_ntoa((const struct ether_addr *)(((const char*)&p->cmp[0]) + 2)));
+			printf("%s", ether_ntoa((const struct ether_addr *)(((const char*)&p->cmp[0]) + 2)));
+			if (p->ip) {
+				ip = (unsigned char*)&p->ip;
+				printf("=%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
+			}
+			printf(",");
 			offset = p->next_ofs;
 		}
 	}				
@@ -187,30 +296,46 @@ static void wormhash_printout(const struct ebt_mac_wormhash *wh)
 static void print(const struct ebt_u_entry *entry,
    const struct ebt_entry_match *match)
 {
-	struct ebt_among_info *amonginfo = (struct ebt_among_info *)match->data;
+	struct ebt_among_info *info = (struct ebt_among_info *)match->data;
 
-	if (amonginfo->bitmask & EBT_AMONG_DST) {
+	if (info->wh_dst_ofs) {
 		printf("--among-dst ");
-		wormhash_printout(&amonginfo->wh_dst);
+		if (info->bitmask && EBT_AMONG_DST_NEG) {
+			printf("! ");
+		}
+		wormhash_printout(ebt_among_wh_dst(info));
 	}
-	if (amonginfo->bitmask & EBT_AMONG_SRC) {
+	if (info->wh_src_ofs) {
 		printf("--among-src ");
-		wormhash_printout(&amonginfo->wh_src);
+		if (info->bitmask && EBT_AMONG_SRC_NEG) {
+			printf("! ");
+		}
+		wormhash_printout(ebt_among_wh_src(info));
 	}
+}
+
+static int compare_wh(const struct ebt_mac_wormhash *aw, const struct ebt_mac_wormhash *bw)
+{
+	int as, bs;
+	as = ebt_mac_wormhash_size(aw);
+	bs = ebt_mac_wormhash_size(bw);
+	if (as != bs)
+		return 0;
+	if (as && memcmp(aw, bw, as))
+		return 0;
+	return 1;
 }
 
 static int compare(const struct ebt_entry_match *m1,
    const struct ebt_entry_match *m2)
 {
-	struct ebt_among_info *amonginfo1 = (struct ebt_among_info *)m1->data;
-	struct ebt_among_info *amonginfo2 = (struct ebt_among_info *)m2->data;
+	struct ebt_among_info *a = (struct ebt_among_info *)m1->data;
+	struct ebt_among_info *b = (struct ebt_among_info *)m2->data;
 
-#ifdef DEBUG	
-//	hexdump(amonginfo1, sizeof(struct ebt_among_info));
-//	hexdump(amonginfo2, sizeof(struct ebt_among_info));
-#endif /* DEBUG */
-
-	return memcmp(amonginfo1, amonginfo2, sizeof(struct ebt_among_info)) == 0;
+	if (!compare_wh(ebt_among_wh_dst(a), ebt_among_wh_dst(b))) return 0;
+	if (!compare_wh(ebt_among_wh_src(a), ebt_among_wh_src(b))) return 0;
+	if (a->bitmask != b->bitmask) return 0;
+	return 1;
 }
 
 static struct ebt_u_match among_match =
