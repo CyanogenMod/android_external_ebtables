@@ -1,8 +1,9 @@
 /*
- *  ebt_reply
+ *  ebt_arpreply
  *
  *	Authors:
  *	Grzegorz Borowiak <grzes@gnu.univ.gda.pl>
+ *	Bart De Schuymer <bdschuym@pandora.be>
  *
  *  August, 2003
  *
