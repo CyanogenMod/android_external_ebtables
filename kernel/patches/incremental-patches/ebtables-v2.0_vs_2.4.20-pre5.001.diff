@@ -1,5 +1,5 @@
---- linux-2.4.20-pre5-old/include/linux/if_bridge.h	Tue Sep 17 23:06:45 2002
-+++ linux-2.4.20-pre5/include/linux/if_bridge.h	Tue Sep 17 22:13:51 2002
+--- linux-2.4.20-pre5-old/include/linux/if_bridge.h	Wed Sep 18 21:04:46 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/if_bridge.h	Wed Sep 18 21:01:01 2002
 @@ -103,12 +103,8 @@
  
  extern int (*br_ioctl_hook)(unsigned long arg);
@@ -15,8 +15,8 @@
  #endif
  
  #endif
---- linux-2.4.20-pre5-old/net/core/dev.c	Tue Sep 17 23:06:45 2002
-+++ linux-2.4.20-pre5/net/core/dev.c	Tue Sep 17 21:38:45 2002
+--- linux-2.4.20-pre5-old/net/core/dev.c	Wed Sep 18 21:04:46 2002
++++ linux-2.4.20-pre5-ebtables/net/core/dev.c	Wed Sep 18 21:01:01 2002
 @@ -1473,6 +1473,7 @@
  		ret = handle_bridge(skb, pt_prev);
  		if (br_handle_frame_hook(skb) == 0)
@@ -25,8 +25,8 @@
  	}
  #endif
  
---- linux-2.4.20-pre5-old/net/bridge/br_input.c	Tue Sep 17 23:06:45 2002
-+++ linux-2.4.20-pre5/net/bridge/br_input.c	Tue Sep 17 21:38:45 2002
+--- linux-2.4.20-pre5-old/net/bridge/br_input.c	Wed Sep 18 21:04:46 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/br_input.c	Wed Sep 18 21:01:01 2002
 @@ -19,15 +19,14 @@
  #include <linux/if_bridge.h>
  #include <linux/netfilter_bridge.h>
@@ -61,8 +61,20 @@
  		NF_HOOK(PF_BRIDGE, NF_BR_PRE_ROUTING, skb, skb->dev, NULL,
  			br_handle_frame_finish);
  		read_unlock(&br->lock);
---- linux-2.4.20-pre5-old/net/bridge/br.c	Tue Sep 17 23:06:45 2002
-+++ linux-2.4.20-pre5/net/bridge/br.c	Tue Sep 17 21:38:45 2002
+--- linux-2.4.20-pre5-old/net/bridge/br_forward.c	Sat Aug  3 02:39:46 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/br_forward.c	Wed Sep 18 21:01:01 2002
+@@ -49,6 +49,9 @@
+ static void __br_deliver(struct net_bridge_port *to, struct sk_buff *skb)
+ {
+ 	skb->dev = to->dev;
++#ifdef CONFIG_NETFILTER_DEBUG
++	skb->nf_debug = 0;
++#endif
+ 	NF_HOOK(PF_BRIDGE, NF_BR_LOCAL_OUT, skb, NULL, skb->dev,
+ 			__br_forward_finish);
+ }
+--- linux-2.4.20-pre5-old/net/bridge/br.c	Wed Sep 18 21:04:46 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/br.c	Wed Sep 18 21:01:01 2002
 @@ -28,13 +28,7 @@
  #include "../atm/lec.h"
  #endif
@@ -92,8 +104,8 @@
  
  module_init(br_init)
  module_exit(br_deinit)
---- linux-2.4.20-pre5-old/net/bridge/Makefile	Tue Sep 17 23:06:45 2002
-+++ linux-2.4.20-pre5/net/bridge/Makefile	Tue Sep 17 21:38:45 2002
+--- linux-2.4.20-pre5-old/net/bridge/Makefile	Wed Sep 18 21:04:46 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/Makefile	Wed Sep 18 21:01:01 2002
 @@ -7,11 +7,7 @@
  #
  # Note 2! The CFLAGS definition is now in the main makefile...
@@ -106,8 +118,8 @@
  
  O_TARGET	:= bridge.o
  obj-y		:= br.o br_device.o br_fdb.o br_forward.o br_if.o br_input.o \
---- linux-2.4.20-pre5-old/include/linux/netfilter_bridge.h	Tue Sep 17 23:06:45 2002
-+++ linux-2.4.20-pre5/include/linux/netfilter_bridge.h	Tue Sep 17 22:27:33 2002
+--- linux-2.4.20-pre5-old/include/linux/netfilter_bridge.h	Wed Sep 18 21:04:46 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge.h	Wed Sep 18 21:01:01 2002
 @@ -23,13 +23,13 @@
  #define NF_BR_NUMHOOKS		6
  
@@ -129,8 +141,8 @@
  };
  
  #endif
---- linux-2.4.20-pre5-old/net/bridge/netfilter/Makefile	Tue Sep 17 23:06:45 2002
-+++ linux-2.4.20-pre5/net/bridge/netfilter/Makefile	Tue Sep 17 21:38:45 2002
+--- linux-2.4.20-pre5-old/net/bridge/netfilter/Makefile	Wed Sep 18 21:04:46 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/Makefile	Wed Sep 18 21:01:01 2002
 @@ -11,7 +11,7 @@
  
  export-objs := ebtables.o
@@ -140,8 +152,8 @@
  obj-$(CONFIG_BRIDGE_EBT_T_FILTER) += ebtable_filter.o
  obj-$(CONFIG_BRIDGE_EBT_T_NAT) += ebtable_nat.o
  obj-$(CONFIG_BRIDGE_EBT_BROUTE) += ebtable_broute.o
---- linux-2.4.20-pre5-old/net/bridge/netfilter/Config.in	Tue Sep 17 23:06:45 2002
-+++ linux-2.4.20-pre5/net/bridge/netfilter/Config.in	Tue Sep 17 21:38:45 2002
+--- linux-2.4.20-pre5-old/net/bridge/netfilter/Config.in	Wed Sep 18 21:04:46 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/Config.in	Wed Sep 18 21:01:01 2002
 @@ -1,17 +1,16 @@
  #
  # Bridge netfilter configuration
@@ -173,8 +185,8 @@
 +dep_tristate '    ebt: dnat target support' CONFIG_BRIDGE_EBT_DNAT $CONFIG_BRIDGE_NF_EBTABLES
 +dep_tristate '    ebt: redirect target support' CONFIG_BRIDGE_EBT_REDIRECT $CONFIG_BRIDGE_NF_EBTABLES
 +dep_tristate '    ebt: mark target support' CONFIG_BRIDGE_EBT_MARK_T $CONFIG_BRIDGE_NF_EBTABLES
---- linux-2.4.20-pre5-old/net/bridge/netfilter/ebtable_broute.c	Tue Sep 17 23:06:45 2002
-+++ linux-2.4.20-pre5/net/bridge/netfilter/ebtable_broute.c	Tue Sep 17 21:38:45 2002
+--- linux-2.4.20-pre5-old/net/bridge/netfilter/ebtable_broute.c	Wed Sep 18 21:04:46 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebtable_broute.c	Wed Sep 18 21:01:01 2002
 @@ -40,11 +40,15 @@
    RW_LOCK_UNLOCKED, check, NULL
  };
@@ -215,8 +227,8 @@
  	br_write_unlock_bh(BR_NETPROTO_LOCK);
  	ebt_unregister_table(&broute_table);
  }
---- linux-2.4.20-pre5-old/net/bridge/netfilter/ebt_vlan.c	Tue Sep 17 23:06:45 2002
-+++ linux-2.4.20-pre5/net/bridge/netfilter/ebt_vlan.c	Tue Sep 17 21:38:45 2002
+--- linux-2.4.20-pre5-old/net/bridge/netfilter/ebt_vlan.c	Wed Sep 18 21:04:46 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_vlan.c	Wed Sep 18 21:01:01 2002
 @@ -35,7 +35,7 @@
  MODULE_LICENSE ("GPL");
  
@@ -226,8 +238,8 @@
  #define INV_FLAG(_inv_flag_) (info->invflags & _inv_flag_) ? "!" : ""
  #define GET_BITMASK(_BIT_MASK_) info->bitmask & _BIT_MASK_
  #define SET_BITMASK(_BIT_MASK_) info->bitmask |= _BIT_MASK_
---- linux-2.4.20-pre5-old/include/linux/netfilter_bridge/ebtables.h	Tue Sep 17 23:06:45 2002
-+++ linux-2.4.20-pre5/include/linux/netfilter_bridge/ebtables.h	Tue Sep 17 22:28:18 2002
+--- linux-2.4.20-pre5-old/include/linux/netfilter_bridge/ebtables.h	Wed Sep 18 21:04:46 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebtables.h	Wed Sep 18 21:01:01 2002
 @@ -4,7 +4,7 @@
   *	Authors:
   *	Bart De Schuymer		<bart.de.schuymer@pandora.be>
