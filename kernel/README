@@ -10,7 +10,7 @@ ebtables_kernel-2-0-pre7
 
 June 1, 2002
 ---
-Release candidats are tagged like this:
+Release candidates are tagged like this:
 ebtables_kernel-2-0-rc1
 
 July 31, 2002
@@ -24,3 +24,9 @@ The repository should now contain files compilable against 2.4.20-pre4 and
 
 August 23, 2002
 ---
+Release candidates for 2.5 are tagged like this:
+ebtables_kernel-2-0-dev-rc2
+
+August 30, 2002
+---
+

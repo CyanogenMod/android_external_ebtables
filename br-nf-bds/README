@@ -14,4 +14,13 @@ br_nf_bds-0-0-8
 
 June 1, 2002
 ---
+All kernel code in linux/ is tagged like this example:
+br_nf_bds-0-0-8-3
+All kernel code in linux2.5/ is tagged like this example:
+br_nf_bds-0-0-8-3-dev
 
+the -3 means it is the third patch against a kernel, but no functionality
+changed.
+
+August 31, 2002
+---
