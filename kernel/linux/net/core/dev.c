@@ -1385,13 +1385,6 @@ void net_call_rx_atomic(void (*fn)(void))
 
 #if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
 int (*br_handle_frame_hook)(struct sk_buff *skb) = NULL;
-#if defined(CONFIG_BRIDGE_EBT_BROUTE) || \
-    defined(CONFIG_BRIDGE_EBT_BROUTE_MODULE)
-unsigned int (*broute_decision) (unsigned int hook, struct sk_buff **pskb,
-			const struct net_device *in,
-			const struct net_device *out,
-			int (*okfn)(struct sk_buff *)) = NULL;
-#endif
 #endif
 
 static __inline__ int handle_bridge(struct sk_buff *skb,
