@@ -2,12 +2,13 @@
 # for making the bridge-nf-bds patches
 # 18 September 2002: removed net/Config.in
 # 9 October 2002: added include/linux/netfilter_bridge.h
+# 19 October 2002: removed ip_output.c
 
-export FROM=linux-2.5.39ori
-export TO=linux-2.5.39
-export FILE=bridge-nf-0.0.10-dev-pre1.diff
+export FROM=linux-2.5.42
+export TO=linux-2.5.42-brnf
+export FILE=bridge-nf-0.0.10-dev-pre1-against-2.5.42.diff
 
-echo "bridge-nf-0.0.10-dev-pre1 vs 2.5.39 - 8 October" >$FILE
+echo "bridge-nf-0.0.10-dev-pre1-against-2.5.42 - 13 October" >$FILE
 echo >>$FILE
 
 diff -urN $FROM/include/linux/netfilter.h $TO/include/linux/netfilter.h >> $FILE
@@ -22,7 +23,6 @@ diff -urN $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h >> $FILE
 diff -urN $FROM/net/bridge/Makefile $TO/net/bridge/Makefile >> $FILE
 diff -urN $FROM/net/core/netfilter.c $TO/net/core/netfilter.c >> $FILE
 diff -urN $FROM/net/core/skbuff.c $TO/net/core/skbuff.c >> $FILE
-diff -urN $FROM/net/ipv4/ip_output.c $TO/net/ipv4/ip_output.c >> $FILE
 diff -urN $FROM/net/ipv4/netfilter/ip_tables.c $TO/net/ipv4/netfilter/ip_tables.c >> $FILE
 diff -urN $FROM/net/ipv4/netfilter/ipt_LOG.c $TO/net/ipv4/netfilter/ipt_LOG.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/br_netfilter.c >> $FILE
