@@ -1,4 +1,4 @@
-/* Library which manipulates firewall rules.  Version $Revision: 1.2 $ */
+/* Library which manipulates firewall rules.  Version $Revision: 1.3 $ */
 
 /* Architecture of firewall rules is as follows:
  *
@@ -26,7 +26,9 @@ static const char *hooknames[] =
 {
 	[NF_ARP_IN]		"INPUT",
 	[NF_ARP_OUT]		"OUTPUT",
+#ifndef KERNEL_2_4
 	[NF_ARP_FORWARD]	"FORWARD",
+#endif
 };
 
 struct counter_map
