@@ -118,7 +118,7 @@ extern struct list_head nf_hooks[NPROTO][NF_MAX_HOOKS];
    call in fast path: gcc doesn't inline (needs value tracking?). --RR */
 #ifdef CONFIG_NETFILTER_DEBUG
 #define NF_HOOK(pf, hook, skb, indev, outdev, okfn)			\
-		nf_hook_slow((pf), (hook), (skb), (indev), (outdev), (okfn), INT_MIN)
+ nf_hook_slow((pf), (hook), (skb), (indev), (outdev), (okfn), INT_MIN)
 #define NF_HOOK_THRESH nf_hook_slow
 #else
 #define NF_HOOK(pf, hook, skb, indev, outdev, okfn)			\

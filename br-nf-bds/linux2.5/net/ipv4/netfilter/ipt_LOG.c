@@ -286,11 +286,15 @@ ipt_log_target(struct sk_buff **pskb,
 	spin_lock_bh(&log_lock);
 	printk(level_string);
 	printk("%sIN=%s ", loginfo->prefix, in ? in->name : "");
+#ifdef CONFIG_BRIDGE_NF
 	if ((*pskb)->physindev && in != (*pskb)->physindev)
 		printk("PHYSIN=%s ", (*pskb)->physindev->name);
+#endif
 	printk("OUT=%s ", out ? out->name : "");
+#ifdef CONFIG_BRIDGE_NF
 	if ((*pskb)->physoutdev && out != (*pskb)->physoutdev)
 		printk("PHYSOUT=%s ", (*pskb)->physoutdev->name);
+#endif
 
 	if (in && !out) {
 		/* MAC logging for input chain only. */

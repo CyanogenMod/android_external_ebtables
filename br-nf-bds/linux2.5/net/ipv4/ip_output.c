@@ -5,7 +5,7 @@
  *
  *		The Internet Protocol (IP) output module.
  *
- * Version:	$Id: ip_output.c,v 1.1 2002/08/24 09:25:29 bdschuym Exp $
+ * Version:	$Id: ip_output.c,v 1.2 2002/08/24 13:43:43 bdschuym Exp $
  *
  * Authors:	Ross Biro, <bir7@leland.Stanford.Edu>
  *		Fred N. van Kempen, <waltje@uWalt.NL.Mugnet.ORG>
@@ -835,8 +835,10 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff*))
 			skb_set_owner_w(skb2, skb->sk);
 		skb2->dst = dst_clone(skb->dst);
 		skb2->dev = skb->dev;
+#ifdef CONFIG_BRIDGE_NF
 		skb2->physindev = skb->physindev;
 		skb2->physoutdev = skb->physoutdev;
+#endif
 
 		/*
 		 *	Copy the packet header into the new buffer.
@@ -900,7 +902,9 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff*))
 		iph->tot_len = htons(len + hlen);
 
 		ip_send_check(iph);
+#ifdef CONFIG_BRIDGE_NF
 		memcpy(skb2->data - 16, skb->data - 16, 16);
+#endif
 
 		err = output(skb2);
 		if (err)
