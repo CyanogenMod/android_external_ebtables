@@ -1182,8 +1182,6 @@ void ebt_unregister_table(struct ebt_table *table)
 	up(&ebt_mutex);
 	EBT_ENTRY_ITERATE(table->private->entries,
 	   table->private->entries_size, ebt_cleanup_entry, NULL);
-	if (table->private->counters)
-		vfree(table->private->counters);
 	if (table->private->entries)
 		vfree(table->private->entries);
 	if (table->private->chainstack) {
