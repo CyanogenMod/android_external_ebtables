@@ -57,6 +57,8 @@ static struct option opts[] =
 	{ 0 }
 };
 
+struct protoent *p_ent;
+
 // put the ip string into 4 bytes
 static int undot_ip(char *ip, unsigned char *ip2)
 {
@@ -313,9 +315,14 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			ipinfo->invflags |= EBT_IP_PROTO;
 		if (optind > argc)
 			print_error("Missing IP protocol argument");
-		i = strtol(argv[optind - 1], &end, 10);
-		if (i < 0 || i > 255 || *end != '\0')
-			print_error("Problem with specified IP protocol");
+		(unsigned char) i = strtoul(argv[optind - 1], &end, 10);
+		if ((i > 0xFF) || (*end != '\0')) {
+			p_ent = getprotobyname(argv[optind - 1]);
+			if (p_ent == NULL)
+				print_error("Unknown Internet protocol %s ",
+					    argv[optind - 1]);
+			i = p_ent->p_proto;
+		}
 		ipinfo->protocol = i;
 		ipinfo->bitmask |= EBT_IP_PROTO;
 		break;
