@@ -48,13 +48,13 @@ static int parse(int c, char **argv, int argc,
 	case MARK_TARGET:
 		ebt_check_option(flags, OPT_MARK_TARGET);
 		if (FILL_TARGET(optarg, markinfo->target))
-			print_error("Illegal --mark-target target");
+			ebt_print_error("Illegal --mark-target target");
 		break;
 	case MARK_SETMARK:
 		ebt_check_option(flags, OPT_MARK_SETMARK);
 		markinfo->mark = strtoul(optarg, &end, 0);
 		if (*end != '\0' || end == optarg)
-			print_error("Bad MARK value '%s'", optarg);
+			ebt_print_error("Bad MARK value '%s'", optarg);
 		mark_supplied = 1;
                 break;
 	 default:
@@ -71,9 +71,10 @@ static void final_check(const struct ebt_u_entry *entry,
 	   (struct ebt_mark_t_info *)target->data;
 
 	if (time == 0 && mark_supplied == 0)
-		print_error("No mark value supplied");
+		ebt_print_error("No mark value supplied");
 	if (BASE_CHAIN && markinfo->target == EBT_RETURN)
-		print_error("--mark-target RETURN not allowed on base chain");
+		ebt_print_error("--mark-target RETURN not allowed on base "
+				"chain");
 }
 
 static void print(const struct ebt_u_entry *entry,
@@ -113,8 +114,7 @@ static struct ebt_u_target mark_target =
 	.extra_ops	= opts,
 };
 
-static void _init(void) __attribute__ ((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_target(&mark_target);
 }

@@ -76,13 +76,14 @@ static int parse_s(int c, char **argv, int argc,
 		ebt_check_option(flags, OPT_SNAT);
 		to_source_supplied = 1;
 		if (!(addr = ether_aton(optarg)))
-			print_error("Problem with specified --to-source mac");
+			ebt_print_error("Problem with specified --to-source "
+					"mac");
 		memcpy(natinfo->mac, addr, ETH_ALEN);
 		break;
 	case NAT_S_TARGET:
 		ebt_check_option(flags, OPT_SNAT_TARGET);
 		if (FILL_TARGET(optarg, natinfo->target))
-			print_error("Illegal --snat-target target");
+			ebt_print_error("Illegal --snat-target target");
 		break;
 	default:
 		return 0;
@@ -104,14 +105,14 @@ static int parse_d(int c, char **argv, int argc,
 		ebt_check_option(flags, OPT_DNAT);
 		to_dest_supplied = 1;
 		if (!(addr = ether_aton(optarg)))
-			print_error("Problem with specified "
-			            "--to-destination mac");
+			ebt_print_error("Problem with specified "
+					"--to-destination mac");
 		memcpy(natinfo->mac, addr, ETH_ALEN);
 		break;
 	case NAT_D_TARGET:
 		ebt_check_option(flags, OPT_DNAT_TARGET);
 		if (FILL_TARGET(optarg, natinfo->target))
-			print_error("Illegal --dnat-target target");
+			ebt_print_error("Illegal --dnat-target target");
 		break;
 	default:
 		return 0;
@@ -126,12 +127,13 @@ static void final_check_s(const struct ebt_u_entry *entry,
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
 
 	if (BASE_CHAIN && natinfo->target == EBT_RETURN)
-		print_error("--snat-target RETURN not allowed on base chain");
+		ebt_print_error("--snat-target RETURN not allowed on base "
+				"chain");
 	CLEAR_BASE_CHAIN_BIT;
 	if ((hookmask & ~(1 << NF_BR_POST_ROUTING)) || strcmp(name, "nat"))
-		print_error("Wrong chain for snat");
+		ebt_print_error("Wrong chain for snat");
 	if (time == 0 && to_source_supplied == 0)
-		print_error("No snat address supplied");
+		ebt_print_error("No snat address supplied");
 }
 
 static void final_check_d(const struct ebt_u_entry *entry,
@@ -141,14 +143,15 @@ static void final_check_d(const struct ebt_u_entry *entry,
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
 
 	if (BASE_CHAIN && natinfo->target == EBT_RETURN)
-		print_error("--dnat-target RETURN not allowed on base chain");
+		ebt_print_error("--dnat-target RETURN not allowed on base "
+				"chain");
 	CLEAR_BASE_CHAIN_BIT;
 	if (((hookmask & ~((1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_LOCAL_OUT)))
 	   || strcmp(name, "nat")) &&
 	   ((hookmask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute")))
-		print_error("Wrong chain for dnat");
+		ebt_print_error("Wrong chain for dnat");
 	if (time == 0 && to_dest_supplied == 0)
-		print_error("No dnat address supplied");
+		ebt_print_error("No dnat address supplied");
 }
 
 static void print_s(const struct ebt_u_entry *entry,
@@ -207,8 +210,7 @@ static struct ebt_u_target dnat_target =
 	.extra_ops	= opts_d,
 };
 
-static void _init(void) __attribute__ ((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_target(&snat_target);
 	ebt_register_target(&dnat_target);

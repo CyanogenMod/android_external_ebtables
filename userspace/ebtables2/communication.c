@@ -36,9 +36,9 @@ static void get_sockfd()
 	if (sockfd == -1) {
 		sockfd = socket(AF_INET, SOCK_RAW, PF_INET);
 		if (sockfd < 0)
-			print_error("Problem getting a socket, "
-			   "you probably don't have the right "
-			   "permissions");
+			ebt_print_error("Problem getting a socket, "
+					"you probably don't have the right "
+					"permissions");
 	}
 }
 
@@ -56,7 +56,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 
 	new = (struct ebt_replace *)malloc(sizeof(struct ebt_replace));
 	if (!new)
-		print_memory();
+		ebt_print_memory();
 	new->valid_hooks = u_repl->valid_hooks;
 	strcpy(new->name, u_repl->name);
 	new->nentries = u_repl->nentries;
@@ -111,7 +111,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 		}
 		/* a little sanity check */
 		if (j != entries->nentries)
-			print_bug("Wrong nentries: %d != %d, hook = %s", j,
+			ebt_print_bug("Wrong nentries: %d != %d, hook = %s", j,
 			   entries->nentries, entries->name);
 		if (i >= NF_BR_NUMHOOKS)
 			cl = cl->next;
@@ -121,7 +121,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 	new->entries_size = entries_size;
 	p = (char *)malloc(entries_size);
 	if (!p)
-		print_memory();
+		ebt_print_memory();
 
 	/* put everything in one block */
 	new->entries = sparc_cast p;
@@ -209,7 +209,7 @@ static struct ebt_replace * translate_user2kernel(struct ebt_u_replace *u_repl)
 
 	/* sanity check */
 	if (p - (char *)new->entries != new->entries_size)
-		print_bug("Entries_size bug");
+		ebt_print_bug("Entries_size bug");
 	free(chain_offsets);
 	return new;
 }
@@ -223,22 +223,22 @@ static void store_table_in_file(char *filename, struct ebt_replace *repl)
 	/* start from an empty file with right priviliges */
 	command = (char *)malloc(strlen(filename) + 15);
 	if (!command)
-		print_memory();
+		ebt_print_memory();
 	strcpy(command, "cat /dev/null>");
 	strcpy(command + 14, filename);
 	if (system(command))
-		print_error("Couldn't create file %s", filename);
+		ebt_print_error("Couldn't create file %s", filename);
 	strcpy(command, "chmod 600 ");
 	strcpy(command + 10, filename);
 	if (system(command))
-		print_error("Couldn't chmod file %s", filename);
+		ebt_print_error("Couldn't chmod file %s", filename);
 	free(command);
 
 	size = sizeof(struct ebt_replace) + repl->entries_size +
 	   repl->nentries * sizeof(struct ebt_counter);
 	data = (char *)malloc(size);
 	if (!data)
-		print_memory();
+		ebt_print_memory();
 	memcpy(data, repl, sizeof(struct ebt_replace));
 	memcpy(data + sizeof(struct ebt_replace), (char *)repl->entries,
 	   repl->entries_size);
@@ -246,10 +246,11 @@ static void store_table_in_file(char *filename, struct ebt_replace *repl)
 	memset(data + sizeof(struct ebt_replace) + repl->entries_size,
 	   0, repl->nentries * sizeof(struct ebt_counter));
 	if (!(file = fopen(filename, "wb")))
-		print_error("Couldn't open file %s", filename);
+		ebt_print_error("Couldn't open file %s", filename);
 	if (fwrite(data, sizeof(char), size, file) != size) {
 		fclose(file);
-		print_error("Couldn't write everything to file %s", filename);
+		ebt_print_error("Couldn't write everything to file %s",
+				filename);
 	}
 	fclose(file);
 	free(data);
@@ -279,7 +280,7 @@ void ebt_deliver_table(struct ebt_u_replace *u_repl)
 			return;
 	}
 
-	print_error("The kernel doesn't support a certain ebtables"
+	ebt_print_error("The kernel doesn't support a certain ebtables"
 		    " extension, consider recompiling your kernel or insmod"
 		    " the extension");
 }
@@ -292,7 +293,7 @@ static void store_counters_in_file(char *filename, struct ebt_u_replace *repl)
 	FILE *file;
 
 	if (!(file = fopen(filename, "r+b")))
-		print_error("Could not open file %s", filename);
+		ebt_print_error("Could not open file %s", filename);
 	/* 
 	 * find out entries_size and then set the file pointer to the
 	 * counters
@@ -302,11 +303,12 @@ static void store_counters_in_file(char *filename, struct ebt_u_replace *repl)
 	   sizeof(unsigned int) ||
 	   fseek(file, entries_size + sizeof(struct ebt_replace), SEEK_SET)) {
 		fclose(file);
-		print_error("File %s is corrupt", filename);
+		ebt_print_error("File %s is corrupt", filename);
 	}
 	if (fwrite(repl->counters, sizeof(char), size, file) != size) {
 		fclose(file);
-		print_error("Could not write everything to file %s", filename);
+		ebt_print_error("Could not write everything to file %s",
+				filename);
 	}
 	fclose(file);
 }
@@ -325,7 +327,7 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl)
 	newcounters = (struct ebt_counter *)
 	   malloc(u_repl->nentries * sizeof(struct ebt_counter));
 	if (!newcounters)
-		print_memory();
+		ebt_print_memory();
 	memset(newcounters, 0, u_repl->nentries * sizeof(struct ebt_counter));
 	old = u_repl->counters;
 	new = newcounters;
@@ -371,7 +373,7 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl)
 
 	get_sockfd();
 	if (setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_COUNTERS, &repl, optlen))
-		print_bug("Couldn't update kernel counters");
+		ebt_print_bug("Couldn't update kernel counters");
 }
 
 static int
@@ -382,18 +384,18 @@ ebt_translate_match(struct ebt_entry_match *m, struct ebt_u_match_list ***l)
 	new = (struct ebt_u_match_list *)
 	   malloc(sizeof(struct ebt_u_match_list));
 	if (!new)
-		print_memory();
+		ebt_print_memory();
 	new->m = (struct ebt_entry_match *)
 	   malloc(m->match_size + sizeof(struct ebt_entry_match));
 	if (!new->m)
-		print_memory();
+		ebt_print_memory();
 	memcpy(new->m, m, m->match_size + sizeof(struct ebt_entry_match));
 	new->next = NULL;
 	**l = new;
 	*l = &new->next;
 	if (ebt_find_match(new->m->u.name) == NULL)
-		print_error("Kernel match %s unsupported by userspace tool",
-		   new->m->u.name);
+		ebt_print_error("Kernel match %s unsupported by userspace tool",
+				new->m->u.name);
 	return 0;
 }
 
@@ -406,18 +408,18 @@ ebt_translate_watcher(struct ebt_entry_watcher *w,
 	new = (struct ebt_u_watcher_list *)
 	   malloc(sizeof(struct ebt_u_watcher_list));
 	if (!new)
-		print_memory();
+		ebt_print_memory();
 	new->w = (struct ebt_entry_watcher *)
 	   malloc(w->watcher_size + sizeof(struct ebt_entry_watcher));
 	if (!new->w)
-		print_memory();
+		ebt_print_memory();
 	memcpy(new->w, w, w->watcher_size + sizeof(struct ebt_entry_watcher));
 	new->next = NULL;
 	**l = new;
 	*l = &new->next;
 	if (ebt_find_watcher(new->w->u.name) == NULL)
-		print_error("Kernel watcher %s unsupported by userspace tool",
-		   new->w->u.name);
+		ebt_print_error("Kernel watcher %s unsupported by userspace "
+				"tool", new->w->u.name);
 	return 0;
 }
 
@@ -435,7 +437,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 
 		new = (struct ebt_u_entry *)malloc(sizeof(struct ebt_u_entry));
 		if (!new)
-			print_memory();
+			ebt_print_memory();
 		new->bitmask = e->bitmask;
 		/*
 		 * plain userspace code doesn't know about
@@ -464,10 +466,10 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 		new->t = (struct ebt_entry_target *)
 		   malloc(t->target_size + sizeof(struct ebt_entry_target));
 		if (!new->t)
-			print_memory();
+			ebt_print_memory();
 		if (ebt_find_target(t->u.name) == NULL)
-			print_error("Kernel target %s unsupported by "
-			            "userspace tool", t->u.name);
+			ebt_print_error("Kernel target %s unsupported by "
+					"userspace tool", t->u.name);
 		memcpy(new->t, t, t->target_size +
 		   sizeof(struct ebt_entry_target));
 		/* deal with jumps to udc */
@@ -486,7 +488,8 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 					cl = cl->next;
 				}
 				if (!cl)
-					print_bug("can't find udc for jump");
+					ebt_print_bug("can't find udc for "
+						      "jump");
 				((struct ebt_standard_target *)new->t)->verdict = i;
 			}
 		}
@@ -503,7 +506,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 		struct ebt_u_chain_list *cl;
 
 		if (*n != *cnt)
-			print_bug("Nr of entries in the chain is wrong");
+			ebt_print_bug("Nr of entries in the chain is wrong");
 		*n = entries->nentries;
 		*cnt = 0;
 		for (i = *hook + 1; i < NF_BR_NUMHOOKS; i++)
@@ -546,12 +549,12 @@ ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
 			*chain_list = (struct ebt_u_chain_list *)
 			   malloc(sizeof(struct ebt_u_chain_list));
 			if (!(*chain_list))
-				print_memory();
+				ebt_print_memory();
 			(*chain_list)->next = NULL;
 			(*chain_list)->udc = (struct ebt_u_entries *)
 			   malloc(sizeof(struct ebt_u_entries));
 			if (!((*chain_list)->udc))
-				print_memory();
+				ebt_print_memory();
 			new = (*chain_list)->udc;
 			/*
 			 * ebt_translate_entry depends on this for knowing
@@ -563,7 +566,7 @@ ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
 			new = (struct ebt_u_entries *)
 			   malloc(sizeof(struct ebt_u_entries));
 			if (!new)
-				print_memory();
+				ebt_print_memory();
 			u_repl->hook_entry[*hook] = new;
 		}
 		new->nentries = entries->nentries;
@@ -584,27 +587,28 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 	int size;
 
 	if (!(file = fopen(filename, "r+b")))
-		print_error("Could not open file %s", filename);
+		ebt_print_error("Could not open file %s", filename);
 	/*
 	 * make sure table name is right if command isn't -L or --atomic-commit
 	 */
 	if (command != 'L' && command != 8) {
 		hlp = (char *)malloc(strlen(repl->name) + 1);
 		if (!hlp)
-			print_memory();
+			ebt_print_memory();
 		strcpy(hlp, repl->name);
 	}
 	if (fread(repl, sizeof(char), sizeof(struct ebt_replace), file)
 	   != sizeof(struct ebt_replace))
-		print_error("File %s is corrupt", filename);
+		ebt_print_error("File %s is corrupt", filename);
 	if (command != 'L' && command != 8 && strcmp(hlp, repl->name)) {
 		fclose(file);
-		print_error("File %s contains wrong table name or is corrupt",
-		   filename);
+		ebt_print_error("File %s contains wrong table name or is "
+				"corrupt", filename);
 		free(hlp);
 	} else if (!ebt_find_table(repl->name)) {
 		fclose(file);
-		print_error("File %s contains invalid table name", filename);
+		ebt_print_error("File %s contains invalid table name",
+				filename);
 	}
 
 	size = sizeof(struct ebt_replace) +
@@ -612,35 +616,37 @@ static void retrieve_from_file(char *filename, struct ebt_replace *repl,
 	fseek(file, 0, SEEK_END);
 	if (size != ftell(file)) {
 		fclose(file);
-		print_error("File %s has wrong size", filename);
+		ebt_print_error("File %s has wrong size", filename);
 	}
 	entries = (char *)malloc(repl->entries_size);
 	if (!entries)
-		print_memory();
+		ebt_print_memory();
 	repl->entries = sparc_cast entries;
 	if (repl->nentries) {
 		counters = (struct ebt_counter *)
 		   malloc(repl->nentries * sizeof(struct ebt_counter));
 		repl->counters = sparc_cast counters;
 		if (!repl->counters)
-			print_memory();
+			ebt_print_memory();
 	} else
 		repl->counters = sparc_cast NULL;
 	/* copy entries and counters */
 	if (fseek(file, sizeof(struct ebt_replace), SEEK_SET) ||
 	   fread((char *)repl->entries, sizeof(char), repl->entries_size, file)
 	   != repl->entries_size ||
-	   fseek(file, sizeof(struct ebt_replace) + repl->entries_size, SEEK_SET)
+	   fseek(file, sizeof(struct ebt_replace) + repl->entries_size,
+		 SEEK_SET)
 	   || fread((char *)repl->counters, sizeof(char),
 	   repl->nentries * sizeof(struct ebt_counter), file)
 	   != repl->nentries * sizeof(struct ebt_counter)) {
 		fclose(file);
-		print_error("File %s is corrupt", filename);
+		ebt_print_error("File %s is corrupt", filename);
 	}
 	fclose(file);
 }
 
-static int retrieve_from_kernel(struct ebt_replace *repl, char command)
+static int retrieve_from_kernel(struct ebt_replace *repl, char command,
+				int init)
 {
 	socklen_t optlen;
 	int optname;
@@ -649,7 +655,7 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 	optlen = sizeof(struct ebt_replace);
 	get_sockfd();
 	/* --atomic-init || --init-table */
-	if (command == 7 || command == 11)
+	if (init)
 		optname = EBT_SO_GET_INIT_INFO;
 	else
 		optname = EBT_SO_GET_INFO;
@@ -657,14 +663,14 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 		return -1;
 
 	if ( !(entries = (char *)malloc(repl->entries_size)) )
-		print_memory();
+		ebt_print_memory();
 	repl->entries = sparc_cast entries;
 	if (repl->nentries) {
 		struct ebt_counter *counters;
 
 		if (!(counters = (struct ebt_counter *)
 		   malloc(repl->nentries * sizeof(struct ebt_counter))) )
-			print_memory();
+			ebt_print_memory();
 		repl->counters = sparc_cast counters;
 	}
 	else
@@ -674,17 +680,17 @@ static int retrieve_from_kernel(struct ebt_replace *repl, char command)
 	repl->num_counters = repl->nentries;
 	optlen += repl->entries_size + repl->num_counters *
 	   sizeof(struct ebt_counter);
-	if (command == 7 || command == 11)
+	if (init)
 		optname = EBT_SO_GET_INIT_ENTRIES;
 	else
 		optname = EBT_SO_GET_ENTRIES;
 	if (getsockopt(sockfd, IPPROTO_IP, optname, repl, &optlen))
-		print_bug("hmm, what is wrong??? bug#1");
+		ebt_print_bug("hmm, what is wrong??? bug#1");
 
 	return 0;
 }
 
-int ebt_get_table(struct ebt_u_replace *u_repl)
+int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 {
 	int i, j, k, hook;
 	struct ebt_replace repl;
@@ -694,12 +700,15 @@ int ebt_get_table(struct ebt_u_replace *u_repl)
 
 	strcpy(repl.name, u_repl->name);
 	if (u_repl->filename != NULL) {
+		if (init)
+			ebt_print_bug("getting initial table data from a "
+				  "file is impossible");
 		retrieve_from_file(u_repl->filename, &repl, u_repl->command);
 		/*
 		 * -L with a wrong table name should be dealt with silently
 		 */
 		strcpy(u_repl->name, repl.name);
-	} else if (retrieve_from_kernel(&repl, u_repl->command) == -1)
+	} else if (retrieve_from_kernel(&repl, u_repl->command, init) == -1)
 		return -1;
 
 	/* translate the struct ebt_replace to a struct ebt_u_replace */
@@ -713,7 +722,7 @@ int ebt_get_table(struct ebt_u_replace *u_repl)
 		new_cc = (struct ebt_cntchanges *)
 			 malloc(sizeof(struct ebt_cntchanges));
 		if (!new_cc)
-			print_memory();
+			ebt_print_memory();
 		new_cc->type = CNT_NORM;
 		new_cc->next = NULL;
 		*prev_cc = new_cc;
@@ -730,9 +739,10 @@ int ebt_get_table(struct ebt_u_replace *u_repl)
 	 */
 	k = 0;
 	hook = -1;
-	EBT_ENTRY_ITERATE((char *)repl.entries, repl.entries_size, ebt_translate_entry,
-	   &hook, &i, &j, &k, &u_e, u_repl, u_repl->valid_hooks, (char *)repl.entries);
+	EBT_ENTRY_ITERATE((char *)repl.entries, repl.entries_size,
+	   ebt_translate_entry, &hook, &i, &j, &k, &u_e, u_repl,
+	   u_repl->valid_hooks, (char *)repl.entries);
 	if (k != u_repl->nentries)
-		print_bug("Wrong total nentries");
+		ebt_print_bug("Wrong total nentries");
 	return 0;
 }

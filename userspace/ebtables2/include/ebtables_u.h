@@ -126,7 +126,8 @@ struct ebt_u_entry
 	struct ebt_u_watcher_list *w_list;
 	struct ebt_entry_target *t;
 	struct ebt_u_entry *next;
-	/* needed f.e. to find out the name of the udc when listing -j */
+	/* the standard target needs this to know the name of a udc when
+	 * printing out rules. */
 	struct ebt_u_replace *replace;
 };
 
@@ -223,7 +224,7 @@ void ebt_register_match(struct ebt_u_match *);
 void ebt_register_watcher(struct ebt_u_watcher *);
 void ebt_register_target(struct ebt_u_target *t);
 void ebt_get_kernel_table(struct ebt_u_replace *replace,
-			  struct ebt_u_table *table);
+			  struct ebt_u_table *table, int init);
 struct ebt_u_target *ebt_find_target(const char *name);
 struct ebt_u_match *ebt_find_match(const char *name);
 struct ebt_u_watcher *ebt_find_watcher(const char *name);
@@ -264,12 +265,12 @@ void ebt_add_watcher(struct ebt_u_entry *new_entry, struct ebt_u_watcher *w);
 void ebt_iterate_matches(void (*f)(struct ebt_u_match *));
 void ebt_iterate_watchers(void (*f)(struct ebt_u_watcher *));
 void ebt_iterate_targets(void (*f)(struct ebt_u_target *));
-void __print_bug(char *file, int line, char *format, ...);
-void __print_error(char *format, ...);
+void __ebt_print_bug(char *file, int line, char *format, ...);
+void __ebt_print_error(char *format, ...);
 
 /* communication.c */
 
-int ebt_get_table(struct ebt_u_replace *repl);
+int ebt_get_table(struct ebt_u_replace *repl, int init);
 void ebt_deliver_counters(struct ebt_u_replace *repl);
 void ebt_deliver_table(struct ebt_u_replace *repl);
 
@@ -286,10 +287,10 @@ char *ebt_mask_to_dotted(uint32_t mask);
 
 struct ethertypeent *parseethertypebynumber(int type);
 
-#define print_bug(format, args...) \
-   __print_bug(__FILE__, __LINE__, format, ##args)
-#define print_error(format,args...) __print_error(format, ##args);
-#define print_memory() {printf("Ebtables: " __FILE__ \
+#define ebt_print_bug(format, args...) \
+   __ebt_print_bug(__FILE__, __LINE__, format, ##args)
+#define ebt_print_error(format,args...) __ebt_print_error(format, ##args);
+#define ebt_print_memory() {printf("Ebtables: " __FILE__ \
    " %s %d :Out of memory.\n", __FUNCTION__, __LINE__); exit(-1);}
 
 /* used for keeping the rule counters right during rule adds or deletes */

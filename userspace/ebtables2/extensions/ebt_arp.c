@@ -97,15 +97,15 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			arpinfo->invflags |= EBT_ARP_OPCODE;
 
 		if (optind > argc)
-			print_error("Missing ARP opcode argument");
+			ebt_print_error("Missing ARP opcode argument");
 		i = strtol(argv[optind - 1], &end, 10);
 		if (i < 0 || i >= (0x1 << 16) || *end !='\0') {
 			for (i = 0; i < NUMOPCODES; i++)
 				if (!strcasecmp(opcodes[i], optarg))
 					break;
 			if (i == NUMOPCODES)
-				print_error("Problem with specified "
-				            "ARP opcode");
+				ebt_print_error("Problem with specified "
+						"ARP opcode");
 			i++;
 		}
 		arpinfo->opcode = htons(i);
@@ -118,14 +118,14 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			arpinfo->invflags |= EBT_ARP_HTYPE;
 
 		if (optind > argc)
-			print_error("Missing ARP hardware type argument");
+			ebt_print_error("Missing ARP hardware type argument");
 		i = strtol(argv[optind - 1], &end, 10);
 		if (i < 0 || i >= (0x1 << 16) || *end !='\0') {
 			if (!strcasecmp("Ethernet", argv[optind - 1]))
 				i = 1;
 			else
-				print_error("Problem with specified ARP "
-				            "hardware type");
+				ebt_print_error("Problem with specified ARP "
+						"hardware type");
 		}
 		arpinfo->htype = htons(i);
 		arpinfo->bitmask |= EBT_ARP_HTYPE;
@@ -140,15 +140,15 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			arpinfo->invflags |= EBT_ARP_PTYPE;
 
 		if (optind > argc)
-			print_error("Missing ARP protocol type argument");
+			ebt_print_error("Missing ARP protocol type argument");
 		i = strtol(argv[optind - 1], &end, 16);
 		if (i < 0 || i >= (0x1 << 16) || *end !='\0') {
 			struct ethertypeent *ent;
 
 			ent = getethertypebyname(argv[optind - 1]);
 			if (!ent)
-				print_error("Problem with specified ARP "
-				            "protocol type");
+				ebt_print_error("Problem with specified ARP "
+						"protocol type");
 			proto = ent->e_ethertype;
 
 		} else
@@ -178,7 +178,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 				arpinfo->invflags |= EBT_ARP_DST_IP;
 		}
 		if (optind > argc)
-			print_error("Missing ARP IP address argument");
+			ebt_print_error("Missing ARP IP address argument");
 		ebt_parse_ip_address(argv[optind - 1], addr, mask);
 		break;
 
@@ -202,9 +202,10 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 				arpinfo->invflags |= EBT_ARP_DST_MAC;
 		}
 		if (optind > argc)
-			print_error("Missing ARP MAC address argument");
+			ebt_print_error("Missing ARP MAC address argument");
 		if (ebt_get_mac_and_mask(argv[optind - 1], maddr, mmask))
-			print_error("Problem with ARP MAC address argument");
+			ebt_print_error("Problem with ARP MAC address "
+					"argument");
 		break;
 
 	default:
@@ -219,8 +220,8 @@ static void final_check(const struct ebt_u_entry *entry,
 {
 	if ((entry->ethproto != ETH_P_ARP && entry->ethproto != ETH_P_RARP) ||
 	    entry->invflags & EBT_IPROTO)
-		print_error("For (R)ARP filtering the protocol must be "
-		            "specified as ARP or RARP");
+		ebt_print_error("For (R)ARP filtering the protocol must be "
+				"specified as ARP or RARP");
 }
 
 static void print(const struct ebt_u_entry *entry,
@@ -353,8 +354,7 @@ static struct ebt_u_match arp_match =
 	.extra_ops	= opts,
 };
 
-static void _init(void) __attribute__ ((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_match(&arp_match);
 }

@@ -21,8 +21,7 @@ static struct ebt_u_table table =
 	.help		= print_help,
 };
 
-static void _init(void) __attribute__ ((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_table(&table);
 }

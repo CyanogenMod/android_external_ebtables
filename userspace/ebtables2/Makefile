@@ -1,12 +1,14 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGVERSION:=2.0.5
-PROGDATE:=July\ 2003
+PROGVERSION:=2.0.7
+PROGDATE:=January\ 2004
 
+LIBDIR?=/usr/lib/
 MANDIR?=$(DESTDIR)/usr/local/man
 CFLAGS:=-Wall -Wunused
 CC:=gcc
+LD:=ld
 
 ifeq ($(shell uname -m),sparc64)
 CFLAGS+=-DEBT_MIN_ALIGN=8 -DKERNEL_64_USERSPACE_32
@@ -14,8 +16,10 @@ endif
 
 include extensions/Makefile
 
-OBJECTS:=getethertype.o ebtables.o communication.o libebtc.o \
-useful_functions.o $(EXT_OBJS)
+OBJECTS2:=getethertype.o communication.o libebtc.o \
+useful_functions.o
+
+OBJECTS:=$(OBJECTS2) ebtables.o $(EXT_OBJS) $(EXT_LIBS)
 
 KERNEL_INCLUDES?=include/
 
@@ -49,7 +53,10 @@ ebtables.o: ebtables.c include/ebtables_u.h
 	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
 
 ebtables: $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $^ -I$(KERNEL_INCLUDES)
+	ld -shared -soname libebtc.so -o libebtc.so -lc $(OBJECTS2)
+	$(CC) $(CFLAGS) -o $@ ebtables.o -I$(KERNEL_INCLUDES) -L/root/ \
+	-L. -Lextensions/ -lebtc $(EXT_LIBSI)
+	
 
 $(MANDIR)/man8/ebtables.8: ebtables.8
 	mkdir -p $(@D)
@@ -65,12 +72,14 @@ exec: ebtables
 
 .PHONY: install
 install: $(MANDIR)/man8/ebtables.8 $(ETHERTYPESFILE) exec
+	install -m 0755 extensions/*.so $(LIBDIR)
+	install -m 0755 *.so $(LIBDIR)
 
 .PHONY: clean
 clean:
 	rm -f ebtables
-	rm -f *.o *.c~
-	rm -f extensions/*.o extensions/*.c~
+	rm -f *.o *.c~ *.so
+	rm -f extensions/*.o extensions/*.c~ extensions/*.so
 
 DIR:=$(PROGNAME)-v$(PROGVERSION)
 # This is used to make a new userspace release

@@ -169,7 +169,7 @@ static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 	char token[4];
 
 	if (!(workcopy = new_wormhash(1024))) {
-		print_memory();
+		ebt_print_memory();
 	}
 	while (1) {
 		/* remember current position, we'll need it on error */
@@ -181,22 +181,22 @@ static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 		for (i = 0; i < 5; i++) {
 			if (read_until(&pc, ":", token, 2) < 0
 			    || token[0] == 0) {
-				print_error("MAC parse error: %.20s",
-					    anchor);
+				ebt_print_error("MAC parse error: %.20s",
+						anchor);
 			}
 			mac[i] = strtol(token, &endptr, 16);
 			if (*endptr) {
-				print_error("MAC parse error: %.20s",
-					    anchor);
+				ebt_print_error("MAC parse error: %.20s",
+						anchor);
 			}
 			pc++;
 		}
 		if (read_until(&pc, "=,", token, 2) == -2 || token[0] == 0) {
-			print_error("MAC parse error: %.20s", anchor);
+			ebt_print_error("MAC parse error: %.20s", anchor);
 		}
 		mac[i] = strtol(token, &endptr, 16);
 		if (*endptr) {
-			print_error("MAC parse error: %.20s", anchor);
+			ebt_print_error("MAC parse error: %.20s", anchor);
 		}
 		if (*pc == '=') {
 			/* an IP follows the MAC; collect similarly to MAC */
@@ -205,13 +205,13 @@ static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 			for (i = 0; i < 3; i++) {
 				if (read_until(&pc, ".", token, 3) < 0
 				    || token[0] == 0) {
-					print_error
+					ebt_print_error
 					    ("IP parse error: %.20s",
 					     anchor);
 				}
 				ip[i] = strtol(token, &endptr, 10);
 				if (*endptr) {
-					print_error
+					ebt_print_error
 					    ("IP parse error: %.20s",
 					     anchor);
 				}
@@ -219,16 +219,16 @@ static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 			}
 			if (read_until(&pc, ",", token, 3) == -2
 			    || token[0] == 0) {
-				print_error("IP parse error: %.20s",
+				ebt_print_error("IP parse error: %.20s",
 					    anchor);
 			}
 			ip[3] = strtol(token, &endptr, 10);
 			if (*endptr) {
-				print_error("IP parse error: %.20s",
+				ebt_print_error("IP parse error: %.20s",
 					    anchor);
 			}
 			if (*(uint32_t*)ip == 0) {
-				print_error("Illegal IP 0.0.0.0");
+				ebt_print_error("Illegal IP 0.0.0.0");
 			}
 		} else {
 			/* no IP, we set it to 0.0.0.0 */
@@ -243,7 +243,7 @@ static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 		/* re-allocate memory if needed */
 		if (*pc && nmacs >= workcopy->poolsize) {
 			if (!(h = new_wormhash(nmacs * 2))) {
-				print_memory();
+				ebt_print_memory();
 			}
 			copy_wormhash(h, workcopy);
 			free(workcopy);
@@ -259,7 +259,7 @@ static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 		/* increment this to the next char */
 		/* but first assert :-> */
 		if (*pc != ',') {
-			print_error("Something went wrong; no comma...\n");
+			ebt_print_error("Something went wrong; no comma...\n");
 		}
 		pc++;
 
@@ -270,7 +270,7 @@ static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 		}
 	}
 	if (!(result = new_wormhash(nmacs))) {
-		print_memory();
+		ebt_print_memory();
 	}
 	copy_wormhash(result, workcopy);
 	free(workcopy);
@@ -302,7 +302,7 @@ static int parse(int c, char **argv, int argc,
 				info->bitmask |= EBT_AMONG_SRC_NEG;
 		}
 		if (optind > argc)
-			print_error("No MAC list specified\n");
+			ebt_print_error("No MAC list specified\n");
 		wh = create_wormhash(argv[optind - 1]);
 		old_size = sizeof(struct ebt_entry_match) +
 				(**match).match_size;
@@ -436,8 +436,7 @@ static struct ebt_u_match among_match = {
 	.extra_ops 	= opts,
 };
 
-static void _init(void) __attribute__ ((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_match(&among_match);
 }

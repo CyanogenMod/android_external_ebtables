@@ -53,7 +53,7 @@ static void print(const struct ebt_u_entry *entry,
 	else if (verdict == EBT_RETURN)
 		printf("RETURN ");
 	else
-		print_bug("Bad standard target");
+		ebt_print_bug("Bad standard target");
 }
 
 static int compare(const struct ebt_entry_target *t1,
@@ -77,8 +77,7 @@ static struct ebt_u_target standard =
 	.extra_ops	= opts,
 };
 
-static void _init(void) __attribute__ ((constructor));
-static void _init(void)
+void _init(void)
 {
 	ebt_register_target(&standard);
 }

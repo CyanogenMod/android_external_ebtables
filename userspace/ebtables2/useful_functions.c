@@ -85,9 +85,9 @@ void ebt_print_mac_and_mask(const char *mac, const char *mask)
 struct ethertypeent *parseethertypebynumber(int type)
 {
 	if (type < 1536)
-		print_error("Ethernet protocols have values >= 0x0600");
+		ebt_print_error("Ethernet protocols have values >= 0x0600");
 	if (type > 0xffff)
-		print_error("Ethernet protocols have values <= 0xffff");
+		ebt_print_error("Ethernet protocols have values <= 0xffff");
 	return getethertypebynumber(type);
 }
 
@@ -141,7 +141,7 @@ int ebt_check_inverse(const char option[])
 {
 	if (strcmp(option, "!") == 0) {
 		if (ebt_invert == 1)
-			print_error("double use of '!' not allowed");
+			ebt_print_error("double use of '!' not allowed");
 		optind++;
 		ebt_invert = 1;
 		return 1;
@@ -152,7 +152,7 @@ int ebt_check_inverse(const char option[])
 void ebt_check_option(unsigned int *flags, unsigned int mask)
 {
 	if (*flags & mask)
-		print_error("Multiple use of same option not allowed");
+		ebt_print_error("Multiple use of same option not allowed");
 	*flags |= mask;
 }
 
@@ -218,12 +218,12 @@ void ebt_parse_ip_address(char *address, uint32_t *addr, uint32_t *msk)
 	if ((p = strrchr(address, '/')) != NULL) {
 		*p = '\0';
 		if (ip_mask(p + 1, (unsigned char *)msk))
-			print_error("Problem with the IP mask");
+			ebt_print_error("Problem with the IP mask");
 	} else
 		*msk = 0xFFFFFFFF;
 
 	if (undot_ip(address, (unsigned char *)addr))
-		print_error("Problem with the IP address");
+		ebt_print_error("Problem with the IP address");
 	*addr = *addr & *msk;
 }
 
