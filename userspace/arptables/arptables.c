@@ -154,7 +154,7 @@ static struct option original_opts[] = {
 	{ 0 }
 };
 
-int NF_ARP_NUMHOOKS = 3;
+int RUNTIME_NF_ARP_NUMHOOKS = 3;
 
 /*#ifndef __OPTIMIZE__
 struct arpt_entry_target *
@@ -1785,7 +1785,8 @@ int do_command(int argc, char *argv[], char **table, arptc_handle_t *handle)
 		arptables_insmod("arp_tables", modprobe);
 		*handle = arptc_init(*table);
 		if (!*handle) {
-			NF_ARP_NUMHOOKS = 2;
+		        /* 2.4 kernel: NF_ARP_NUMHOOKS = 2 */
+			RUNTIME_NF_ARP_NUMHOOKS = 2;
 			*handle = arptc_init(*table);
 			if (!*handle) {
 				exit_error(VERSION_PROBLEM,

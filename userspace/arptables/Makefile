@@ -6,9 +6,8 @@ KERNEL_DIR=include/linux
 endif
 ARPTABLES_VERSION:=0.0.3
 OLD_ARPTABLES_VERSION:=0.0.2
-MANDIR?=/usr/local/man
 
-PREFIX:=/usr/local
+PREFIX:=$(DESTDIR)/usr/local
 LIBDIR:=$(PREFIX)/lib
 BINDIR:=$(PREFIX)/sbin
 MANDIR:=$(PREFIX)/man

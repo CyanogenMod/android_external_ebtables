@@ -470,7 +470,7 @@ do_check(TC_HANDLE_T h, unsigned int line)
 
 	/* Overflows should be end of entry chains, and unconditional
            policy nodes. */
-	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
+	for (i = 0; i < RUNTIME_NF_ARP_NUMHOOKS; i++) {
 		STRUCT_ENTRY *e;
 		STRUCT_STANDARD_TARGET *t;
 

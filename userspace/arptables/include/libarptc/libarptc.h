@@ -21,6 +21,11 @@ typedef char arpt_chainlabel[32];
 #define ARPTC_LABEL_QUEUE   "QUEUE"
 #define ARPTC_LABEL_RETURN  "RETURN"
 
+
+/* NF_ARP_NUMHOOKS is different on 2.4 and 2.6; hack to support both */
+extern int RUNTIME_NF_ARP_NUMHOOKS; /* boy, this is dirty */
+
+
 /* Transparent handle type. */
 typedef struct arptc_handle *arptc_handle_t;
 

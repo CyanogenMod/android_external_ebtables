@@ -1,4 +1,4 @@
-/* Library which manipulates firewall rules.  Version $Revision: 1.4 $ */
+/* Library which manipulates firewall rules.  Version $Revision: 1.5 $ */
 
 /* Architecture of firewall rules is as follows:
  *
@@ -234,7 +234,7 @@ TC_INIT(const char *tablename)
 		return NULL;
 
 	s = sizeof(info);
-	if (NF_ARP_NUMHOOKS == 2)
+	if (RUNTIME_NF_ARP_NUMHOOKS == 2)
 		s -= 2 * sizeof(unsigned int);
 
 	if (strlen(tablename) >= TABLE_MAXNAMELEN) {
@@ -245,7 +245,7 @@ TC_INIT(const char *tablename)
 	if (getsockopt(sockfd, TC_IPPROTO, SO_GET_INFO, &info, &s) < 0)
 		return NULL;
 
-	if (NF_ARP_NUMHOOKS == 2) {
+	if (RUNTIME_NF_ARP_NUMHOOKS == 2) {
 		memmove(&(info.hook_entry[3]), &(info.hook_entry[2]),
 		5 * sizeof(unsigned int));
 		memmove(&(info.underflow[3]), &(info.underflow[2]),
@@ -331,7 +331,7 @@ is_hook_entry(STRUCT_ENTRY *e, TC_HANDLE_T h)
 {
 	unsigned int i;
 
-	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
+	for (i = 0; i < RUNTIME_NF_ARP_NUMHOOKS; i++) {
 		if ((h->info.valid_hooks & (1 << i))
 		    && get_entry(h, h->info.hook_entry[i]) == e)
 			return i+1;
@@ -403,7 +403,7 @@ static int populate_cache(TC_HANDLE_T h)
 	h->cache_num_builtins = 0;
 
 	/* Count builtins */
-	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
+	for (i = 0; i < RUNTIME_NF_ARP_NUMHOOKS; i++) {
 		if (h->info.valid_hooks & (1 << i))
 			h->cache_num_builtins++;
 	}
@@ -464,7 +464,7 @@ get_chain_end(const TC_HANDLE_T handle, unsigned int start)
 		e = get_entry(handle, off);
 
 		/* We hit an entry point. */
-		for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
+		for (i = 0; i < RUNTIME_NF_ARP_NUMHOOKS; i++) {
 			if ((handle->info.valid_hooks & (1 << i))
 			    && off == handle->info.hook_entry[i])
 				return last_off;
@@ -633,7 +633,7 @@ TC_BUILTIN(const char *chain, const TC_HANDLE_T handle)
 {
 	unsigned int i;
 
-	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
+	for (i = 0; i < RUNTIME_NF_ARP_NUMHOOKS; i++) {
 		if ((handle->info.valid_hooks & (1 << i))
 		    && handle->hooknames[i]
 		    && strcmp(handle->hooknames[i], chain) == 0)
@@ -718,7 +718,7 @@ insert_rules(unsigned int num_rules, unsigned int rules_size,
 	newinfo = (*handle)->info;
 
 	/* Fix up entry points. */
-	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
+	for (i = 0; i < RUNTIME_NF_ARP_NUMHOOKS; i++) {
 		/* Entry points to START of chain, so keep same if
                    inserting on at that point. */
 		if ((*handle)->info.hook_entry[i] > offset)
@@ -786,7 +786,7 @@ delete_rules(unsigned int num_rules, unsigned int rules_size,
 	}
 
 	/* Fix up entry points. */
-	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
+	for (i = 0; i < RUNTIME_NF_ARP_NUMHOOKS; i++) {
 		/* In practice, we never delete up to a hook entry,
 		   since the built-in chains are always first,
 		   so these two are never equal */
@@ -1634,7 +1634,7 @@ TC_COMMIT(TC_HANDLE_T *handle)
 	memcpy(repl->entries, (*handle)->entries.entrytable,
 	       (*handle)->entries.size);
 
-	if (NF_ARP_NUMHOOKS == 2) {
+	if (RUNTIME_NF_ARP_NUMHOOKS == 2) {
 		memmove(&(repl->underflow[2]), &(repl->underflow[3]),
 		((*handle)->entries.size) + sizeof(struct arpt_replace));
 		memmove(&(repl->hook_entry[2]), &(repl->hook_entry[3]),
@@ -1650,7 +1650,7 @@ TC_COMMIT(TC_HANDLE_T *handle)
 		return 0;
 	}
 
-	if (NF_ARP_NUMHOOKS == 2) {
+	if (RUNTIME_NF_ARP_NUMHOOKS == 2) {
 		memmove(&(repl->hook_entry[3]), &(repl->hook_entry[2]),
 		((*handle)->entries.size) + sizeof(struct arpt_replace));
 		memmove(&(repl->underflow[3]), &(repl->underflow[2]),
