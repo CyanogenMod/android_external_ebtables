@@ -13,17 +13,16 @@
  * License: GPL 
  *
  */
- 
-#include <getopt.h>
-#include <netinet/in.h>
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/socket.h>
-
-#include <linux/netfilter_bridge/ebt_vlan.h>
+#include <netinet/in.h>
+#include <string.h>
 #include <linux/netfilter_bridge/ebtables.h>
+#include <getopt.h>
 #include "../include/ebtables_u.h"
+#include <linux/netfilter_bridge/ebt_vlan.h>
 
 #define VLAN_ID    '1'
 #define VLAN_PRIO  '2'
