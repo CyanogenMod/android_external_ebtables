@@ -18,7 +18,7 @@
       <H1>Ebtables (Ethernet Bridge Tables) Frequently Asked Questions</H1>
     </DIV>
     <A name="top"></A> 
-    <P>Last modified: March 3, 2003</P>
+    <P>Last modified: April 15, 2003</P>
     <H2>Questions</H2>
     <OL>
       <LI><A href="#quiz0">Intro</A></LI>
@@ -221,6 +221,9 @@ ebtables2/kernel/scripts/CopyRep2.5
       <LI>
         <B><A name="quiz3">Problems</A></B><BR>
         <DL>
+          <DT>My bridging box seems to drop all IP packets, which is not what I want and I'm sure my ebtables rules don't drop them.</DT>
+          <DD>Your iptables rules are probably dropping them then. On a Linux bridging firewall all bridge IP packets are seen by iptables,
+          so you should take that into account.</DD>
           <DT>This stuff isn't working on my 64-bit machine with a 32-bit userspace (like the Sparc64)</DT>
           <DD>We know. It's kind of hard to fix this without access to such a machine. The problem is caused by the
           different word length between kernel and userspace.</DD>
