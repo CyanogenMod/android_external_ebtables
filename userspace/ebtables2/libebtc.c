@@ -23,12 +23,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <getopt.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <netinet/ether.h>
 #include "include/ebtables_u.h"
 #include "include/ethernetdb.h"
 #include <unistd.h>
@@ -140,7 +138,7 @@ void ebt_list_extensions()
 int ebt_get_kernel_table(struct ebt_u_replace *replace, int init)
 {
 	if (!ebt_find_table(replace->name)) {
-		ebt_print_error("Bad table name");
+		ebt_print_error("Bad table name '%s'", replace->name);
 		return -1;
 	}
 	/* Get the kernel's information */
@@ -149,7 +147,7 @@ int ebt_get_kernel_table(struct ebt_u_replace *replace, int init)
 			return -1;
 		ebtables_insmod("ebtables");
 		if (ebt_get_table(replace, init)) {
-			ebt_print_error("The kernel doesn't support the ebtables %s table", replace->name);
+			ebt_print_error("The kernel doesn't support the ebtables '%s' table", replace->name);
 			return -1;
 		}
 	}
@@ -212,10 +210,7 @@ void ebt_cleanup_replace(struct ebt_u_replace *replace)
 			else
 				break;
 		}
-		entries->nentries = 0;
-		entries->counter_offset = 0;
 		u_e1 = entries->entries;
-		entries->entries = NULL;
 		while (u_e1) {
 			ebt_free_u_entry(u_e1);
 			u_e2 = u_e1->next;
@@ -223,6 +218,11 @@ void ebt_cleanup_replace(struct ebt_u_replace *replace)
 			u_e1 = u_e2;
 		}
 	}
+	for (i = 0; i < NF_BR_NUMHOOKS; i++)
+		if (replace->hook_entry[i]) {
+			free(replace->hook_entry[i]);
+			replace->hook_entry[i] = NULL;
+		}
 	udc1 = replace->udc;
 	while (udc1) {
 		free(udc1->udc);
@@ -314,8 +314,6 @@ void ebt_free_u_entry(struct ebt_u_entry *e)
 	free(e->t);
 }
 
-/* Blatently stolen (again) from iptables.c userspace program
- * find out where the modprobe utility is located */
 static char *get_modprobe(void)
 {
 	int procfile;
@@ -327,12 +325,9 @@ static char *get_modprobe(void)
 
 	ret = malloc(1024);
 	if (ret) {
-		switch (read(procfile, ret, 1024)) {
-		case -1: goto fail;
-		case 1024: goto fail; /* Partial read.  Wierd */
-		}
-		if (ret[strlen(ret)-1] == '\n')
-			ret[strlen(ret)-1] = 0;
+		if (read(procfile, ret, 1024) == -1)
+			goto fail;
+		ret[1023] = '\0';
 		close(procfile);
 		return ret;
 	}
@@ -343,7 +338,7 @@ static char *get_modprobe(void)
 }
 
 char *ebt_modprobe;
-/* Try to load the kernel module */
+/* Try to load the kernel module, analogous to ip_tables.c */
 int ebtables_insmod(const char *modname)
 {
 	char *buf = NULL;
@@ -380,8 +375,7 @@ int ebtables_insmod(const char *modname)
 /* Gives back a pointer to the chain base, based on nr.
  * If nr >= NF_BR_NUMHOOKS you'll get back a user-defined chain.
  * Returns NULL on failure. */
-struct ebt_u_entries *ebt_nr_to_chain(const struct ebt_u_replace *replace,
-				       int nr)
+struct ebt_u_entries *ebt_nr_to_chain(const struct ebt_u_replace *replace, int nr)
 {
 	if (nr == -1)
 		return NULL;
@@ -418,7 +412,7 @@ struct ebt_u_entries *ebt_name_to_chain(const struct ebt_u_replace *replace,
 	struct ebt_u_chain_list *cl = replace->udc;
 
 	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
-		if (!(replace->valid_hooks & (1 << i)))
+		if (!replace->hook_entry[i])
 			continue;
 		if (!strcmp(arg, replace->hook_entry[i]->name))
 			return replace->hook_entry[i];
@@ -439,7 +433,7 @@ int ebt_get_chainnr(const struct ebt_u_replace *replace, const char* arg)
 	struct ebt_u_chain_list *cl = replace->udc;
 
 	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
-		if (!(replace->valid_hooks & (1 << i)))
+		if (!replace->hook_entry[i])
 			continue;
 		if (!strcmp(arg, replace->hook_entry[i]->name))
 			return i;
@@ -473,7 +467,7 @@ void ebt_change_policy(struct ebt_u_replace *replace, int policy)
 }
 
 /* Flush one chain or the complete table
- * If selected_chain == -1: flush the complete table */
+ * If selected_chain == -1 then flush the complete table */
 void ebt_flush_chains(struct ebt_u_replace *replace)
 {
 	int i, j, numdel;
@@ -690,8 +684,8 @@ letscontinue:;
  * This function expects the ebt_{match,watcher,target} members of new_entry
  * to contain pointers to ebt_u_{match,watcher,target} and updates these
  * pointers so that they point to ebt_{match,watcher,target}, before adding
- * the rule to the chain. Don't free() the ebt_{match,watcher,target} after a
- * successful call to ebt_add_rule() */
+ * the rule to the chain. Don't free() the ebt_{match,watcher,target} and
+ * don't reuse the new_entry after a successful call to ebt_add_rule() */
 void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 		  int rule_nr)
 {
@@ -717,7 +711,7 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 
 	/* Handle counter stuff */
 	for (i = 0; i < replace->selected_chain; i++) {
-		if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
+		if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
 			continue;
 		j = ebt_nr_to_chain(replace, i)->nentries;
 		while (j) {
@@ -737,11 +731,11 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 	if (cc && cc->type == CNT_DEL)
 		cc->type = CNT_OWRITE;
 	else {
-		new_cc = (struct ebt_cntchanges *)
-			 malloc(sizeof(struct ebt_cntchanges));
+		new_cc = (struct ebt_cntchanges *)malloc(sizeof(struct ebt_cntchanges));
 		if (!new_cc)
 			ebt_print_memory();
 		new_cc->type = CNT_ADD;
+		new_cc->change = 0;
 		new_cc->next = cc;
 		*prev_cc = new_cc;
 	}
@@ -780,6 +774,8 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 	}
 }
 
+/* If *begin==*end==0 then find the rule corresponding to new_entry,
+ * else make the rule numbers positive and check for bad rule numbers. */
 static int check_and_change_rule_number(struct ebt_u_replace *replace,
    struct ebt_u_entry *new_entry, int *begin, int *end)
 {
@@ -837,7 +833,7 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 
 	/* Handle counter stuff */
 	for (i = 0; i < replace->selected_chain; i++) {
-		if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
+		if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
 			continue;
 		j = ebt_nr_to_chain(replace, i)->nentries;
 		while (j) {
@@ -899,17 +895,19 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 	}
 }
 
-#define OPT_CNT_INCR	0x2000 /* This value is also defined in ebtables.c */
-#define OPT_CNT_DECR	0x4000 /* This value is also defined in ebtables.c */
 /* Change the counters of a rule or rules
  * begin == end == 0: change counters of the rule corresponding to new_entry
  *
  * The first rule has rule nr 1, the last rule has rule nr -1, etc.
  * This function expects the ebt_{match,watcher,target} members of new_entry
- * to contain pointers to ebt_u_{match,watcher,target}. */
+ * to contain pointers to ebt_u_{match,watcher,target}.
+ * The mask denotes the following:
+ *    pcnt: mask % 3 = 0 : change; = 1: increment; = 2: decrement
+ *    bcnt: mask / 3 = 0 : change; = 1: increment = 2: increment
+ * In daemon mode, mask==0 must hold */
 void ebt_change_counters(struct ebt_u_replace *replace,
 		     struct ebt_u_entry *new_entry, int begin, int end,
-		     struct ebt_counter *cnt)
+		     struct ebt_counter *cnt, int mask)
 {
 	int i, j;
 	struct ebt_u_entry *u_e;
@@ -920,7 +918,7 @@ void ebt_change_counters(struct ebt_u_replace *replace,
 		return;
 
 	for (i = 0; i < replace->selected_chain; i++) {
-		if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
+		if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
 			continue;
 		j = ebt_nr_to_chain(replace, i)->nentries;
 		while (j) {
@@ -942,40 +940,34 @@ void ebt_change_counters(struct ebt_u_replace *replace,
 	while (i) {
 		if (cc->type != CNT_DEL) {
 			i--;
-			if (cc->type != CNT_ADD && cc->type != CNT_OWRITE) {
-				/* In daemon mode, we want to make sure we don't lose
-				 * any counted packets/bytes (the kernel is still counting
-				 * while we are changing things in userspace). Therefore,
-				 * we need to add the amount to the counters in the kernel,
-				 * not the counters copied earlier from the kernel. */
-				u_e->cnt_surplus = *cnt;
-				if (replace->flags & OPT_CNT_INCR) {
-					cc->type = CNT_INCR;
-				} else if (replace->flags & OPT_CNT_DECR)
-					cc->type = CNT_DECR;
-				else {
-					cc->type = CNT_CHANGE;
-					u_e->cnt = *cnt;
-					u_e->cnt_surplus.pcnt = u_e->cnt_surplus.bcnt = 0;
-				}
-			} else { /* A -C after a -A remains a -A */
-				if (replace->flags & OPT_CNT_INCR) {
-					u_e->cnt.pcnt += cnt->pcnt;
-					u_e->cnt.bcnt += cnt->bcnt;
-				} else if (replace->flags & OPT_CNT_DECR) {
-					u_e->cnt.pcnt -= cnt->pcnt;
-					u_e->cnt.bcnt -= cnt->bcnt;
-				} else
-					u_e->cnt = *cnt;
+			if (mask % 3 == 0) {
+				u_e->cnt.pcnt = (*cnt).pcnt;
+				u_e->cnt_surplus.pcnt = 0;
+			} else {
+				if (cc->type != CNT_NORM)
+					ebt_print_bug("cc->type != CNT_NORM");
+				u_e->cnt_surplus.pcnt = (*cnt).pcnt;
 			}
+
+			if (mask / 3 == 0) {
+				u_e->cnt.bcnt = (*cnt).bcnt;
+				u_e->cnt_surplus.bcnt = 0;
+			} else {
+				if (cc->type != CNT_NORM)
+					ebt_print_bug("cc->type != CNT_NORM");
+				u_e->cnt_surplus.bcnt = (*cnt).bcnt;
+			}
+			if (cc->type == CNT_NORM || cc->type == CNT_ZERO)
+				cc->type = CNT_CHANGE;
+			cc->change = mask;
 			u_e = u_e->next;
 		}
 		cc = cc->next;
 	}
 }
 
-/* Selected_chain == -1 : zero all counters
- * Otherwise, zero the counters of selected_chain */
+/* If selected_chain == -1 then zero all counters,
+ * otherwise, zero the counters of selected_chain */
 void ebt_zero_counters(struct ebt_u_replace *replace)
 {
 	struct ebt_u_entries *entries = ebt_to_chain(replace);
@@ -992,7 +984,7 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 		i = -1;
 		while (1) {
 			i++;
-			if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
+			if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
 				continue;
 			entries = ebt_nr_to_chain(replace, i);
 			if (!entries) {
@@ -1006,14 +998,13 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 				next = next->next;
 			}
 		}
-			
 	} else {
 		next = entries->entries;
 		if (entries->nentries == 0)
 			return;
 
 		for (i = 0; i < replace->selected_chain; i++) {
-			if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
+			if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
 				continue;
 			j = ebt_nr_to_chain(replace, i)->nentries;
 			while (j) {
@@ -1059,8 +1050,7 @@ void ebt_new_chain(struct ebt_u_replace *replace, const char *name, int policy)
 	if (!cl)
 		ebt_print_memory();
 	cl->next = NULL;
-	cl->udc = (struct ebt_u_entries *)
-	   malloc(sizeof(struct ebt_u_entries));
+	cl->udc = (struct ebt_u_entries *)malloc(sizeof(struct ebt_u_entries));
 	if (!cl->udc)
 		ebt_print_memory();
 	cl->udc->nentries = 0;
@@ -1217,7 +1207,7 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 	/* Initialize hook_mask to 0 */
 	while (1) {
 		i++;
-		if (i < NF_BR_NUMHOOKS && !(replace->valid_hooks & (1 << i)))
+		if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
 			continue;
 		entries = ebt_nr_to_chain(replace, i);
 		if (!entries)
@@ -1225,15 +1215,14 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 		entries->hook_mask = 0;
 	}
 	if (i > NF_BR_NUMHOOKS) {
-		stack = (struct ebt_u_stack *)malloc((i - NF_BR_NUMHOOKS) *
-		   sizeof(struct ebt_u_stack));
+		stack = (struct ebt_u_stack *)malloc((i - NF_BR_NUMHOOKS) * sizeof(struct ebt_u_stack));
 		if (!stack)
 			ebt_print_memory();
 	}
 
 	/* Check for loops, starting from every base chain */
 	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
-		if (!(replace->valid_hooks & (1 << i)))
+		if (!(replace->hook_entry[i]))
 			continue;
 		entries = ebt_nr_to_chain(replace, i);
 		/* (1 << NF_BR_NUMHOOKS) implies it's a standard chain

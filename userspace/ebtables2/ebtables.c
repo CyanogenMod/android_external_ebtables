@@ -318,14 +318,8 @@ static void list_em(struct ebt_u_entries *entries, struct ebt_cntchanges *cc)
 
 			while (cc->type == CNT_DEL)
 				cc = cc->next;
-			/* This can only happen in daemon mode */
-			if (cc->type == CNT_INCR) {
-				pcnt += hlp->cnt_surplus.pcnt;
-				bcnt += hlp->cnt_surplus.bcnt;
-			} else if (cc->type == CNT_DECR) {
-				pcnt -= hlp->cnt_surplus.pcnt;
-				bcnt -= hlp->cnt_surplus.bcnt;
-			}
+			if (cc->change != 0) /* in daemon mode, only change==0 is allowed */
+				ebt_print_bug("cc->change != 0");
 			cc = cc->next;
 			if (replace->flags & LIST_X)
 				printf("-c %llu %llu", pcnt, bcnt);
@@ -490,13 +484,16 @@ static int parse_rule_range(const char *argv, int *rule_nr, int *rule_nr_end)
 	return 0;
 }
 
-static int parse_change_counters_rule(int argc, char **argv, int *rule_nr, int *rule_nr_end)
+/* Incrementing or decrementing rules in daemon mode is not supported as the
+ * involved code overload is not worth it. */
+static int parse_change_counters_rule(int argc, char **argv, int *rule_nr, int *rule_nr_end, int exec_style)
 {
 	char *buffer;
+	int ret = 0;
 
 	if (optind + 1 >= argc || (argv[optind][0] == '-' && (argv[optind][1] < '0' || argv[optind][1] > '9')) ||
 	    (argv[optind + 1][0] == '-' && (argv[optind + 1][1] < '0'  && argv[optind + 1][1] > '9')))
-		ebt_print_error2("The command -C needs at least 3 arguments");
+		ebt_print_error2("The command -C needs at least 2 arguments");
 	if (optind + 2 < argc && (argv[optind + 2][0] != '-' || (argv[optind + 2][1] >= '0' && argv[optind + 2][1] <= '9'))) {
 		if (optind + 3 != argc)
 			ebt_print_error2("No extra options allowed with -C start_nr[:end_nr] pcnt bcnt");
@@ -506,36 +503,40 @@ static int parse_change_counters_rule(int argc, char **argv, int *rule_nr, int *
 	}
 
 	if (argv[optind][0] == '+') {
-		if (argv[optind + 1][0] != '+')
-			ebt_print_error2("If one counter is increased, the other should be increased too (perhaps put a '+' before '%s')", argv[optind + 1]);
-		replace->flags |= OPT_CNT_INCR;
+		if (exec_style == EXEC_STYLE_DAEMON)
+daemon_incr:
+			ebt_print_error2("Incrementing rule counters (%s) not allowed in daemon mode", argv[optind]);
+		ret += 1;
 		new_entry->cnt_surplus.pcnt = strtoull(argv[optind] + 1, &buffer, 10);
-		if (*buffer != '\0')
-			goto invalid;
-		optind++;
-		new_entry->cnt_surplus.bcnt = strtoull(argv[optind] + 1, &buffer, 10);
 	} else if (argv[optind][0] == '-') {
-		if (argv[optind + 1][0] != '-')
-			ebt_print_error2("If one counter is decreased, the other should be decreased too (perhaps put a '-' before '%s')", argv[optind + 1]);
-		replace->flags |= OPT_CNT_DECR;
+		if (exec_style == EXEC_STYLE_DAEMON)
+daemon_decr:
+			ebt_print_error2("Decrementing rule counters (%s) not allowed in daemon mode", argv[optind]);
+		ret += 2;
 		new_entry->cnt_surplus.pcnt = strtoull(argv[optind] + 1, &buffer, 10);
-		if (*buffer != '\0')
-			goto invalid;
-		optind++;
-		new_entry->cnt_surplus.bcnt = strtoull(argv[optind] + 1, &buffer, 10);
-	} else {
-		if (argv[optind + 1][0] == '-' || argv[optind + 1][0] == '+')
-			ebt_print_error2("If one counter is %screased, the other should be %screased too (perhaps put a '%c' before '%s')",
-			   argv[optind + 1][0] == '-' ? "de" : "in", argv[optind + 1][0] == '-' ? "de" : "in", argv[optind + 1][0], argv[optind]);
+	} else
 		new_entry->cnt_surplus.pcnt = strtoull(argv[optind], &buffer, 10);
-		optind++;
-		new_entry->cnt_surplus.bcnt = strtoull(argv[optind], &buffer, 10);
-	}
 
 	if (*buffer != '\0')
 		goto invalid;
 	optind++;
-	return 0;
+	if (argv[optind][0] == '+') {
+		if (exec_style == EXEC_STYLE_DAEMON)
+			goto daemon_incr;
+		ret += 3;
+		new_entry->cnt_surplus.bcnt = strtoull(argv[optind] + 1, &buffer, 10);
+	} else if (argv[optind][0] == '-') {
+		if (exec_style == EXEC_STYLE_DAEMON)
+			goto daemon_decr;
+		ret += 6;
+		new_entry->cnt_surplus.bcnt = strtoull(argv[optind] + 1, &buffer, 10);
+	} else
+		new_entry->cnt_surplus.bcnt = strtoull(argv[optind], &buffer, 10);
+
+	if (*buffer != '\0')
+		goto invalid;
+	optind++;
+	return ret;
 invalid:
 	ebt_print_error2("Packet counter '%s' invalid", argv[optind]);
 }
@@ -567,6 +568,7 @@ int do_command(int argc, char *argv[], int exec_style,
 	char *buffer;
 	int c, i;
 	int zerochain = -1; /* Needed for the -Z option (we can have -Z <this> -L <that>) */
+	int chcounter; /* Needed for -C */
 	int policy = 0;
 	int rule_nr = 0;
 	int rule_nr_end = 0;
@@ -686,7 +688,7 @@ int do_command(int argc, char *argv[], int exec_style,
 					ebt_print_error2("Problem with the specified rule number(s) '%s'", argv[optind]);
 				optind++;
 			} else if (c == 'C') {
-				if (parse_change_counters_rule(argc, argv, &rule_nr, &rule_nr_end))
+				if ((chcounter = parse_change_counters_rule(argc, argv, &rule_nr, &rule_nr_end, exec_style)) == -1)
 					return -1;
 			} else if (c == 'I') {
 				if (optind >= argc || (argv[optind][0] == '-' && (argv[optind][1] < '0' || argv[optind][1] > '9')))
@@ -1224,7 +1226,7 @@ delete_the_rule:
 		if (ebt_errormsg[0] != '\0')
 			return -1;
 	} else if (replace->command == 'C') {
-		ebt_change_counters(replace, new_entry, rule_nr, rule_nr_end, &(new_entry->cnt_surplus));
+		ebt_change_counters(replace, new_entry, rule_nr, rule_nr_end, &(new_entry->cnt_surplus), chcounter);
 		if (ebt_errormsg[0] != '\0')
 			return -1;
 	}

@@ -369,12 +369,20 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 			/* Don't use this old counter */
 			old++;
 		} else {
-			if (cc->type == CNT_INCR) {
-				new->pcnt = old->pcnt + next->cnt_surplus.pcnt;
-				new->bcnt = old->bcnt + next->cnt_surplus.bcnt;
-			} else if (cc->type == CNT_DECR) {
-				new->pcnt = old->pcnt - next->cnt_surplus.pcnt;
-				new->bcnt = old->bcnt - next->cnt_surplus.bcnt;
+			if (cc->type == CNT_CHANGE) {
+				new->pcnt = old->pcnt;
+				if (cc->change % 3 == 1)
+					new->pcnt = old->pcnt + next->cnt_surplus.pcnt;
+				else if (cc->change % 3 == 2)
+					new->pcnt = old->pcnt - next->cnt_surplus.pcnt;
+				else
+					new->pcnt = next->cnt.pcnt;
+				if (cc->change / 3 == 1)
+					new->bcnt = old->bcnt + next->cnt_surplus.bcnt;
+				else if (cc->change / 3 == 2)
+					new->bcnt = old->bcnt - next->cnt_surplus.bcnt;
+				else
+					new->bcnt = next->cnt.bcnt;
 			} else
 				*new = next->cnt;
 			next->cnt = *new;
@@ -415,6 +423,7 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 	cc = u_repl->counterchanges;
 	for (i = 0; i < u_repl->nentries; i++) {
 		cc->type = CNT_NORM;
+		cc->change = 0;
 		cc3 = &cc->next;
 		cc = cc->next;
 	}
@@ -513,6 +522,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 		if (*totalcnt >= u_repl->nentries)
 			ebt_print_bug("*totalcnt >= u_repl->nentries");
 		new->cnt = u_repl->counters[*totalcnt];
+		new->cnt_surplus.pcnt = new->cnt_surplus.bcnt = 0;
 		new->m_list = NULL;
 		new->w_list = NULL;
 		new->next = NULL;
@@ -792,6 +802,7 @@ int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 		if (!new_cc)
 			ebt_print_memory();
 		new_cc->type = CNT_NORM;
+		new_cc->change = 0;
 		new_cc->next = NULL;
 		*prev_cc = new_cc;
 		prev_cc = &(new_cc->next);
