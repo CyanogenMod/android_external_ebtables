@@ -22,6 +22,7 @@ WHAT GETS INSTALLED?
   option on the command line.
   The Makefile will append /man8/ebtables.8.
 - ethertypes is placed in /etc/
-- the userspace program ebtables is compiled.
+- the userspace program ebtables is compiled and the executable is copied
+  to in /sbin/ebtables.
 
 That's all

@@ -2,7 +2,7 @@
 
 KERNEL_DIR?=/usr/src/linux
 PROGNAME:=ebtables
-PROGVERSION:="2.0pre9 (July 2002)"
+PROGVERSION:="2.0pre10 (July 2002)"
 
 MANDIR?=/usr/local/man
 CFLAGS:=-Wall -Wunused
@@ -51,9 +51,12 @@ $(MANDIR)/man8/ebtables.8: ebtables.8
 /etc/ethertypes: ethertypes
 	mkdir -p $(@D)
 	install -m 0644 -o root -g root $< $@
+.PHONY: exec
+exec: ebtables
+	install -m 0755 -o root -g root $< /sbin/ebtables
 
 install: $(MANDIR)/man8/ebtables.8 $(KERNEL_INCLUDES) \
-	ebtables /etc/ethertypes
+	ebtables /etc/ethertypes exec
 
 clean:
 	rm -f ebtables
