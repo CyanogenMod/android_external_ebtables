@@ -1450,7 +1450,7 @@ void __ebt_print_error(char *format, ...)
 		va_end(l);
 	} else {
 		vprintf(format, l);
-		printf("\n");
+		printf(".\n");
 		va_end(l);
 		exit (-1);
 	}

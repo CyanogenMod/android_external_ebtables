@@ -357,7 +357,7 @@ continue_read:
 write_msg:
 #ifndef SILENT_DAEMON
 		if (ebt_errormsg[0] != '\0')
-			printf("%s\n", ebt_errormsg);
+			printf("%s.\n", ebt_errormsg);
 #endif
 		ebt_errormsg[0]= '\0';
 		n = 0;
