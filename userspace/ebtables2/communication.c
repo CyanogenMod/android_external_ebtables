@@ -323,6 +323,7 @@ void deliver_counters(struct ebt_u_replace *u_repl)
 			 * So, we just copy
 			 */
 			new->pcnt = old->pcnt;
+			new->bcnt = old->bcnt;
 			/* we've used an old counter */
 			old++;
 			/* we've set a new counter */
