@@ -48,12 +48,6 @@ void __print_bug(char *file, int line, char *format, ...)
 	exit (-1);
 }
 
-/*
- * here are the number-name correspondences kept for the Ethernet
- * frame type field
- */
-#define PROTOCOLFILE "/etc/ethertypes"
-
 #ifndef PROC_SYS_MODPROBE
 #define PROC_SYS_MODPROBE "/proc/sys/kernel/modprobe"
 #endif
