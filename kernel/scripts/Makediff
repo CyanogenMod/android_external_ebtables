@@ -54,3 +54,20 @@ diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_nat.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_redirect.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_mark_m.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_mark_t.h >> $FILE
+
+diff -urNp $FROM/include/linux/netfilter.h $TO/include/linux/netfilter.h >> $FILE
+diff -urNp $FROM/include/linux/netfilter_ipv4.h $TO/include/linux/netfilter_ipv4.h >> $FILE
+diff -urNp $FROM/include/linux/skbuff.h $TO/include/linux/skbuff.h >> $FILE
+diff -urNp $FROM/net/core/netfilter.c $TO/net/core/netfilter.c >> $FILE
+diff -urNp $FROM/net/core/skbuff.c $TO/net/core/skbuff.c >> $FILE
+diff -urNp $FROM/net/ipv4/netfilter/ip_tables.c $TO/net/ipv4/netfilter/ip_tables.c >> $FILE
+diff -urNp $FROM/net/ipv4/ip_output.c $TO/net/ipv4/ip_output.c >> $FILE
+diff -urNp $FROM/net/ipv4/netfilter/ipt_LOG.c $TO/net/ipv4/netfilter/ipt_LOG.c >> $FILE
+diff -urNp $FROM/net/ipv4/netfilter/Makefile $TO/net/ipv4/netfilter/Makefile >> $FILE
+diff -urNp $FROM/net/ipv4/netfilter/Config.in $TO/net/ipv4/netfilter/Config.in >> $FILE
+diff -urN /dev/null $TO/net/bridge/br_netfilter.c >> $FILE
+
+diff -urN /dev/null $TO/net/ipv4/netfilter/ipt_physdev.c >> $FILE
+diff -urN /dev/null $TO/include/linux/netfilter_ipv4/ipt_physdev.h >> $FILE
+
+diff -urNp $FROM/net/8021q/vlan_dev.c $TO/net/8021q/vlan_dev.c >> $FILE
