@@ -7,7 +7,11 @@
 #
 # Note 2! The CFLAGS definition is now in the main makefile...
 
+ifneq ($(CONFIG_BRIDGE_EBT_BROUTE),n)
+ifneq ($(CONFIG_BRIDGE_EBT_BROUTE),)
 export-objs := br.o
+endif
+endif
 
 O_TARGET	:= bridge.o
 obj-y		:= br.o br_device.o br_fdb.o br_forward.o br_if.o br_input.o \
