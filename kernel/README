@@ -15,4 +15,9 @@ ebtables_kernel-2-0-rc1
 
 July 31, 2002
 ---
+Added the linux2.5 directory, which contains files that are different
+between the 2.4 patch (linux/) and the 2.5 patch (linux2.5).
+
+August 23, 2002
+---
 
