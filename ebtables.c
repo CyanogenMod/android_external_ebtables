@@ -103,7 +103,7 @@ static struct option ebt_original_options[] =
 	{ "modprobe"      , required_argument, 0, 'M' },
 	{ "new-chain"     , required_argument, 0, 'N' },
 	{ "rename-chain"  , required_argument, 0, 'E' },
-	{ "delete-chain"  , required_argument, 0, 'X' },
+	{ "delete-chain"  , optional_argument, 0, 'X' },
 	{ "atomic-init"   , no_argument      , 0, 7   },
 	{ "atomic-commit" , no_argument      , 0, 8   },
 	{ "atomic-file"   , required_argument, 0, 9   },
@@ -841,7 +841,7 @@ static void print_help()
 "--policy -P chain target      : change policy on chain to target\n"
 "--new-chain -N chain          : create a user defined chain\n"
 "--rename-chain -E old new     : rename a chain\n"
-"--delete-chain -X chain       : delete a user defined chain\n"
+"--delete-chain -X [chain]     : delete a user defined chain\n"
 "--atomic-commit               : update the kernel w/t table contained in <FILE>\n"
 "--atomic-init                 : put the initial kernel table into <FILE>\n"
 "--atomic-save                 : put the current kernel table into <FILE>\n"
@@ -1513,8 +1513,10 @@ static void do_final_checks(struct ebt_u_entry *e, struct ebt_u_entries *entries
 
 /*
  * used for the -X command
+ * type = 0 => update chain jumps
+ * type = 1 => check for reference
  */
-static void check_for_references(int chain_nr)
+static int iterate_entries(int chain_nr, int silent, int type)
 {
 	int i = -1, j;
 	struct ebt_u_entries *entries;
@@ -1540,14 +1542,144 @@ static void check_for_references(int chain_nr)
 				continue;
 			}
 			chain_jmp = ((struct ebt_standard_target *)e->t)->verdict;
-			if (chain_jmp == chain_nr)
+			switch (type) {
+			case 1:
+			if (chain_jmp == chain_nr) {
+				if (silent)
+					return 1;
 				print_error("Can't delete the chain, it's referenced "
 				   "in chain %s, rule %d", entries->name, j);
+			}
+			break;
+			case 0:
 			/* adjust the chain jumps when necessary */
 			if (chain_jmp > chain_nr)
 				((struct ebt_standard_target *)e->t)->verdict--;
+			break;
+			} /* end switch */
 			e = e->next;
 		}
+	}
+	return 0;
+}
+
+static void decrease_chain_jumps(int chain_nr)
+{
+	iterate_entries(chain_nr, 1, 0);
+}
+
+static int check_for_references(int chain_nr, int silent)
+{
+	return iterate_entries(chain_nr, silent, 1);
+}
+
+static int *determine_referenced_chains(int *n)
+{
+	int *nrs, i = 0, j = 0;
+
+	*n = 0;
+	while (nr_to_chain(i + NF_BR_NUMHOOKS)) {
+		if (check_for_references(i, 1))
+			(*n)++;
+		i++;
+	}
+	if (*n == 0)
+		return NULL;
+	nrs = malloc(*n * sizeof(int));
+	i = 0;
+	while (nr_to_chain(i + NF_BR_NUMHOOKS)) {
+		if (check_for_references(i, 1)) {
+			nrs[j] = i;
+			j++;
+		}
+		i++;
+	}
+	return nrs;
+}
+
+static void remove_udc(int udc_nr)
+{
+	struct ebt_u_chain_list *cl, **cl2;
+	struct ebt_u_entries *entries;
+	struct ebt_u_entry *u_e, *tmp;
+
+	/* first free the rules */
+	entries = nr_to_chain(udc_nr + NF_BR_NUMHOOKS);
+	u_e = entries->entries;
+	while (u_e) {
+		free_u_entry(u_e);
+		tmp = u_e->next;
+		free(u_e);
+		u_e = tmp;
+	}
+
+	/* next, remove the chain */
+	cl2 = &(replace.udc);
+	while ((*cl2)->udc != entries)
+		cl2 = &((*cl2)->next);
+	cl = (*cl2);
+	(*cl2) = (*cl2)->next;
+	free(cl->udc);
+	free(cl);
+}
+
+/* Removes all udc that aren't referenced at the time of execution */
+static void delete_all_user_chains()
+{
+	struct ebt_u_chain_list *chain;
+	int *ref, nr_ref, chain_nr = 0, counter_offset, i;
+	struct ebt_u_entries *entries;
+
+	/* initialize counterchanges */
+	counters_nochange();
+
+	ref = determine_referenced_chains(&nr_ref);
+
+	chain = replace.udc;
+	counter_offset = 0;
+	/* skip the standard chains */
+	for (i = 0; i < NF_BR_NUMHOOKS; i++)
+		if ((entries = nr_to_chain(i)) != NULL)
+			counter_offset += entries->nentries;
+
+	/* first update chain jumps and counterchanges */
+	while (chain) {
+		int nentries;
+
+		nentries = chain->udc->nentries;
+		for (i = 0; i < nr_ref; i++)
+			if (ref[i] == chain_nr)
+				goto letscontinue;
+		decrease_chain_jumps(chain_nr);
+		for (i = counter_offset; i < counter_offset + nentries; i++)
+			replace.counterchanges[i] = CNT_DEL;
+		replace.nentries -= nentries;
+letscontinue:
+		counter_offset += nentries;
+		chain = chain->next;
+		chain_nr++;
+	}		
+	chain = replace.udc;
+	chain_nr = -1;
+	/* next, remove the chains, update the counter offset of
+	 * non-removed chains */
+	counter_offset = 0;
+	while (chain) {
+		int real_cn = 0;
+
+		chain_nr++;
+		for (i = 0; i < nr_ref; i++)
+			if (ref[i] == chain_nr)
+				break;
+		if (i != nr_ref) {
+			real_cn++;
+			chain->udc->counter_offset -= counter_offset;
+			chain = chain->next;
+			continue;
+		}
+		counter_offset += chain->udc->nentries;
+		chain = chain->next;
+		remove_udc(real_cn);
 	}
 }
 
@@ -1680,7 +1812,7 @@ int main(int argc, char *argv[])
 	 * getopt saves the day
 	 */
 	while ((c = getopt_long(argc, argv,
-	   "-A:D:I:N:E:X:L::Z::F::P:Vhi:o:j:p:s:d:t:M:", ebt_options, NULL)) != -1) {
+	   "-A:D:I:N:E:X::L::Z::F::P:Vhi:o:j:p:s:d:t:M:", ebt_options, NULL)) != -1) {
 		switch (c) {
 
 		case 'A': /* add a rule */
@@ -1695,7 +1827,8 @@ int main(int argc, char *argv[])
 				print_error("Multiple commands not allowed");
 			replace.flags |= OPT_COMMAND;
 			get_kernel_table();
-			if (optarg[0] == '-' || !strcmp(optarg, "!"))
+			if (optarg && (optarg[0] == '-' ||
+			    !strcmp(optarg, "!")))
 				print_error("No chain name specified");
 			if (c == 'N') {
 				struct ebt_u_chain_list *cl, **cl2;
@@ -1735,6 +1868,40 @@ int main(int argc, char *argv[])
 				counters_nochange();
 				break;
 			}
+			if (c == 'X') {
+				char *opt;
+				int udc_nr;
+
+				if (!optarg && (optind >= argc ||
+				   (argv[optind][0] != '-'
+				    && strcmp(argv[optind], "!")))) {
+					delete_all_user_chains();
+					break;
+				}
+				if (optarg)
+					opt = optarg;
+				else {
+					opt = argv[optind];
+					optind++;
+				}
+				if ((replace.selected_hook = get_hooknr(opt)) == -1)
+					print_error("Chain %s doesn't exist", optarg);
+				if (replace.selected_hook < NF_BR_NUMHOOKS)
+					print_error("You can't remove a standard chain");
+				/*
+				 * if the chain is referenced, don't delete it,
+				 * also decrement jumps to a chain behind the
+				 * one we're deleting
+				 */
+				udc_nr=replace.selected_hook-NF_BR_NUMHOOKS;
+				check_for_references(udc_nr, 0);
+				decrease_chain_jumps(udc_nr);
+				if (flush_chains() == -1)
+					counters_nochange();
+				remove_udc(udc_nr);
+				break;
+			}
+
 			if ((replace.selected_hook = get_hooknr(optarg)) == -1)
 				print_error("Chain %s doesn't exist", optarg);
 			if (c == 'E') {
@@ -1754,29 +1921,6 @@ int main(int argc, char *argv[])
 				strcpy(entries->name, argv[optind]);
 				counters_nochange();
 				optind++;
-				break;
-			}
-			if (c == 'X') {
-				struct ebt_u_chain_list *cl, **cl2;
-
-				if (replace.selected_hook < NF_BR_NUMHOOKS)
-					print_error("You can't remove a standard chain");
-				/*
-				 * if the chain is referenced, don't delete it,
-				 * also decrement jumps to a chain behind the
-				 * one we're deleting
-				 */
-				check_for_references(replace.selected_hook - NF_BR_NUMHOOKS);
-				if (flush_chains() == -1)
-					counters_nochange();
-				entries = to_chain();
-				cl2 = &(replace.udc);
-				while ((*cl2)->udc != entries)
-					cl2 = &((*cl2)->next);
-				cl = (*cl2);
-				(*cl2) = (*cl2)->next;
-				free(cl->udc);
-				free(cl);
 				break;
 			}
 
