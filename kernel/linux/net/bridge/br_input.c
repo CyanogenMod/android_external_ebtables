@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_input.c,v 1.2 2002/08/22 17:49:34 bdschuym Exp $
+ *	$Id: br_input.c,v 1.3 2002/08/23 16:56:52 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
