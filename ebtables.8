@@ -37,6 +37,8 @@ ebtables (v.2.0) \- ethernet bridge packet table administration
 .br
 .BR "ebtables -[b] [" "y/n" "]"
 .br
+.BR "ebtables --init-table"
+.br
 .BR "ebtables --atomic-init " file
 .br
 .BR "ebtables --atomic-save " file
@@ -179,6 +181,9 @@ renaming the standard chains will be made.
 Flush the selected chain. If no chain is selected, every chain will be
 flushed. This does not change the policy of the chain.
 .TP
+.B "--init-table"
+Replace the current table data by the initial table data.
+.TP
 .B "-Z, --zero"
 Put the counters of the selected chain on zero. If no chain is selected, all the counters
 are put on zero. This can be used in conjunction with the -L command (see above). 
@@ -206,12 +211,12 @@ if you like PREBRIDGING more than PREROUTING. Be sure to talk about the
 standard chain names when you would ask a question on a mailing list.
 .TP
 .B "--atomic-init"
-Copy the kernel's initial data of the specified table to the specified
+Copy the kernel's initial data of the table to the specified
 file. This can be used as the first action, after which rules are added
 to the file.
 .TP
 .B "--atomic-save"
-Copy the kernel's current data of the specified table to the specified
+Copy the kernel's current data of the table to the specified
 file. This can be used as the first action, after which rules are added
 to the file.
 .TP
