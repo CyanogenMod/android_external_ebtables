@@ -1,5 +1,6 @@
 20030724
-	* added (automatic) Sparc64 support
+	* added (automatic) Sparc64 support, thanks to Michael Bellion and
+	  Thomas Heinz from hipac.org for providing a test-box.
 20030717
 	* added stp frames match type
 20030713
