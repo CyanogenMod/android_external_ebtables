@@ -1279,12 +1279,13 @@ static inline int ebt_make_watchername(struct ebt_entry_watcher *w,
 static inline int ebt_make_names(struct ebt_entry *e, char *base, char *ubase)
 {
 	int ret;
-	char *hlp = ubase - base + (char *)e + e->target_offset;
+	char *hlp;
 	struct ebt_entry_target *t;
 
 	if ((e->bitmask & EBT_ENTRY_OR_ENTRIES) == 0)
 		return 0;
 
+	hlp = ubase - base + (char *)e + e->target_offset;
 	t = (struct ebt_entry_target *)(((char *)e) + e->target_offset);
 	
 	ret = EBT_MATCH_ITERATE(e, ebt_make_matchname, base, ubase);
@@ -1367,10 +1368,6 @@ static int copy_everything_to_user(struct ebt_table *t, void *user,
 
 	if (copy_to_user(tmp.entries, entries, entries_size)) {
 		BUGPRINT("Couldn't copy entries to userspace\n");
-		return -EFAULT;
-	}
-	if (copy_to_user(user, &tmp, sizeof(struct ebt_replace))) {
-		BUGPRINT("Couldn't copy ebt_replace to userspace\n");
 		return -EFAULT;
 	}
 	// set the match/watcher/target names right
