@@ -443,11 +443,13 @@ static int compare(const struct ebt_entry_match *m1,
 			return 0;
 	}
 	if (ipinfo1->bitmask & EBT_IP_SPORT) {
-		if (ipinfo1->sport != ipinfo2->sport)
+		if (ipinfo1->sport[0] != ipinfo2->sport[0] ||
+		   ipinfo1->sport[1] != ipinfo2->sport[1])
 			return 0;
 	}
 	if (ipinfo1->bitmask & EBT_IP_DPORT) {
-		if (ipinfo1->dport != ipinfo2->dport)
+		if (ipinfo1->dport[0] != ipinfo2->dport[0] ||
+		   ipinfo1->dport[1] != ipinfo2->dport[1])
 			return 0;
 	}
 	return 1;
