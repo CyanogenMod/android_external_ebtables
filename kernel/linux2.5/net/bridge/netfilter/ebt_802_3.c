@@ -38,14 +38,11 @@ static int ebt_filter_802_3(const struct sk_buff *skb, const struct net_device *
 
 static struct ebt_match filter_802_3;
 static int ebt_802_3_check(const char *tablename, unsigned int hookmask,
-   const struct ebt_entry *e, void *data, unsigned int datalen,
-   unsigned int version)
+   const struct ebt_entry *e, void *data, unsigned int datalen)
 {
 	struct ebt_802_3_info *info = (struct ebt_802_3_info *)data;
 
 	if (datalen < sizeof(struct ebt_802_3_info))
-		return -EINVAL;
-	if (ebt_check_version(version, filter_802_3.version, filter_802_3.name))
 		return -EINVAL;
 	if (info->bitmask & ~EBT_802_3_MASK || info->invflags & ~EBT_802_3_MASK)
 		return -EINVAL;
@@ -59,7 +56,6 @@ static struct ebt_match filter_802_3 =
 	.match		= ebt_filter_802_3,
 	.check		= ebt_802_3_check,
 	.me		= THIS_MODULE,
-	.version	= VERSIONIZE(1,0),
 };
 
 static int __init init(void)
