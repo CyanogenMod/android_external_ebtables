@@ -18,7 +18,7 @@ static void print_help()
 {
 	printf(
 "mark option:\n"
-"--mark    [!] value[/mask]: Match nfmask value with optional mask\n");
+"--mark    [!] [value][/mask]: Match nfmask value (see man page)\n");
 }
 
 static void init(struct ebt_entry_match *match)
@@ -28,6 +28,7 @@ static void init(struct ebt_entry_match *match)
 	markinfo->mark = 0;
 	markinfo->mask = 0;
 	markinfo->invert = 0;
+	markinfo->bitmask = 0;
 }
 
 #define OPT_MARK 0x01
@@ -46,9 +47,12 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		if (optind > argc)
 			print_error("No mark specified");
 		markinfo->mark = strtoul(argv[optind - 1], &end, 0);
-		if (*end == '/')
+		markinfo->bitmask = EBT_MARK_AND;
+		if (*end == '/') {
+			if (end == argv[optind - 1])
+				markinfo->bitmask = EBT_MARK_OR;
 			markinfo->mask = strtoul(end+1, &end, 0);
-		else
+		} else
 			markinfo->mask = 0xffffffff;
 		if ( *end != '\0' || end == argv[optind - 1])
 			print_error("Bad mark value '%s'", argv[optind - 1]);
@@ -74,7 +78,9 @@ static void print(const struct ebt_u_entry *entry,
 	printf("--mark ");
 	if (markinfo->invert)
 		printf("! ");
-	if(markinfo->mask != 0xffffffff)
+	if (markinfo->bitmask == EBT_MARK_OR)
+		printf("/0x%lx ", markinfo->mask);
+	else if(markinfo->mask != 0xffffffff)
 		printf("0x%lx/0x%lx ", markinfo->mark, markinfo->mask);
 	else
 		printf("0x%lx ", markinfo->mark);
@@ -91,6 +97,8 @@ static int compare(const struct ebt_entry_match *m1,
 	if (markinfo1->mark != markinfo2->mark)
 		return 0;
 	if (markinfo1->mask != markinfo2->mask)
+		return 0;
+	if (markinfo1->bitmask != markinfo2->bitmask)
 		return 0;
 	return 1;
 }
