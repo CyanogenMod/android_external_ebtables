@@ -664,8 +664,9 @@ cleanup_matches:
 // checks for loops and sets the hook mask for udc
 // the hook mask for udc tells us from which base chains the udc can be
 // accessed. This mask is a parameter to the check() functions of the extensions
-int check_chainloops(struct ebt_entries *chain, struct ebt_cl_stack *cl_s,
-   unsigned int udc_cnt, unsigned int hooknr, char *base)
+static int check_chainloops(struct ebt_entries *chain,
+   struct ebt_cl_stack *cl_s, unsigned int udc_cnt, 
+   unsigned int hooknr, char *base)
 {
 	int i, chain_nr = -1, pos = 0, nentries = chain->nentries, verdict;
 	struct ebt_entry *e = (struct ebt_entry *)chain->data;
