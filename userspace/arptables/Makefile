@@ -6,6 +6,7 @@ KERNEL_DIR=include/linux
 endif
 ARPTABLES_VERSION:=0.0.3
 OLD_ARPTABLES_VERSION:=0.0.2
+MANDIR?=/usr/local/man
 
 PREFIX:=/usr/local
 LIBDIR:=$(PREFIX)/lib
@@ -47,12 +48,16 @@ $(DESTDIR)$(BINDIR)/arptables: arptables
 	@[ -d $(DESTDIR)$(BINDIR) ] || mkdir -p $(DESTDIR)$(BINDIR)
 	cp $< $@
 
+$(MANDIR)/man8/arptables.8: arptables.8
+	mkdir -p $(@D)
+	install -m 0644 -o root -g root $< $@
+
 .PHONY: exec
 exec: arptables
 	install -m 0755 -o root -g root $< $(BINFILE)
 
 .PHONY: install
-install: exec
+install: $(MANDIR)/man8/arptables.8 exec
 
 .PHONY: clean
 clean:
