@@ -375,6 +375,7 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 			}
 		}
 		cc = cc->next;
+		next = next->next;
 	}
 
 	free(u_repl->counters);
