@@ -34,40 +34,73 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <ctype.h>
 #include "../include/ebtables_u.h"
 #include "../include/ethernetdb.h"
 #include <linux/netfilter_bridge/ebt_vlan.h>
+#include <linux/if_ether.h>
+
 
 #define GET_BITMASK(_MASK_) vlaninfo->bitmask & _MASK_
 #define SET_BITMASK(_MASK_) vlaninfo->bitmask |= _MASK_
 #define INV_FLAG(_inv_flag_) (vlaninfo->invflags & _inv_flag_) ? "! " : ""
+#define CHECK_IF_MISSING_VALUE if (optind > argc) print_error ("Missing %s value", opts[c].name);
+#define CHECK_INV_FLAG(_INDEX_) if (check_inverse (optarg)) vlaninfo->invflags |= _INDEX_;
+#define CHECK_RANGE(_RANGE_) if (_RANGE_) print_error ("Invalid %s range", opts[c].name);
+
+#define NAME_VLAN_ID    "id"
+#define NAME_VLAN_PRIO  "prio"
+#define NAME_VLAN_ENCAP "encap"
 
 #define VLAN_ID    0
 #define VLAN_PRIO  1
 #define VLAN_ENCAP 2
+
 static struct option opts[] = {
-	{"vlan-id", required_argument, NULL, VLAN_ID},
-	{"vlan-prio", required_argument, NULL, VLAN_PRIO},
-	{"vlan-encap", required_argument, NULL, VLAN_ENCAP},
+	{EBT_VLAN_MATCH "-" NAME_VLAN_ID, required_argument, NULL,
+	 VLAN_ID},
+	{EBT_VLAN_MATCH "-" NAME_VLAN_PRIO, required_argument, NULL,
+	 VLAN_PRIO},
+	{EBT_VLAN_MATCH "-" NAME_VLAN_ENCAP, required_argument, NULL,
+	 VLAN_ENCAP},
 	{NULL}
 };
 
+/*
+ * option inverse flags definition 
+ */
+#define OPT_VLAN_ID     0x01
+#define OPT_VLAN_PRIO   0x02
+#define OPT_VLAN_ENCAP  0x04
+#define OPT_VLAN_FLAGS	(OPT_VLAN_ID | OPT_VLAN_PRIO | OPT_VLAN_ENCAP)
+
+struct ethertypeent *ethent;
 
 /*
- * Print out local help by "ebtables -h vlan" 
+ * Print out local help by "ebtables -h <match name>" 
  */
-static void print_help ()
+
+static void print_help()
 {
-	printf ("802.1Q VLAN extension options:\n"
-		"--vlan-id [!] id        : VLAN-tagged frame identifier, 0,1-4094 (integer)\n"
-		"--vlan-prio [!] prio    : Priority-tagged frame user_priority, 0-7 (integer)\n"
-		"--vlan-encap [!] proto  : Encapsulated protocol (hexadecimal)\n");
+#define HELP_TITLE "802.1Q VLAN extension"
+
+	printf(HELP_TITLE " options:\n");
+	printf("--" EBT_VLAN_MATCH "-" NAME_VLAN_ID " %s" NAME_VLAN_ID
+	       " : VLAN-tagged frame identifier, 0,1-4096 (integer), default 1\n",
+	       OPT_VLAN_FLAGS & OPT_VLAN_ID ? "[!] " : "");
+	printf("--" EBT_VLAN_MATCH "-" NAME_VLAN_PRIO " %s" NAME_VLAN_PRIO
+	       " : Priority-tagged frame user_priority, 0-7 (integer), default 0\n",
+	       OPT_VLAN_FLAGS & OPT_VLAN_PRIO ? "[!] " : "");
+	printf("--" EBT_VLAN_MATCH "-" NAME_VLAN_ENCAP " %s"
+	       NAME_VLAN_ENCAP
+	       " : Encapsulated frame type (hexadecimal), default IP (0800)\n",
+	       OPT_VLAN_FLAGS & OPT_VLAN_ENCAP ? "[!] " : "");
 }
 
 /*
  * Initialization function 
  */
-static void init (struct ebt_entry_match *match)
+static void init(struct ebt_entry_match *match)
 {
 	struct ebt_vlan_info *vlaninfo =
 	    (struct ebt_vlan_info *) match->data;
@@ -81,136 +114,72 @@ static void init (struct ebt_entry_match *match)
 	vlaninfo->bitmask = 0;
 }
 
-/*
- * option flags definition 
- */
-#define OPT_VLAN_ID     0x01
-#define OPT_VLAN_PRIO   0x02
-#define OPT_VLAN_ENCAP  0x04
 
 /*
  * Parse passed arguments values (ranges, flags, etc...)
  * int c - parameter number from static struct option opts[]
  * int argc - total amout of arguments (std argc value)
- * 
+ * int argv - arguments (std argv value)
+ * const struct ebt_u_entry *entry - default ebtables entry set
+ * unsigned int *flags -
+ * struct ebt_entry_match **match - 
  */
 static int
-parse (int c,
-       char **argv,
-       int argc,
-       const struct ebt_u_entry *entry,
-       unsigned int *flags, struct ebt_entry_match **match)
+parse(int c,
+      char **argv,
+      int argc,
+      const struct ebt_u_entry *entry,
+      unsigned int *flags, struct ebt_entry_match **match)
 {
 	struct ebt_vlan_info *vlaninfo =
 	    (struct ebt_vlan_info *) (*match)->data;
-	unsigned long i;
 	char *end;
-	uint16_t encap;
+	struct ebt_vlan_info local;
+
 	switch (c) {
 	case VLAN_ID:
-		/*
-		 * ebtables.c:check_option(unsigned int *flags, unsigned int mask)
-		 * checking for multiple usage of same option 
-		 */
-		check_option (flags, OPT_VLAN_ID);
-		/*
-		 * Check If we got inversed arg for vlan-id option,
-		 * otherwise unset inversion flag 
-		 */
-		if (check_inverse (optarg))
-			vlaninfo->invflags |= EBT_VLAN_ID;
-		/*
-		 * Check arg value presence
-		 */
-		if (optind > argc)
-			print_error ("Missing VLAN ID argument value");
-		/*
-		 * Convert argv to long int,
-		 * set *end to end of argv string, 
-		 * base set 10 for decimal only
-		 */
-		(unsigned short) i = strtol (argv[optind - 1], &end, 10);
-		/*
-		 * Check arg val range
-		 */
-		if (i > 4094 || *end != '\0')
-			print_error
-			    ("Specified VLAN ID is out of range (0-4094)");
-		/*
-		 * Set up parameter value
-		 */
-		vlaninfo->id = i;
-		/*
-		 * Set up parameter presence flag 
-		 */
-		SET_BITMASK (EBT_VLAN_ID);
+		check_option(flags, OPT_VLAN_ID);
+		CHECK_INV_FLAG(EBT_VLAN_ID);
+		CHECK_IF_MISSING_VALUE;
+		(unsigned short) local.id =
+		    strtoul(argv[optind - 1], &end, 10);
+		CHECK_RANGE(local.id > 4094 || *end != '\0');
+		vlaninfo->id = local.id;
+		SET_BITMASK(EBT_VLAN_ID);
 		break;
 
 	case VLAN_PRIO:
-		check_option (flags, OPT_VLAN_PRIO);
-		if (check_inverse (optarg))
-			vlaninfo->invflags |= EBT_VLAN_PRIO;
-		if (optind > argc)
-			print_error
-			    ("Missing user_priority argument value");
-		/*
-		 * Convert argv to long int,
-		 * set *end to end of argv string, 
-		 * base set 10 for decimal only 
-		 */
-		(unsigned char) i = strtol (argv[optind - 1], &end, 10);
-		/*
-		 * Check arg val range 
-		 */
-		if (i >= 8 || *end != '\0')
-			print_error
-			    ("Specified user_priority is out of range (0-7)");
-		/*
-		 * Set up parameter value 
-		 */
-		vlaninfo->prio = i;
-		/*
-		 * Set up parameter presence flag 
-		 */
-		SET_BITMASK (EBT_VLAN_PRIO);
+		check_option(flags, OPT_VLAN_PRIO);
+		CHECK_INV_FLAG(EBT_VLAN_PRIO);
+		CHECK_IF_MISSING_VALUE;
+		(unsigned char) local.prio =
+		    strtoul(argv[optind - 1], &end, 10);
+		CHECK_RANGE(local.prio >= 8 || *end != '\0');
+		vlaninfo->prio = local.prio;
+		SET_BITMASK(EBT_VLAN_PRIO);
 		break;
 
 	case VLAN_ENCAP:
-		check_option (flags, OPT_VLAN_ENCAP);
-		if (check_inverse (optarg))
-			vlaninfo->invflags |= EBT_VLAN_ENCAP;
-		if (optind > argc)
-			print_error
-			    ("Missing encapsulated frame type argument value");
-		/*
-		 * Parameter can be decimal, hexadecimal, or string.
-		 * Check arg val range (still raw area)
-		 */
-		(unsigned short) encap = strtol (argv[optind - 1], &end, 16);
-		if (*end == '\0' && (encap < ETH_ZLEN || encap > 0xFFFF))
-			print_error
-			    ("Specified encapsulated frame type is out of range");
+		check_option(flags, OPT_VLAN_ENCAP);
+		CHECK_INV_FLAG(EBT_VLAN_ENCAP);
+		CHECK_IF_MISSING_VALUE;
+		(unsigned short) local.encap =
+		    strtoul(argv[optind - 1], &end, 16);
 		if (*end != '\0') {
-			struct ethertypeent *ent;
-
-			ent = getethertypebyname(argv[optind - 1]);
-			if (!ent)
-				print_error
-				    ("Problem with the specified encapsulated"
-				     "protocol");
-			encap = ent->e_ethertype;
+			ethent = getethertypebyname(argv[optind - 1]);
+			if (ethent == NULL)
+				print_error("Unknown %s encap",
+					    opts[c].name);
+			local.encap = ethent->e_ethertype;
 		}
-		/*
-		 * Set up parameter value (network notation)
-		 */
-		vlaninfo->encap = htons (encap);
-		/*
-		 * Set up parameter presence flag
-		 */
-		SET_BITMASK (EBT_VLAN_ENCAP);
+		CHECK_RANGE(local.encap < ETH_ZLEN);
+		vlaninfo->encap = htons(local.encap);
+		SET_BITMASK(EBT_VLAN_ENCAP);
 		break;
+
 	default:
 		return 0;
+
 	}
 	return 1;
 }
@@ -219,9 +188,9 @@ parse (int c,
  * Final check - logical conditions
  */
 static void
-final_check (const struct ebt_u_entry *entry,
-	     const struct ebt_entry_match *match,
-	     const char *name, unsigned int hookmask, unsigned int time)
+final_check(const struct ebt_u_entry *entry,
+	    const struct ebt_entry_match *match,
+	    const char *name, unsigned int hookmask, unsigned int time)
 {
 
 	struct ebt_vlan_info *vlaninfo =
@@ -229,16 +198,15 @@ final_check (const struct ebt_u_entry *entry,
 	/*
 	 * Specified proto isn't 802.1Q?
 	 */
-	if (entry->ethproto != ETH_P_8021Q ||
-	    entry->invflags & EBT_IPROTO)
+	if (entry->ethproto != ETH_P_8021Q || entry->invflags & EBT_IPROTO)
 		print_error
 		    ("For use 802.1Q extension the protocol must be specified as 802_1Q");
 	/*
 	 * Check if specified vlan-encap=0x8100 (802.1Q Frame) 
 	 * when vlan-encap specified.
 	 */
-	if (GET_BITMASK (EBT_VLAN_ENCAP)) {
-		if (vlaninfo->encap==htons(0x8100))
+	if (GET_BITMASK(EBT_VLAN_ENCAP)) {
+		if (vlaninfo->encap == htons(0x8100))
 			print_error
 			    ("Encapsulated frame type can not be 802.1Q (0x8100)");
 	}
@@ -247,8 +215,8 @@ final_check (const struct ebt_u_entry *entry,
 	 * Check if specified vlan-id=0 (priority-tagged frame condition) 
 	 * when vlan-prio was specified.
 	 */
-	if (GET_BITMASK (EBT_VLAN_PRIO)) {
-		if (vlaninfo->id && GET_BITMASK (EBT_VLAN_ID))
+	if (GET_BITMASK(EBT_VLAN_PRIO)) {
+		if (vlaninfo->id && GET_BITMASK(EBT_VLAN_ID))
 			print_error
 			    ("For use user_priority the specified vlan-id must be 0");
 	}
@@ -258,48 +226,48 @@ final_check (const struct ebt_u_entry *entry,
  * Print line when listing rules by ebtables -L 
  */
 static void
-print (const struct ebt_u_entry *entry,
-       const struct ebt_entry_match *match)
+print(const struct ebt_u_entry *entry, const struct ebt_entry_match *match)
 {
 	struct ebt_vlan_info *vlaninfo =
 	    (struct ebt_vlan_info *) match->data;
 
+	char ethertype_name[21];
 	/*
 	 * Print VLAN ID if they are specified 
 	 */
-	if (GET_BITMASK (EBT_VLAN_ID)) {
-		printf ("--%s %s%d ",
-			opts[VLAN_ID].name,
-			INV_FLAG (EBT_VLAN_ID), vlaninfo->id);
+	if (GET_BITMASK(EBT_VLAN_ID)) {
+		printf("--%s %s%d ",
+		       opts[VLAN_ID].name,
+		       INV_FLAG(EBT_VLAN_ID), vlaninfo->id);
 	}
 	/*
 	 * Print user priority if they are specified 
 	 */
-	if (GET_BITMASK (EBT_VLAN_PRIO)) {
-		printf ("--%s %s%d ",
-			opts[VLAN_PRIO].name,
-			INV_FLAG (EBT_VLAN_PRIO), vlaninfo->prio);
+	if (GET_BITMASK(EBT_VLAN_PRIO)) {
+		printf("--%s %s%d ",
+		       opts[VLAN_PRIO].name,
+		       INV_FLAG(EBT_VLAN_PRIO), vlaninfo->prio);
 	}
 	/*
 	 * Print encapsulated frame type if they are specified 
 	 */
-	if (GET_BITMASK (EBT_VLAN_ENCAP)) {
-		struct ethertypeent *ent;
-
-		printf ("--%s %s",
-			opts[VLAN_ENCAP].name, INV_FLAG (EBT_VLAN_ENCAP));
-		ent = getethertypebynumber(ntohs(vlaninfo->encap));
-		if (!ent)
-			printf ("%2.4X ", ntohs (vlaninfo->encap));
-		else
-			printf ("%s ", ent->e_name);
+	if (GET_BITMASK(EBT_VLAN_ENCAP)) {
+		printf("--%s %s",
+		       opts[VLAN_ENCAP].name, INV_FLAG(EBT_VLAN_ENCAP));
+		bzero(ethertype_name, 21);
+		ethent = getethertypebynumber(ntohs(vlaninfo->encap));
+		if (ethent != NULL) {
+			printf("%s ", ethent->e_name);
+		} else {
+			printf("%4.4X ", ntohs(vlaninfo->encap));
+		}
 	}
 }
 
 
 static int
-compare (const struct ebt_entry_match *vlan1,
-	 const struct ebt_entry_match *vlan2)
+compare(const struct ebt_entry_match *vlan1,
+	const struct ebt_entry_match *vlan2)
 {
 	struct ebt_vlan_info *vlaninfo1 =
 	    (struct ebt_vlan_info *) vlan1->data;
@@ -336,12 +304,13 @@ compare (const struct ebt_entry_match *vlan1,
 		if (vlaninfo1->encap != vlaninfo2->encap)
 			return 0;
 	};
+
 	return 1;
 }
 
 static struct ebt_u_match vlan_match = {
 	EBT_VLAN_MATCH,
-	sizeof (struct ebt_vlan_info),
+	sizeof(struct ebt_vlan_info),
 	print_help,
 	init,
 	parse,
@@ -351,8 +320,8 @@ static struct ebt_u_match vlan_match = {
 	opts
 };
 
-static void _init (void) __attribute__ ((constructor));
-static void _init (void)
+static void _init(void) __attribute__ ((constructor));
+static void _init(void)
 {
-	register_match (&vlan_match);
+	register_match(&vlan_match);
 }
