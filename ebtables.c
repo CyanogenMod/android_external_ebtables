@@ -225,6 +225,10 @@ static void list_em(struct ebt_u_entries *entries)
 			printf("ebtables -t %s -A %s ",
 			   replace.name, entries->name);
 
+		/* The standard target's print() uses this to find out
+		 * the name of a udc */
+		hlp->replace = &replace;
+
 		/*
 		 * Don't print anything about the protocol if no protocol was
 		 * specified, obviously this means any protocol will do.
