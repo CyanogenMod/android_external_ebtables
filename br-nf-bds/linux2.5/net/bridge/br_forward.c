@@ -5,7 +5,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_forward.c,v 1.5 2002/10/19 14:27:20 bdschuym Exp $
+ *	$Id: br_forward.c,v 1.6 2002/10/21 17:34:03 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -32,12 +32,11 @@ static inline int should_deliver(struct net_bridge_port *p, struct sk_buff *skb)
 
 int br_dev_queue_push_xmit(struct sk_buff *skb)
 {
-	skb_push(skb, ETH_HLEN);
-
 #ifdef CONFIG_NETFILTER
-	if (skb->nf_bridge->mask & BRNF_COPY_HEADER)
+	if (skb->nf_bridge)
 		memcpy(skb->data - 16, skb->nf_bridge->hh, 16);
 #endif
+	skb_push(skb, ETH_HLEN);
 
 	dev_queue_xmit(skb);
 
@@ -58,13 +57,7 @@ static void __br_deliver(struct net_bridge_port *to, struct sk_buff *skb)
 #ifdef CONFIG_NETFILTER_DEBUG
 	skb->nf_debug = 0;
 #endif
-#ifdef CONFIG_NETFILTER
-	/* Used by br_netfilter.c */
-	if (!skb->nf_bridge && nf_bridge_alloc(skb) == NULL)
-		kfree_skb(skb);
-	else
-#endif
-		NF_HOOK(PF_BRIDGE, NF_BR_LOCAL_OUT, skb, NULL, skb->dev,
+	NF_HOOK(PF_BRIDGE, NF_BR_LOCAL_OUT, skb, NULL, skb->dev,
 			br_forward_finish);
 }
 
