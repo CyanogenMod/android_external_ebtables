@@ -12,6 +12,7 @@
 #include <linux/netfilter_bridge/ebtables.h>
 #include <linux/netfilter_bridge/ebt_arpreply.h>
 #include <linux/if_arp.h>
+#include <net/arp.h>
 #include <linux/module.h>
 
 static int ebt_target_reply(struct sk_buff **pskb, unsigned int hooknr,
