@@ -32,8 +32,7 @@ static void get_sockfd()
 		sockfd = socket(AF_INET, SOCK_RAW, PF_INET);
 		if (sockfd < 0)
 			print_error("Problem getting a socket, "
-			   "you probably don't have the right "
-			   "permissions");
+			   "do you have the right permissions?");
 	}
 }
 
@@ -424,10 +423,10 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 		new->bitmask &= ~EBT_ENTRY_OR_ENTRIES;
 		new->invflags = e->invflags;
 		new->ethproto = e->ethproto;
-		strcmp(new->in, e->in);
-		strcmp(new->out, e->out);
-		strcmp(new->logical_in, e->logical_in);
-		strcmp(new->logical_out, e->logical_out);
+		strcpy(new->in, e->in);
+		strcpy(new->out, e->out);
+		strcpy(new->logical_in, e->logical_in);
+		strcpy(new->logical_out, e->logical_out);
 		memcpy(new->sourcemac, e->sourcemac, sizeof(new->sourcemac));
 		memcpy(new->sourcemsk, e->sourcemsk, sizeof(new->sourcemsk));
 		memcpy(new->destmac, e->destmac, sizeof(new->destmac));
