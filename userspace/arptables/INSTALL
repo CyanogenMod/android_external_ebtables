@@ -1,0 +1,8 @@
+Install:
+%make
+%make install
+
+Options:
+KERNEL_2_4=y
+	Add this option if you are compiling for a 2.4 kernel. The 2.4 and
+	2.6 arptables kernel code are incompatible.
