@@ -149,4 +149,6 @@ extern int flush_entries(const arpt_chainlabel chain, int verbose,
 			arptc_handle_t *handle);
 extern int for_each_chain(int (*fn)(const arpt_chainlabel, int, arptc_handle_t *),
 		int verbose, int builtinstoo, arptc_handle_t *handle);
+struct in_addr *parse_hostnetwork(const char *name, unsigned int *naddrs);
+void print_mac(const unsigned char *mac, int l);
 #endif /*_ARPTABLES_USER_H*/
