@@ -4,7 +4,7 @@ PROGNAME:=ebtables
 PROGVERSION:=2.0.5
 PROGDATE:=July\ 2003
 
-MANDIR?=/usr/local/man
+MANDIR?=$(DESTDIR)/usr/local/man
 CFLAGS:=-Wall -Wunused
 CC:=gcc
 
@@ -18,10 +18,10 @@ OBJECTS:=getethertype.o ebtables.o communication.o $(EXT_OBJS)
 
 KERNEL_INCLUDES?=include/
 
-ETHERTYPESPATH?=/etc
+ETHERTYPESPATH?=$(DESTDIR)/etc
 ETHERTYPESFILE:=$(ETHERTYPESPATH)/ethertypes
 
-BINPATH?=/sbin/
+BINPATH?=$(DESTDIR)/sbin/
 BINFILE:=$(BINPATH)ebtables
 
 PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
