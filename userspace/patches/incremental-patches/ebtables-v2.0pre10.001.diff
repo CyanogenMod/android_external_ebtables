@@ -24,7 +24,7 @@
  clean:
  	rm -f ebtables
 --- ebtables-v2.0pre9/ebtables.c	Sat Jun 29 11:41:57 2002
-+++ ebtables-v2.0pre10.001/ebtables.c	Mon Jul 15 22:14:59 2002
++++ ebtables-v2.0pre10.001/ebtables.c	Tue Jul 16 20:36:50 2002
 @@ -62,11 +62,17 @@
  };
  
@@ -303,7 +303,7 @@
  
  	// getopt saves the day
  	while ((c = getopt_long(argc, argv,
-@@ -2013,8 +2064,78 @@
+@@ -2013,8 +2064,90 @@
  			allowbc = *optarg;
  			break;
  
@@ -352,7 +352,13 @@
 +			strcpy(replace.filename, optarg);
 +			// get the information from the file
 +			get_table(&replace);
-+			replace.num_counters = 0;
++                        if (replace.nentries) {
++                                counterchanges = (unsigned short *)
++                                   malloc(sizeof(unsigned short) * (replace.nentries + 1));
++				for (i = 0; i < replace.nentries; i++)
++                                        counterchanges[i] = CNT_NORM;
++                                counterchanges[i] = CNT_END;
++                        }
 +			free(replace.filename);
 +			replace.filename = NULL;
 +			break;
@@ -371,7 +377,13 @@
 +					print_error("can't initialize ebtables "
 +					"table %s", replace.name);
 +			}
-+			replace.num_counters = 0;
++			if (replace.nentries) {
++				counterchanges = (unsigned short *)
++				   malloc(sizeof(unsigned short) * (replace.nentries + 1));
++				for (i = 0; i < replace.nentries; i++)
++					counterchanges[i] = CNT_NORM;
++				counterchanges[i] = CNT_END;
++			}
 +			if (c == 11)
 +				break;
 +		case 9 : // atomic
@@ -383,7 +395,7 @@
  			// is it a target option?
  			t = (struct ebt_u_target *)new_entry->t;
  			if ((t->parse(c - t->option_offset, argv, argc,
-@@ -2142,7 +2263,8 @@
+@@ -2142,7 +2275,8 @@
  		}
  	} else if (replace.command == 'D')
  		delete_rule(rule_nr);
