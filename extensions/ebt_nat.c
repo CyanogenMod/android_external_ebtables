@@ -88,7 +88,7 @@ static int parse_s(int c, char **argv, int argc,
 		check_option(flags, OPT_SNAT_TARGET);
 		for (i = 0; i < NUM_STANDARD_TARGETS; i++)
 			if (!strcmp(optarg, standard_targets[i])) {
-				natinfo->target = i;
+				natinfo->target = -i - 1;
 				break;
 			}
 		if (i == NUM_STANDARD_TARGETS)
@@ -123,7 +123,7 @@ static int parse_d(int c, char **argv, int argc,
 		check_option(flags, OPT_DNAT_TARGET);
 		for (i = 0; i < NUM_STANDARD_TARGETS; i++)
 			if (!strcmp(optarg, standard_targets[i])) {
-				natinfo->target = i;
+				natinfo->target = -i - 1;
 				break;
 			}
 		if (i == NUM_STANDARD_TARGETS)
@@ -162,7 +162,7 @@ static void print_s(const struct ebt_u_entry *entry,
 
 	printf("--to-src ");
 	printf("%s", ether_ntoa((struct ether_addr *)natinfo->mac));
-	printf(" --snat-target %s", standard_targets[natinfo->target]);
+	printf(" --snat-target %s", standard_targets[-natinfo->target - 1]);
 }
 
 static void print_d(const struct ebt_u_entry *entry,
@@ -172,7 +172,7 @@ static void print_d(const struct ebt_u_entry *entry,
 
 	printf("--to-dst ");
 	printf("%s", ether_ntoa((struct ether_addr *)natinfo->mac));
-	printf(" --dnat-target %s", standard_targets[natinfo->target]);
+	printf(" --dnat-target %s", standard_targets[-natinfo->target - 1]);
 }
 
 static int compare(const struct ebt_entry_target *t1,
