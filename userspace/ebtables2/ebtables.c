@@ -1081,7 +1081,7 @@ static int check_rule_exists(int rule_nr)
 	/*
 	 * handle '-D chain rulenr' command
 	 */
-	if (rule_nr != -1) {
+	if (rule_nr != 0) {
 		if (rule_nr > entries->nentries)
 			return -1;
 		/*
@@ -1186,12 +1186,12 @@ static void add_rule(int rule_nr)
 	struct ebt_u_watcher_list *w_l;
 	struct ebt_u_entries *entries = to_chain(), *entries2;
 
-	if (rule_nr != -1) { /* command -I */
-		if (--rule_nr > entries->nentries)
-			print_error("rule nr too high: %d > %d", rule_nr + 1,
-			   entries->nentries + 1);
-	} else
-		rule_nr = entries->nentries;
+	if (rule_nr <= 0)
+		rule_nr += entries->nentries;
+	else
+		rule_nr--;
+	if (rule_nr > entries->nentries || rule_nr < 0)
+		print_error("The specified rule number is incorrect");
 	/*
 	 * we're adding one rule
 	 */
@@ -1282,6 +1282,16 @@ static void delete_rule(int begin, int end)
 	struct ebt_u_entry **u_e, *u_e2;
 	struct ebt_u_entries *entries = to_chain(), *entries2;
 
+	if (begin < 0) {
+		if (begin < entries->nentries)
+			goto rule_error;
+		begin += entries->nentries + 1;
+	}
+	if (end < 0)
+		end += entries->nentries + 1;
+	if (begin > end)
+rule_error:
+		print_error("Sorry, wrong rule numbers");
 	if ((begin = check_rule_exists(begin)) == -1 ||
 	    (end = check_rule_exists(end)) == -1)
 		print_error("Sorry, rule does not exist");
@@ -1535,24 +1545,22 @@ static int parse_delete_rule(const char *argv, int *rule_nr, int *rule_nr_end)
 	if (colon) {
 		*colon = '\0';
 		if (*(colon + 1) == '\0')
-			*rule_nr_end = -1;
+			*rule_nr_end = -1; /* until the last rule */
 		else {
 			*rule_nr_end = strtol(colon + 1, &buffer, 10);
-			if (*buffer != '\0' || *rule_nr_end < 0)
+			if (*buffer != '\0' || *rule_nr_end == 0)
 				return -1;
 		}
 	}
 	if (colon == argv)
-		*rule_nr = 1;
+		*rule_nr = 1; /* beginning with the first rule */
 	else {
 		*rule_nr = strtol(argv, &buffer, 10);
-		if (*buffer != '\0' || *rule_nr < 0)
+		if (*buffer != '\0' || *rule_nr == 0)
 			return -1;
 	}
 	if (!colon)
 		*rule_nr_end = *rule_nr;
-	if (*rule_nr_end != -1 && *rule_nr > *rule_nr_end)
-		return -1;
 	return 0;
 }
 
@@ -1620,8 +1628,8 @@ int main(int argc, char *argv[])
 	 */
 	int zerochain = -1;
 	int policy = 0;
-	int rule_nr = -1; /* used for -[D,I] */
-	int rule_nr_end = -1; /* used for -I */
+	int rule_nr = 0; /* used for -[D,I] */
+	int rule_nr_end = 0; /* used for -I */
 	struct ebt_u_target *t;
 	struct ebt_u_match *m;
 	struct ebt_u_watcher *w;
@@ -1758,7 +1766,8 @@ int main(int argc, char *argv[])
 			}
 
 			if (c == 'D' && optind < argc &&
-			    argv[optind][0] != '-') {
+			    (argv[optind][0] != '-' ||
+			    (argv[optind][1] >= '0' && argv[optind][1] <= '9'))) {
 				if (parse_delete_rule(argv[optind],
 				    &rule_nr, &rule_nr_end))
 					print_error("Problem with the "
@@ -1766,11 +1775,12 @@ int main(int argc, char *argv[])
 				optind++;
 			}
 			if (c == 'I') {
-				if (optind >= argc || argv[optind][0] == '-')
+				if (optind >= argc || (argv[optind][0] == '-' &&
+				    (argv[optind][1] < '0' || argv[optind][1] > '9')))
 					print_error("No rulenr for -I"
 					            " specified");
 				rule_nr = strtol(argv[optind], &buffer, 10);
-				if (*buffer != '\0' || rule_nr < 0)
+				if (*buffer != '\0')
 					print_error("Problem with the "
 					            "specified rule number");
 				optind++;
@@ -2320,11 +2330,8 @@ check_extension:
 				e = e->next;
 			}
 		}
-	} else if (replace.command == 'D') {
-		if (rule_nr != -1 && rule_nr_end == -1)
-			rule_nr_end = entries->nentries;
+	} else if (replace.command == 'D')
 		delete_rule(rule_nr, rule_nr_end);
-	}
 	/*
 	 * commands -N, -E, -X, --atomic-commit, --atomic-commit, --atomic-save,
 	 * --init-table fall through
