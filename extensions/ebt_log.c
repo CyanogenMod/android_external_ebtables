@@ -176,15 +176,15 @@ static int compare(const struct ebt_entry_watcher *w1,
 
 static struct ebt_u_watcher log_watcher =
 {
-	EBT_LOG_WATCHER,
-	sizeof(struct ebt_log_info),
-	print_help,
-	init,
-	parse,
-	final_check,
-	print,
-	compare,
-	opts
+	.name		= EBT_LOG_WATCHER,
+	.size		= sizeof(struct ebt_log_info),
+	.help		= print_help,
+	.init		= init,
+	.parse		= parse,
+	.final_check	= final_check,
+	.print		= print,
+	.compare	= compare,
+	.extra_ops	= opts,
 };
 
 static void _init(void) __attribute__ ((constructor));

@@ -307,15 +307,15 @@ compare(const struct ebt_entry_match *vlan1,
 }
 
 static struct ebt_u_match vlan_match = {
-	EBT_VLAN_MATCH,
-	sizeof(struct ebt_vlan_info),
-	print_help,
-	init,
-	parse,
-	final_check,
-	print,
-	compare,
-	opts
+	.name		= EBT_VLAN_MATCH,
+	.size		= sizeof(struct ebt_vlan_info),
+	.help		= print_help,
+	.init		= init,
+	.parse		= parse,
+	.final_check	= final_check,
+	.print		= print,
+	.compare	= compare,
+	.extra_ops	= opts,
 };
 
 static void _init(void) __attribute__ ((constructor));
