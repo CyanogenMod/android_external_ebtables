@@ -703,7 +703,9 @@ static void check_for_loops()
 		if (!(replace.valid_hooks & (1 << i)))
 			continue;
 		entries = nr_to_chain(i);
-		entries->hook_mask = (1 << i);
+		// (1 << NF_BR_NUMHOOKS) implies it's a standard chain
+		// (usefull in the final_check() funtions)
+		entries->hook_mask = (1 << i) | (1 << NF_BR_NUMHOOKS);
 		chain_nr = i;
 
 		e = entries->entries;
