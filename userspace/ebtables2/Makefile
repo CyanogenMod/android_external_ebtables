@@ -82,4 +82,9 @@ release:
 	install -m 0644 -o root -g root \
 		include/ebtables.h include/linux/netfilter_bridge/
 	make clean
+	touch *
+	touch extensions/*
+	touch include/*
+	touch include/linux/*
+	touch include/linux/netfilter_bridge/*
 	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz
