@@ -1473,7 +1473,7 @@ static void get_kernel_table(const char *modprobe)
 // the main thing
 int main(int argc, char *argv[])
 {
-	char *buffer, allowbc = 'n';
+	char *buffer;
 	int c, i;
 	// this special one for the -Z option (we can have -Z <this> -L <that>)
 	int zerochain = -1;
