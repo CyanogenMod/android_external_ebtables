@@ -155,6 +155,19 @@ static void merge_target(struct ebt_u_target *t)
 	   (ebt_options, t->extra_ops, &(t->option_offset));
 }
 
+/* be backwards compatible, so don't use '+' in kernel */
+#define IF_WILDCARD 1
+static void print_iface(const char *iface)
+{
+	char *c;
+
+	if ((c = strchr(iface, IF_WILDCARD)))
+		*c = '+';
+	printf("%s ", iface);
+	if (c)
+		*c = IF_WILDCARD;
+}
+
 /*
  * we use replace.flags, so we can't use the following values:
  * 0x01 == OPT_COMMAND, 0x02 == OPT_TABLE, 0x100 == OPT_ZERO
@@ -251,25 +264,25 @@ static void list_em(struct ebt_u_entries *entries)
 			printf("-i ");
 			if (hlp->invflags & EBT_IIN)
 				printf("! ");
-			printf("%s ", hlp->in);
+			print_iface(hlp->in);
 		}
 		if (hlp->logical_in[0] != '\0') {
 			printf("--logical-in ");
 			if (hlp->invflags & EBT_ILOGICALIN)
 				printf("! ");
-			printf("%s ", hlp->logical_in);
+			print_iface(hlp->logical_in);
 		}
 		if (hlp->logical_out[0] != '\0') {
 			printf("--logical-out ");
 			if (hlp->invflags & EBT_ILOGICALOUT)
 				printf("! ");
-			printf("%s ", hlp->logical_out);
+			print_iface(hlp->logical_out);
 		}
 		if (hlp->out[0] != '\0') {
 			printf("-o ");
 			if (hlp->invflags & EBT_IOUT)
 				printf("! ");
-			printf("%s ", hlp->out);
+			print_iface(hlp->out);
 		}
 
 		m_l = hlp->m_list;
@@ -440,6 +453,19 @@ static int parse_delete_rule(const char *argv, int *rule_nr, int *rule_nr_end)
 	if (!colon)
 		*rule_nr_end = *rule_nr;
 	return 0;
+}
+
+static void parse_iface(char *iface, char *option)
+{
+	char *c;
+
+	if ((c = strchr(iface, '+'))) {
+		if (*(c + 1) != '\0') {
+			ebt_print_error("Spurious characters after '+' "
+			                "wildcard for %s", option);
+		} else
+			*c = IF_WILDCARD;
+	}
 }
 
 #define print_if_l_error ebt_print_error("Interface name length must be less " \
@@ -773,6 +799,7 @@ handle_P:
 				if (strlen(argv[optind - 1]) >= IFNAMSIZ)
 					print_if_l_error;
 				strcpy(new_entry->in, argv[optind - 1]);
+				parse_iface(new_entry->in, "-i");
 				break;
 			}
 			if (c == 2) {
@@ -792,6 +819,8 @@ handle_P:
 				if (strlen(argv[optind - 1]) >= IFNAMSIZ)
 					print_if_l_error;
 				strcpy(new_entry->logical_in, argv[optind - 1]);
+				parse_iface(new_entry->logical_in,
+				            "--logical-in");
 				break;
 			}
 			if (c == 'o') {
@@ -810,6 +839,7 @@ handle_P:
 				if (strlen(argv[optind - 1]) >= IFNAMSIZ)
 					print_if_l_error;
 				strcpy(new_entry->out, argv[optind - 1]);
+				parse_iface(new_entry->out, "-o");
 				break;
 			}
 			if (c == 3) {
@@ -831,6 +861,8 @@ handle_P:
 					print_if_l_error;
 				strcpy(new_entry->logical_out,
 				   argv[optind - 1]);
+				parse_iface(new_entry->logical_out,
+				         "--logical-out");
 				break;
 			}
 			if (c == 'j') {
