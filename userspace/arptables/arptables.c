@@ -1781,20 +1781,24 @@ int do_command(int argc, char *argv[], char **table, arptc_handle_t *handle)
 	/* first figure out if this is a 2.6 or a 2.4 kernel */
 	*handle = arptc_init(*table);
 
+        /* 2.4 kernel: NF_ARP_NUMHOOKS = 2 */
 	if (!*handle) {
-		arptables_insmod("arp_tables", modprobe);
+		RUNTIME_NF_ARP_NUMHOOKS = 2;
 		*handle = arptc_init(*table);
 		if (!*handle) {
-		        /* 2.4 kernel: NF_ARP_NUMHOOKS = 2 */
-			RUNTIME_NF_ARP_NUMHOOKS = 2;
+			arptables_insmod("arp_tables", modprobe);
+			RUNTIME_NF_ARP_NUMHOOKS = 3;
 			*handle = arptc_init(*table);
 			if (!*handle) {
-				exit_error(VERSION_PROBLEM,
-				"can't initialize arptables table `%s': %s",
-				*table, arptc_strerror(errno));
+				RUNTIME_NF_ARP_NUMHOOKS = 2;
+				*handle = arptc_init(*table);
 			}
 		}
         }
+	if (!*handle)
+		exit_error(VERSION_PROBLEM,
+			"can't initialize arptables table `%s': %s",
+			*table, arptc_strerror(errno));
 
 	memset(&fw, 0, sizeof(fw));
 	opts = original_opts;
