@@ -7,12 +7,9 @@
 # 20 August 2002: deleted br_db
 # 18 September 2002: added br_forward.c
 
-export FROM=linux-2.4.20-pre5
-export TO=linux-2.4.20-pre5-ebtables
-export FILE=ebtables-v2.0_vs_2.4.20-pre5.diff
-
-echo "ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002" >$FILE
-echo >>$FILE
+export FROM=linux-2.4.21
+export TO=linux-2.4.21-ebt-brnf-2
+export FILE=ebtables-brnf-2_vs_2.4.21.diff
 
 diff -urNp --exclude TAGS $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h >> $FILE
 diff -urNp --exclude TAGS $FROM/include/linux/if_bridge.h $TO/include/linux/if_bridge.h >> $FILE
@@ -32,8 +29,11 @@ diff -urN /dev/null $TO/net/bridge/netfilter/Config.in >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_filter.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_nat.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_broute.c >> $FILE
+diff -urN /dev/null $TO/net/bridge/netfilter/ebt_802_3.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_mark.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_mark_m.c >> $FILE
+diff -urN /dev/null $TO/net/bridge/netfilter/ebt_pkttype.c >> $FILE
+diff -urN /dev/null $TO/net/bridge/netfilter/ebt_stp.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_redirect.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_arp.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_ip.c >> $FILE
@@ -43,8 +43,11 @@ diff -urN /dev/null $TO/net/bridge/netfilter/ebt_snat.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_dnat.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtables.c >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebtables.h >> $FILE
+diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_802_3.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_arp.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_ip.h >> $FILE
+diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_pkttype.h >> $FILE
+diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_stp.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_vlan.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_log.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_nat.h >> $FILE
