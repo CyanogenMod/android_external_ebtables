@@ -1436,13 +1436,17 @@ static void check_for_references(int chain_nr)
 	}
 }
 
+static int invert = 0;
 int check_inverse(const char option[])
 {
 	if (strcmp(option, "!") == 0) {
+		if (invert == 1)
+			print_error("double use of '!' not allowed");
 		optind++;
+		invert = 1;
 		return 1;
 	}
-	return 0;
+	return invert;
 }
 
 void check_option(unsigned int *flags, unsigned int mask)
@@ -1498,6 +1502,8 @@ int main(int argc, char *argv[])
 	struct ebt_u_watcher_list *w_l;
 	struct ebt_u_entries *entries;
 	const char *modprobe = NULL;
+
+	opterr = 0;
 
 	// initialize the table name, OPT_ flags, selected hook and command
 	strcpy(replace.name, "filter");
@@ -1993,7 +1999,14 @@ int main(int argc, char *argv[])
 			replace.filename = (char *)malloc(strlen(optarg) + 1);
 			strcpy(replace.filename, optarg);
 			break;
-
+		case 1 :
+			if (!strcmp(optarg, "!"))
+				check_inverse(optarg);
+			else
+				print_error("Bad argument : %s", optarg);
+			// check_inverse() did optind++
+			optind--;
+			continue;
 		default:
 			// is it a target option?
 			t = (struct ebt_u_target *)new_entry->t;
@@ -2028,6 +2041,7 @@ check_extension:
 			   replace.command != 'D')
 				print_error("Extensions only for -A, -I and -D");
 		}
+		invert = 0;
 	}
 
 	if ( !table && !(table = find_table(replace.name)) )
