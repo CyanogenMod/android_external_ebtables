@@ -591,6 +591,26 @@ The destination port or port range for ip protocols 6 (TCP) and
 17 (UDP). The flag
 .B --ip-dport
 is an alias for this option.
+<<<<<<< ebtables.8
+.SS limit
+This module matches at a limited rate using a token bucket filter.
+A rule using this extension will match until this limit is reached.
+It can be used with the
+.B --log
+watcher
+to give limited logging, for example. Its use is the same as the limit
+match of iptables.
+.TP
+.BR "--limit " "[\fIvalue\fP]"
+Maximum average matching rate: specified as a number, with an optional
+`/second', `/minute', `/hour', or `/day' suffix; the default is 3/hour.
+.TP
+.BR "--limit-burst " "[\fInumber\fP]"
+Maximum initial number of packets to match: this number gets recharged by
+one every time the limit specified above is not reached, up to this
+number; the default is 5.
+.SS pkttype
+=======
 .SS limit
 This module matches at a limited rate using a token bucket filter.
 A rule using this extension will match until this limit is reached.
@@ -608,15 +628,20 @@ Maximum initial number of packets to match: this number gets recharged by
 one every time the limit specified above is not reached, up to this
 number; the default is 5.
 .SS pkttype
+>>>>>>> 1.39
 .SS mark_m
 .TP
 .BR "--mark " "[!] [\fIvalue\fP][/\fImask\fP]"
 Matches frames with the given unsigned mark value. If a mark value and
 mask is specified, the logical AND of the mark value of the frame and
-the user-specified mask is taken before comparing it with the user-specified
-mark value. If only a mask is specified (start with '/') the logical AND
-of the mark value of the frame and the user-specified mark is taken and
-the result is compared with zero.
+the user-specified mark mask is taken before comparing it with the
+user-specified mark value. When only a mark value is specified, the packet
+only matches when the mark value of the frame equals the user-specified
+mark value. If only a mark mask is specified (start with '/') the logical
+AND of the mark value of the frame and the user-specified mark mask is
+taken and the frame matches when the result of this logical AND is
+non-zero. Only specifying a mark mask is useful to match multiple mark
+values.
 .SS pkttype
 .TP
 .BR "--pkttype-type " "[!] \fItype\fP"
@@ -831,7 +856,7 @@ if the br-nf code is compiled into the kernel. Both put the marking at the
 same place. So, you can consider this fact as a feature, or as something to
 watch out for.
 .TP
-.BR "--set-mark " "\fIvalue\fP"
+.BR "--mark-set " "\fIvalue\fP"
 .br
 Mark the frame with the specified unsigned value.
 .TP
