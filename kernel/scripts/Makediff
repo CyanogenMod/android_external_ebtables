@@ -6,10 +6,11 @@
 #               deleted netsyms
 # 20 August 2002: deleted br_db
 # 18 September 2002: added br_forward.c
+# 3 September 2003: this file is now used for the ebt-brnf patch
 
-export FROM=linux-2.4.21
-export TO=linux-2.4.21-ebt-brnf-2
-export FILE=ebtables-brnf-2_vs_2.4.21.diff
+export FROM=linux-2.4.22
+export TO=linux-2.4.22-ebt-brnf
+export FILE=ebtables-brnf_vs_2.4.22.diff
 
 diff -urNp --exclude TAGS $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h >> $FILE
 diff -urNp --exclude TAGS $FROM/include/linux/if_bridge.h $TO/include/linux/if_bridge.h >> $FILE
@@ -29,6 +30,7 @@ diff -urN /dev/null $TO/net/bridge/netfilter/Config.in >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_filter.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_nat.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtable_broute.c >> $FILE
+diff -urN /dev/null $TO/net/bridge/netfilter/ebt_arpreply.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_802_3.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_mark.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_mark_m.c >> $FILE
@@ -43,6 +45,7 @@ diff -urN /dev/null $TO/net/bridge/netfilter/ebt_snat.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebt_dnat.c >> $FILE
 diff -urN /dev/null $TO/net/bridge/netfilter/ebtables.c >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebtables.h >> $FILE
+diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_arpreply.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_802_3.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_arp.h >> $FILE
 diff -urN /dev/null $TO/include/linux/netfilter_bridge/ebt_ip.h >> $FILE
