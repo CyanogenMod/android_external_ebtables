@@ -154,6 +154,8 @@ static struct option original_opts[] = {
 	{ 0 }
 };
 
+int NF_ARP_NUMHOOKS = 3;
+
 /*#ifndef __OPTIMIZE__
 struct arpt_entry_target *
 arpt_get_target(struct arpt_entry *e)
@@ -1775,6 +1777,23 @@ int do_command(int argc, char *argv[], char **table, arptc_handle_t *handle)
 	const char *jumpto = "";
 	char *protocol = NULL;
 	const char *modprobe = NULL;
+
+	/* first figure out if this is a 2.6 or a 2.4 kernel */
+	*handle = arptc_init(*table);
+
+	if (!*handle) {
+		arptables_insmod("arp_tables", modprobe);
+		*handle = arptc_init(*table);
+		if (!*handle) {
+			NF_ARP_NUMHOOKS = 2;
+			*handle = arptc_init(*table);
+			if (!*handle) {
+				exit_error(VERSION_PROBLEM,
+				"can't initialize arptables table `%s': %s",
+				*table, arptc_strerror(errno));
+			}
+		}
+        }
 
 	memset(&fw, 0, sizeof(fw));
 	opts = original_opts;

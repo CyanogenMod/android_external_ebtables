@@ -115,6 +115,8 @@ struct arptables_target
 	unsigned int loaded; /* simulate loading so options are merged properly */
 };
 
+extern int NF_ARP_NUMHOOKS; /* boy, this is dirty */
+
 /* Your shared library should call one of these. */
 extern void register_match(struct arptables_match *me);
 extern void register_target(struct arptables_target *me);

@@ -51,7 +51,6 @@ typedef unsigned int socklen_t;
 #define GET_TARGET		arpt_get_target
 
 #define ERROR_TARGET		ARPT_ERROR_TARGET
-#define NUMHOOKS		NF_ARP_NUMHOOKS
 
 #define ARPT_CHAINLABEL		arpt_chainlabel
 
@@ -471,7 +470,7 @@ do_check(TC_HANDLE_T h, unsigned int line)
 
 	/* Overflows should be end of entry chains, and unconditional
            policy nodes. */
-	for (i = 0; i < NUMHOOKS; i++) {
+	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
 		STRUCT_ENTRY *e;
 		STRUCT_STANDARD_TARGET *t;
 

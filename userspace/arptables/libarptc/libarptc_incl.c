@@ -1,4 +1,4 @@
-/* Library which manipulates firewall rules.  Version $Revision: 1.3 $ */
+/* Library which manipulates firewall rules.  Version $Revision: 1.4 $ */
 
 /* Architecture of firewall rules is as follows:
  *
@@ -26,9 +26,7 @@ static const char *hooknames[] =
 {
 	[NF_ARP_IN]		"INPUT",
 	[NF_ARP_OUT]		"OUTPUT",
-#ifndef KERNEL_2_4
 	[NF_ARP_FORWARD]	"FORWARD",
-#endif
 };
 
 struct counter_map
@@ -236,6 +234,9 @@ TC_INIT(const char *tablename)
 		return NULL;
 
 	s = sizeof(info);
+	if (NF_ARP_NUMHOOKS == 2)
+		s -= 2 * sizeof(unsigned int);
+
 	if (strlen(tablename) >= TABLE_MAXNAMELEN) {
 		errno = EINVAL;
 		return NULL;
@@ -243,6 +244,13 @@ TC_INIT(const char *tablename)
 	strcpy(info.name, tablename);
 	if (getsockopt(sockfd, TC_IPPROTO, SO_GET_INFO, &info, &s) < 0)
 		return NULL;
+
+	if (NF_ARP_NUMHOOKS == 2) {
+		memmove(&(info.hook_entry[3]), &(info.hook_entry[2]),
+		5 * sizeof(unsigned int));
+		memmove(&(info.underflow[3]), &(info.underflow[2]),
+		2 * sizeof(unsigned int));
+	}
 
 	if ((h = alloc_handle(info.name, info.size, info.num_entries))
 	    == NULL)
@@ -323,7 +331,7 @@ is_hook_entry(STRUCT_ENTRY *e, TC_HANDLE_T h)
 {
 	unsigned int i;
 
-	for (i = 0; i < NUMHOOKS; i++) {
+	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
 		if ((h->info.valid_hooks & (1 << i))
 		    && get_entry(h, h->info.hook_entry[i]) == e)
 			return i+1;
@@ -395,7 +403,7 @@ static int populate_cache(TC_HANDLE_T h)
 	h->cache_num_builtins = 0;
 
 	/* Count builtins */
-	for (i = 0; i < NUMHOOKS; i++) {
+	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
 		if (h->info.valid_hooks & (1 << i))
 			h->cache_num_builtins++;
 	}
@@ -456,7 +464,7 @@ get_chain_end(const TC_HANDLE_T handle, unsigned int start)
 		e = get_entry(handle, off);
 
 		/* We hit an entry point. */
-		for (i = 0; i < NUMHOOKS; i++) {
+		for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
 			if ((handle->info.valid_hooks & (1 << i))
 			    && off == handle->info.hook_entry[i])
 				return last_off;
@@ -625,7 +633,7 @@ TC_BUILTIN(const char *chain, const TC_HANDLE_T handle)
 {
 	unsigned int i;
 
-	for (i = 0; i < NUMHOOKS; i++) {
+	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
 		if ((handle->info.valid_hooks & (1 << i))
 		    && handle->hooknames[i]
 		    && strcmp(handle->hooknames[i], chain) == 0)
@@ -710,7 +718,7 @@ insert_rules(unsigned int num_rules, unsigned int rules_size,
 	newinfo = (*handle)->info;
 
 	/* Fix up entry points. */
-	for (i = 0; i < NUMHOOKS; i++) {
+	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
 		/* Entry points to START of chain, so keep same if
                    inserting on at that point. */
 		if ((*handle)->info.hook_entry[i] > offset)
@@ -778,7 +786,7 @@ delete_rules(unsigned int num_rules, unsigned int rules_size,
 	}
 
 	/* Fix up entry points. */
-	for (i = 0; i < NUMHOOKS; i++) {
+	for (i = 0; i < NF_ARP_NUMHOOKS; i++) {
 		/* In practice, we never delete up to a hook entry,
 		   since the built-in chains are always first,
 		   so these two are never equal */
@@ -1578,6 +1586,7 @@ TC_COMMIT(TC_HANDLE_T *handle)
 	size_t counterlen
 		= sizeof(STRUCT_COUNTERS_INFO)
 		+ sizeof(STRUCT_COUNTERS) * (*handle)->new_number;
+	int sizeof_repl = sizeof(*repl);
 
 	CHECK(*handle);
 #if 0
@@ -1588,7 +1597,8 @@ TC_COMMIT(TC_HANDLE_T *handle)
 	if (!(*handle)->changed)
 		goto finished;
 
-	repl = malloc(sizeof(*repl) + (*handle)->entries.size);
+	/* allocate a bit more than needed for ease */
+	repl = malloc(2 * sizeof(*repl) + (*handle)->entries.size);
 	if (!repl) {
 		errno = ENOMEM;
 		return 0;
@@ -1624,12 +1634,27 @@ TC_COMMIT(TC_HANDLE_T *handle)
 	memcpy(repl->entries, (*handle)->entries.entrytable,
 	       (*handle)->entries.size);
 
+	if (NF_ARP_NUMHOOKS == 2) {
+		memmove(&(repl->underflow[2]), &(repl->underflow[3]),
+		((*handle)->entries.size) + sizeof(struct arpt_replace));
+		memmove(&(repl->hook_entry[2]), &(repl->hook_entry[3]),
+		((*handle)->entries.size) + sizeof(struct arpt_replace));
+		sizeof_repl -= 2 * sizeof(unsigned int);
+	}
+
 	if (setsockopt(sockfd, TC_IPPROTO, SO_SET_REPLACE, repl,
-		       sizeof(*repl) + (*handle)->entries.size) < 0) {
+		       sizeof_repl + (*handle)->entries.size) < 0) {
 		free(repl->counters);
 		free(repl);
 		free(newcounters);
 		return 0;
+	}
+
+	if (NF_ARP_NUMHOOKS == 2) {
+		memmove(&(repl->hook_entry[3]), &(repl->hook_entry[2]),
+		((*handle)->entries.size) + sizeof(struct arpt_replace));
+		memmove(&(repl->underflow[3]), &(repl->underflow[2]),
+		((*handle)->entries.size) + sizeof(struct arpt_replace));
 	}
 
 	/* Put counters back. */
