@@ -1,3 +1,7 @@
+20031102
+	Since last entry:
+	* <grzes_at_gnu.univ.gda.pl> added arpreply and among modules
+	* <tommy_at_home.tig-grr.com> added limit match
 20030724
 	* added (automatic) Sparc64 support, thanks to Michael Bellion and
 	  Thomas Heinz from hipac.org for providing a test-box.
