@@ -31,6 +31,7 @@
 #include <linux/netfilter_bridge/ebtables.h>
 #include <linux/br_db.h> // the database
 #include <netinet/in.h>
+#include <netinet/ether.h>
 #include <asm/types.h>
 #include "include/ebtables_u.h"
 
@@ -493,14 +494,12 @@ static void list_em(int hooknr)
 				printf("Broadcast");
 				goto endsrc;
 			}
-			for (j = 0; j < ETH_ALEN; j++)
-				printf("%02x%s", hlp->sourcemac[j],
-				   (j == ETH_ALEN - 1) ? "" : ":");
+			printf("%s", ether_ntoa((struct ether_addr *)
+			   hlp->sourcemac));
 			if (memcmp(hlp->sourcemsk, hlpmsk, 6)) {
 				printf("/");
-				for (j = 0; j < ETH_ALEN; j++)
-					printf("%02x%s", hlp->sourcemsk[j],
-					   (j == ETH_ALEN - 1) ? "" : ":");
+				printf("%s", ether_ntoa((struct ether_addr *)
+				   hlp->sourcemsk));
 			}
 endsrc:
 			printf(", ");
@@ -526,14 +525,12 @@ endsrc:
 				printf("Broadcast");
 				goto enddst;
 			}
-			for (j = 0; j < ETH_ALEN; j++)
-				printf("%02x%s", hlp->destmac[j],
-				   (j == ETH_ALEN - 1) ? "" : ":");
+			printf("%s", ether_ntoa((struct ether_addr *)
+			   hlp->destmac));
 			if (memcmp(hlp->destmsk, hlpmsk, 6)) {
 				printf("/");
-				for (j = 0; j < ETH_ALEN; j++)
-					printf("%02x%s", hlp->destmsk[j],
-					   (j == ETH_ALEN - 1) ? "" : ":");
+				printf("%s", ether_ntoa((struct ether_addr *)
+				   hlp->destmsk));
 			}
 enddst:
 			printf(", ");
@@ -1132,31 +1129,11 @@ int name_to_protocol(char *name)
 }
 
 // put the mac address into 6 (ETH_ALEN) bytes
-int getmac(char *from, char *to)
-{
-	int i, tmp;
-	char *buffer;
-
-	if (strlen(from) != 3 * ETH_ALEN - 1)
-		return -1;
-	for (i = 1; i < ETH_ALEN; i++) {
-		if (from[i*3 - 1] != ':')
-			return -1;
-		from[i*3 - 1] = '\0';
-	}
-	for (i = 0; i < ETH_ALEN; i++) {
-		tmp = strtol(from + i*3, &buffer, 16);
-		if (*buffer != '\0' || tmp > 255 || tmp < 0)
-			return -1;
-		to[i] = (unsigned char) tmp;
-	}
-	return 0;
-}
-
 int getmac_and_mask(char *from, char *to, char *mask)
 {
 	char *p;
 	int i;
+	struct ether_addr *addr;
 
 	if (strcasecmp(from, "Unicast") == 0) {
 		memcpy(to, mac_type_unicast, ETH_ALEN);
@@ -1175,12 +1152,14 @@ int getmac_and_mask(char *from, char *to, char *mask)
 	}
 	if ( (p = strrchr(from, '/')) != NULL) {
 		*p = '\0';
-		if (getmac(p + 1, mask))
+		if (!(addr = ether_aton(p + 1)))
 			return -1;
+		memcpy(mask, addr, ETH_ALEN);
 	} else
 		memset(mask, 0xff, ETH_ALEN);
-	if (getmac(from, to))
+	if (!(addr = ether_aton(from)))
 		return -1;
+	memcpy(to, addr, ETH_ALEN);
 	for (i = 0; i < ETH_ALEN; i++)
 		to[i] &= mask[i];
 	return 0;

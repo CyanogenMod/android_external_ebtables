@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/ether.h>
 #include <linux/netfilter_bridge/ebtables.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
@@ -74,13 +75,15 @@ static int parse_s(int c, char **argv, int argc,
 {
 	int i;
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)(*target)->data;
+	struct ether_addr *addr;
 
 	switch (c) {
 	case NAT_S:
 		check_option(flags, OPT_SNAT);
 		to_source_supplied = 1;
-		if (getmac(optarg, natinfo->mac))
+		if (!(addr = ether_aton(optarg)))
 			print_error("Problem with specified to-source mac");
+		memcpy(natinfo->mac, addr, ETH_ALEN);
 		break;
 	case NAT_S_TARGET:
 		check_option(flags, OPT_SNAT_TARGET);
@@ -106,14 +109,16 @@ static int parse_d(int c, char **argv, int argc,
 {
 	int i;
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)(*target)->data;
+	struct ether_addr *addr;
 
 	switch (c) {
 	case NAT_D:
 		check_option(flags, OPT_DNAT);
 		to_dest_supplied = 1;
-		if (getmac(optarg, natinfo->mac))
+		if (!(addr = ether_aton(optarg)))
 			print_error("Problem with specified "
 			            "to-destination mac");
+		memcpy(natinfo->mac, addr, ETH_ALEN);
 		break;
 	case NAT_D_TARGET:
 		check_option(flags, OPT_DNAT_TARGET);
@@ -155,12 +160,9 @@ static void print_s(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target)
 {
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
-	int i;
 
 	printf("snat - to: ");
-	for (i = 0; i < ETH_ALEN; i++)
-		printf("%02x%s",
-		   natinfo->mac[i], (i == ETH_ALEN - 1) ? "" : ":");
+	printf("%s", ether_ntoa((struct ether_addr *)natinfo->mac));
 	printf(" --snat-target %s", standard_targets[natinfo->target]);
 }
 
@@ -168,12 +170,9 @@ static void print_d(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target)
 {
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
-	int i;
 
 	printf("dnat - to: ");
-	for (i = 0; i < ETH_ALEN; i++)
-		printf("%02x%s",
-		   natinfo->mac[i], (i == ETH_ALEN - 1) ? "" : ":");
+	printf("%s", ether_ntoa((struct ether_addr *)natinfo->mac));
 	printf(" --dnat-target %s", standard_targets[natinfo->target]);
 }
 
