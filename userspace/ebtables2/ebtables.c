@@ -88,6 +88,9 @@ static struct option ebt_original_options[] = {
 	{ "dst"           , required_argument, 0, 'd' },
 	{ "table"         , required_argument, 0, 't' },
 	{ "modprobe"      , required_argument, 0, 'M' },
+	{ "new-chain"     , required_argument, 0, 'N' },
+	{ "rename-chain"  , required_argument, 0, 'E' },
+	{ "delete-chain"  , required_argument, 0, 'X' },
 	{ 0 }
 };
 
@@ -662,7 +665,7 @@ enddst:
 	}
 }
 
-static struct ebt_u_entries *nr_to_chain(int nr)
+struct ebt_u_entries *nr_to_chain(int nr)
 {
 	if (nr == -1)
 		return NULL;
@@ -673,8 +676,10 @@ static struct ebt_u_entries *nr_to_chain(int nr)
 		struct ebt_u_chain_list *cl = replace.udc;
 
 		i = nr - NF_BR_NUMHOOKS;
-		while (i > 0 && cl)
+		while (i > 0 && cl) {
 			cl = cl->next;
+			i--;
+		}
 		if (cl)
 			return cl->udc;
 		else
@@ -734,23 +739,21 @@ void check_for_loops()
 			verdict = ((struct ebt_standard_target *)(e->t))->verdict;
 			if (verdict < 0)
 				goto letscontinue;
-			// no jumping to a standard chain
-			if (verdict < NF_BR_NUMHOOKS)
-				goto error;
-			entries2 = nr_to_chain(verdict);
+			entries2 = nr_to_chain(verdict + NF_BR_NUMHOOKS);
 			entries2->hook_mask |= entries->hook_mask;
 			// now see if we've been here before
 			for (k = 0; k < sp; k++)
-				if (stack[k].chain_nr == verdict)
+				if (stack[k].chain_nr == verdict + NF_BR_NUMHOOKS)
 					goto error;
 			// jump to the chain, make sure we know how to get back
 			stack[sp].chain_nr = chain_nr;
 			stack[sp].n = j;
 			stack[sp].entries = entries;
-			stack[sp++].e = e;
+			stack[sp].e = e;
+			sp++;
 			j = -1;
 			e = entries2->entries;
-			chain_nr = verdict;
+			chain_nr = verdict + NF_BR_NUMHOOKS;
 			entries = entries2;
 			continue;
 letscontinue:
@@ -821,6 +824,9 @@ void print_help()
 "--flush  -F [chain]           : Delete all rules in chain or in all chains\n"
 "--zero   -Z [chain]           : Put counters on zero in chain or in all chains\n"
 "--policy -P chain target      : Change policy on chain to target\n"
+"--new-chain -N chain          : Create a user defined chain\n"
+"--rename-chain -E old new     : Rename a chain\n"
+"--delete-chain -X chain       : Delete a user defined chain\n"
 "Options:\n"
 "--proto  -p [!] proto         : protocol hexadecimal, by name or LENGTH\n"
 "--src    -s [!] address[/mask]: source mac address\n"
@@ -911,7 +917,9 @@ static void change_policy(int policy)
 }
 
 // flush one chain or the complete table
-static void flush_chains()
+// -1 == nothing to do
+// 0 == give back to kernel
+static int flush_chains()
 {
 	int i, j, oldnentries, numdel;
 	unsigned short *cnt;
@@ -921,7 +929,7 @@ static void flush_chains()
 	// flush whole table
 	if (!entries) {
 		if (replace.nentries == 0)
-			exit(0);
+			return -1;
 		replace.nentries = 0;
 		// no need for the kernel to give us counters back
 		replace.num_counters = 0;
@@ -948,11 +956,11 @@ static void flush_chains()
 				u_e = tmp;
 			}
 		}
-		return;
+		return 0;
 	}
 
 	if (entries->nentries == 0)
-		exit(0);
+		return -1;
 	oldnentries = replace.nentries;
 	replace.nentries -= entries->nentries;
 	numdel = entries->nentries;
@@ -981,9 +989,9 @@ static void flush_chains()
 		if (replace.nentries) {
 			for (j = 0; j < entries->nentries; j++) {
 				if (i == replace.selected_hook)
-					*cnt = CNT_NORM;
-				else
 					*cnt = CNT_DEL;
+				else
+					*cnt = CNT_NORM;
 				cnt++;
 			}
 		}
@@ -1006,6 +1014,7 @@ static void flush_chains()
 		u_e = tmp;
 	}
 	entries->entries = NULL;
+	return 0;
 }
 
 // -1 == no match
@@ -1476,7 +1485,7 @@ int main(int argc, char *argv[])
 	int c, i;
 	// this special one for the -Z option (we can have -Z <this> -L <that>)
 	int zerochain = -1;
-	int policy = -1;
+	int policy;
 	int rule_nr = -1;// used for -D chain number
 	struct ebt_u_target *t;
 	struct ebt_u_match *m;
@@ -1503,13 +1512,16 @@ int main(int argc, char *argv[])
 
 	// getopt saves the day
 	while ((c = getopt_long(argc, argv,
-	   "-A:D:I:L::Z::F::P:Vhi:o:j:p:b:s:d:t:M:", ebt_options, NULL)) != -1) {
+	   "-A:D:I:N:E:X:L::Z::F::P:Vhi:o:j:p:b:s:d:t:M:", ebt_options, NULL)) != -1) {
 		switch (c) {
 
 		case 'A': // add a rule
 		case 'D': // delete a rule
 		case 'P': // define policy
 		case 'I': // insert a rule
+		case 'N': // make a user defined chain
+		case 'E': // rename chain
+		case 'X': // delete chain
 			replace.command = c;
 			if (replace.flags & OPT_COMMAND)
 				print_error("Multiple commands not allowed");
@@ -1523,9 +1535,84 @@ int main(int argc, char *argv[])
 					print_error("can't initialize ebtables "
 					"table %s", replace.name);
 			}
-			// here we already need the kernel table
+			if (c == 'N') {
+				struct ebt_u_chain_list *cl, **cl2;
+
+				if (get_hooknr(optarg) != -1)
+					print_error("Chain %s already exists",
+					   optarg);
+				if (find_target(optarg))
+					print_error("Target with name %s exists"
+					   , optarg);
+				if (strlen(optarg) >= EBT_CHAIN_MAXNAMELEN)
+					print_error("Chain name len can't exceed %d",
+					   EBT_CHAIN_MAXNAMELEN - 1);
+				cl = (struct ebt_u_chain_list *)
+				   malloc(sizeof(struct ebt_u_chain_list));
+				if (!cl)
+					print_memory();
+				cl->next = NULL;
+				cl->udc = (struct ebt_u_entries *)
+				   malloc(sizeof(struct ebt_u_entries));
+				if (!cl->udc)
+					print_memory();
+				cl->udc->nentries = 0;
+				cl->udc->policy = EBT_ACCEPT;
+				cl->udc->counter_offset = replace.nentries;
+				cl->udc->hook_mask = 0;
+				strcpy(cl->udc->name, optarg);
+				cl->udc->entries = NULL;
+				cl->kernel_start = NULL;
+				cl2 = &replace.udc;
+				while (*cl2)
+					cl2 = &((*cl2)->next);
+				*cl2 = cl;
+				break;
+			}
+			if (c == 'E') {
+				if ((replace.selected_hook = get_hooknr(optarg)) == -1)
+					print_error("Chain %s doesn't exist", optarg);
+				if (optind >= argc || argv[optind][0] == '-')
+					print_error("No new chain name specified");
+				if (strlen(argv[optind]) >= EBT_CHAIN_MAXNAMELEN)
+					print_error("Chain name len can't exceed %d",
+					   EBT_CHAIN_MAXNAMELEN - 1);
+				if (get_hooknr(argv[optind]) != -1)
+					print_error("Chain %s already exists",
+					   argv[optind]);
+				entries = to_chain();
+				strcpy(entries->name, argv[optind]);
+				optind++;
+				break;
+			}
+			if (c == 'X') {
+				struct ebt_u_chain_list *cl, **cl2;
+
+				if ((replace.selected_hook = get_hooknr(optarg)) == -1)
+					print_error("Chain %s doesn't exist", optarg);
+				if (replace.selected_hook < NF_BR_NUMHOOKS)
+					print_error("You can't remove a standard chain");
+				flush_chains();
+				entries = to_chain();
+				if (replace.udc->udc == entries) {
+					cl = replace.udc;
+					replace.udc = replace.udc->next;
+					free(cl->udc);
+					free(cl);
+					break;
+				}
+				cl2 = &(replace.udc);
+				while ((*cl2)->next->udc != entries)
+					cl2 = &((*cl2)->next);
+				cl = (*cl2)->next;
+				(*cl2)->next = (*cl2)->next->next;
+				free(cl->udc);
+				free(cl);
+				break;
+			}
+
 			if ((replace.selected_hook = get_hooknr(optarg)) == -1)
-				print_error("Bad chain");
+				print_error("Chain %s doesn't exist", optarg);
 			if (c == 'D' && optind < argc &&
 			   argv[optind][0] != '-') {
 				rule_nr = strtol(argv[optind], &buffer, 10);
@@ -1537,13 +1624,14 @@ int main(int argc, char *argv[])
 			if (c == 'P') {
 				if (optind >= argc)
 					print_error("No policy specified");
+				policy = 0;
 				for (i = 0; i < 4; i++)
 					if (!strcmp(argv[optind],
 					   standard_targets[i])) {
 						policy = -i -1;
 						break;
 					}
-				if (policy == -1)
+				if (policy == 0)
 					print_error("Wrong policy");
 				optind++;
 			}
@@ -1762,8 +1850,18 @@ int main(int argc, char *argv[])
 						print_error("Return target"
 						" only for user defined chains");
 				}
-				// must be an extension then
-				if (i == NUM_STANDARD_TARGETS) {
+				if ((i = get_hooknr(optarg)) != -1) {
+						if (i < NF_BR_NUMHOOKS)
+							print_error("don't jump"
+							  " to a standard chain");
+						t = find_target(
+						   EBT_STANDARD_TARGET);
+						((struct ebt_standard_target *)
+						   t->t)->verdict = i - NF_BR_NUMHOOKS;
+						break;
+					}
+				else {
+					// must be an extension then
 					struct ebt_u_target *t;
 					t = find_target(optarg);
 					// -j standard not allowed either
@@ -1931,12 +2029,15 @@ int main(int argc, char *argv[])
 	}
 	if (replace.flags & OPT_ZERO)
 		zero_counters(zerochain);
-	else if (replace.command == 'F')
-		flush_chains();
-	else if (replace.command == 'A' || replace.command == 'I')
+	else if (replace.command == 'F') {
+		if (flush_chains() == -1)
+			exit(0);
+	} else if (replace.command == 'A' || replace.command == 'I') {
 		add_rule(rule_nr);
-	else if (replace.command == 'D')
+		check_for_loops();
+	} else if (replace.command == 'D')
 		delete_rule(rule_nr);
+	// commands -N, -E, -X fall through
 
 	if (table->check)
 		table->check(&replace);

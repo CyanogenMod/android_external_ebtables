@@ -104,6 +104,7 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 	int verdict, sp = 0;
 	struct ebt_chainstack *cs;
 	struct ebt_entries *chaininfo;
+	char *base;
 
 	read_lock_bh(&table->lock);
 	cs = table->private->chainstack;
@@ -114,6 +115,7 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 	   cpu_number_map(smp_processor_id()) * table->private->nentries
 	counter_base = cb_base + table->private->hook_entry[hook]->counter_offset;
 	#define FWINV(bool,invflg) ((bool) ^ !!(point->invflags & invflg))
+	base = (char *)chaininfo;
 	i = 0;
  	while (i < nentries) {
 		if ( ( point->bitmask & EBT_NOPROTO ||
@@ -210,7 +212,7 @@ letsreturn:
 			cs[sp].e = (struct ebt_entry *)
 			   (((char *)point) + point->next_offset);
 			i = 0;
-			chaininfo = (struct ebt_entries *) (((char *)chaininfo) + verdict);
+			chaininfo = (struct ebt_entries *) (base + verdict);
 			if (chaininfo->distinguisher) {
 				BUGPRINT("jump to non-chain\n");
 				read_unlock_bh(&table->lock);
@@ -552,11 +554,6 @@ ebt_check_entry(struct ebt_entry *e, struct ebt_table_info *newinfo,
 			else
 				break;
 		}
-		// sanity check
-		if (i == udc_cnt) {
-			BUGPRINT("serious trouble\n");
-			return -EFAULT;
-		}
 		hookmask = cl_s[i].hookmask;
 	}
 	i = 0;
@@ -643,11 +640,16 @@ int check_chainloops(struct ebt_entries *chain, struct ebt_cl_stack *cl_s,
 		if (pos == nentries) {
 			// put back values of the time when this chain was called
 			e = cl_s[chain_nr].cs.e;
-			nentries = cl_s[cl_s[chain_nr].from].cs.chaininfo->nentries;
+			if (cl_s[chain_nr].from != -1)
+				nentries = cl_s[cl_s[chain_nr].from].cs.chaininfo->nentries;
+			else
+				nentries = chain->nentries;
 			pos = cl_s[chain_nr].cs.n;
 			// make sure we won't see a loop that isn't one
 			cl_s[chain_nr].cs.n = 0;
 			chain_nr = cl_s[chain_nr].from;
+			if (pos == nentries)
+				continue;
 		}
 		t = (struct ebt_entry_target *)
 		   (((char *)e) + e->target_offset);
