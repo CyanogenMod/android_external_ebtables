@@ -57,6 +57,8 @@ static struct option opts[] =
 	{ 0 }
 };
 
+struct protoent *pe;
+
 // put the ip string into 4 bytes
 static int undot_ip(char *ip, unsigned char *ip2)
 {
@@ -313,10 +315,17 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			ipinfo->invflags |= EBT_IP_PROTO;
 		if (optind > argc)
 			print_error("Missing IP protocol argument");
-		i = strtol(argv[optind - 1], &end, 10);
-		if (i < 0 || i > 255 || *end != '\0')
-			print_error("Problem with specified IP protocol");
-		ipinfo->protocol = i;
+		(unsigned char) i = strtoul(argv[optind - 1], &end, 10);
+		if (*end != '\0') {
+			pe = getprotobyname(argv[optind - 1]);
+			if (pe == NULL)
+				print_error
+				    ("Unknown specified IP protocol - %s",
+				     argv[optind - 1]);
+			ipinfo->protocol = pe->p_proto;
+		} else {
+			ipinfo->protocol = (unsigned char) i;
+		}
 		ipinfo->bitmask |= EBT_IP_PROTO;
 		break;
 	default:
@@ -378,7 +387,12 @@ static void print(const struct ebt_u_entry *entry,
 		printf("--ip-proto ");
 		if (ipinfo->invflags & EBT_IP_PROTO)
 			printf("! ");
-		printf("%d ", ipinfo->protocol);
+		pe = getprotobynumber(ipinfo->protocol);
+		if (pe == NULL) {
+			printf("%d ", ipinfo->protocol);
+		} else {
+			printf("%s ", pe->p_name);
+		}
 	}
 	if (ipinfo->bitmask & EBT_IP_SPORT) {
 		printf("--ip-sport ");
