@@ -483,7 +483,7 @@ int get_a_line(char *buffer, char *value, FILE *ifp)
 	return 0;
 }
 
-// translate a hexadecimal number to a protocol name, parsing /etc/etherproto
+// translate a hexadecimal number to a protocol name, parsing /etc/ethertypes
 // returns 0 on success
 int number_to_name(unsigned short proto, char *name)
 {
@@ -1488,6 +1488,38 @@ void do_final_checks(struct ebt_u_entry *e, struct ebt_u_entries *entries)
 	   entries->hook_mask, 1);
 }
 
+// used for the -X command
+void check_for_references(int chain_nr)
+{
+	int i = -1, j;
+	struct ebt_u_entries *entries;
+	struct ebt_u_entry *e;
+
+	while (1) {
+		i++;
+		entries = nr_to_chain(i);
+		if (!entries) {
+			if (i < NF_BR_NUMHOOKS)
+				continue;
+			else
+				break;
+		}
+		e = entries->entries;
+		j = 0;
+		while (e) {
+			j++;
+			if (strcmp(e->t->u.name, EBT_STANDARD_TARGET)) {
+				e = e->next;
+				continue;
+			}
+			if (((struct ebt_standard_target *)e->t)->verdict == chain_nr)
+				print_error("Can't delete the chain, it's referenced "
+				   "in chain %s, rule %d", entries->name, j);
+			e = e->next;
+		}
+	}
+}
+
 int check_inverse(const char option[])
 {
 	if (strcmp(option, "!") == 0) {
@@ -1630,6 +1662,8 @@ int main(int argc, char *argv[])
 
 				if (replace.selected_hook < NF_BR_NUMHOOKS)
 					print_error("You can't remove a standard chain");
+				// if the chain is referenced, don't delete it
+				check_for_references(replace.selected_hook - NF_BR_NUMHOOKS);
 				flush_chains();
 				entries = to_chain();
 				if (replace.udc->udc == entries) {
