@@ -12,6 +12,7 @@ PREFIX:=/usr/local
 LIBDIR:=$(PREFIX)/lib
 BINDIR:=$(PREFIX)/sbin
 MANDIR:=$(PREFIX)/man
+DESTDIR:=
 
 # include DESTDIR param
 override LIBDIR:=$(DESTDIR)$(LIBDIR)

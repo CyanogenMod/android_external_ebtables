@@ -5,10 +5,11 @@ PROGVERSION:=2.0.7
 PROGDATE:=January\ 2004
 
 # default paths
-LIBDIR:=/usr/lib/
+LIBDIR:=/usr/lib
 MANDIR:=/usr/local/man
 BINDIR:=/sbin
 ETCDIR:=/etc
+DESTDIR:=
 
 # include DESTDIR param
 override LIBDIR:=$(DESTDIR)$(LIBDIR)
