@@ -1,7 +1,7 @@
 ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 
 --- linux-2.4.20-pre5/net/bridge/br_private.h	Mon Feb 25 20:38:14 2002
-+++ linux-2.4.20-pre5-ebtables/net/bridge/br_private.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/br_private.h	Wed Sep 18 20:51:58 2002
 @@ -166,7 +166,7 @@ extern void br_get_port_ifindices(struct
  			   int *ifindices);
  
@@ -12,7 +12,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
  /* br_ioctl.c */
  extern void br_call_ioctl_atomic(void (*fn)(void));
 --- linux-2.4.20-pre5/include/linux/if_bridge.h	Thu Nov 22 20:47:12 2001
-+++ linux-2.4.20-pre5-ebtables/include/linux/if_bridge.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/if_bridge.h	Wed Sep 18 20:51:58 2002
 @@ -102,7 +102,8 @@ struct net_bridge;
  struct net_bridge_port;
  
@@ -23,8 +23,8 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
  
  #endif
  
---- linux-2.4.20-pre5/net/core/dev.c	Tue Sep 17 21:16:58 2002
-+++ linux-2.4.20-pre5-ebtables/net/core/dev.c	Tue Sep 17 19:20:04 2002
+--- linux-2.4.20-pre5/net/core/dev.c	Wed Sep 18 20:50:56 2002
++++ linux-2.4.20-pre5-ebtables/net/core/dev.c	Wed Sep 18 20:51:58 2002
 @@ -1392,7 +1392,7 @@ void net_call_rx_atomic(void (*fn)(void)
  }
  
@@ -57,7 +57,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
  #endif
  
 --- linux-2.4.20-pre5/net/bridge/br_input.c	Sat Aug  3 02:39:46 2002
-+++ linux-2.4.20-pre5-ebtables/net/bridge/br_input.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/br_input.c	Wed Sep 18 20:51:58 2002
 @@ -24,6 +24,9 @@ unsigned char bridge_ula[6] = { 0x01, 0x
  
  static int br_pass_frame_up_finish(struct sk_buff *skb)
@@ -110,8 +110,20 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
  	kfree_skb(skb);
 +	return 0;
  }
+--- linux-2.4.20-pre5/net/bridge/br_forward.c	Sat Aug  3 02:39:46 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/br_forward.c	Wed Sep 18 20:51:58 2002
+@@ -49,6 +49,9 @@ static int __br_forward_finish(struct sk
+ static void __br_deliver(struct net_bridge_port *to, struct sk_buff *skb)
+ {
+ 	skb->dev = to->dev;
++#ifdef CONFIG_NETFILTER_DEBUG
++	skb->nf_debug = 0;
++#endif
+ 	NF_HOOK(PF_BRIDGE, NF_BR_LOCAL_OUT, skb, NULL, skb->dev,
+ 			__br_forward_finish);
+ }
 --- linux-2.4.20-pre5/net/bridge/br.c	Mon Feb 25 20:38:14 2002
-+++ linux-2.4.20-pre5-ebtables/net/bridge/br.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/br.c	Wed Sep 18 20:51:58 2002
 @@ -28,6 +28,8 @@
  #include "../atm/lec.h"
  #endif
@@ -131,7 +143,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
  module_init(br_init)
  module_exit(br_deinit)
 --- linux-2.4.20-pre5/net/bridge/Makefile	Fri Dec 29 23:07:24 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/Makefile	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/Makefile	Wed Sep 18 20:51:58 2002
 @@ -7,6 +7,8 @@
  #
  # Note 2! The CFLAGS definition is now in the main makefile...
@@ -142,7 +154,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
  obj-y		:= br.o br_device.o br_fdb.o br_forward.o br_if.o br_input.o \
  			br_ioctl.o br_notify.o br_stp.o br_stp_bpdu.o \
 --- linux-2.4.20-pre5/include/linux/netfilter_bridge.h	Tue Jun 12 04:15:27 2001
-+++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge.h	Wed Sep 18 20:51:58 2002
 @@ -18,7 +18,18 @@
  #define NF_BR_LOCAL_OUT		3
  /* Packets about to hit the wire. */
@@ -164,7 +176,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
  
  #endif
 --- linux-2.4.20-pre5/net/Makefile	Sat Aug  3 02:39:46 2002
-+++ linux-2.4.20-pre5-ebtables/net/Makefile	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/Makefile	Wed Sep 18 20:51:58 2002
 @@ -7,7 +7,8 @@
  
  O_TARGET :=	network.o
@@ -189,7 +201,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
  endif
  
 --- linux-2.4.20-pre5/net/Config.in	Sat Aug  3 02:39:46 2002
-+++ linux-2.4.20-pre5-ebtables/net/Config.in	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/Config.in	Wed Sep 18 20:51:58 2002
 @@ -65,6 +65,9 @@ if [ "$CONFIG_DECNET" != "n" ]; then
     source net/decnet/Config.in
  fi
@@ -201,7 +213,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
     tristate 'CCITT X.25 Packet Layer (EXPERIMENTAL)' CONFIG_X25
     tristate 'LAPB Data Link Driver (EXPERIMENTAL)' CONFIG_LAPB
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/Makefile	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/Makefile	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,27 @@
 +#
 +# Makefile for the netfilter modules on top of bridging.
@@ -231,7 +243,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +obj-$(CONFIG_BRIDGE_EBT_MARK_T) += ebt_mark.o
 +include $(TOPDIR)/Rules.make
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/Config.in	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/Config.in	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,16 @@
 +#
 +# Bridge netfilter configuration
@@ -250,7 +262,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +dep_tristate '    ebt: redirect target support' CONFIG_BRIDGE_EBT_REDIRECT $CONFIG_BRIDGE_NF_EBTABLES
 +dep_tristate '    ebt: mark target support' CONFIG_BRIDGE_EBT_MARK_T $CONFIG_BRIDGE_NF_EBTABLES
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebtable_filter.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebtable_filter.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,90 @@
 +/*
 + *  ebtable_filter
@@ -343,7 +355,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +EXPORT_NO_SYMBOLS;
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebtable_nat.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebtable_nat.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,96 @@
 +/*
 + *  ebtable_nat
@@ -442,7 +454,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +EXPORT_NO_SYMBOLS;
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebtable_broute.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebtable_broute.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,79 @@
 +/*
 + *  ebtable_broute
@@ -524,7 +536,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +EXPORT_NO_SYMBOLS;
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_mark.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_mark.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,66 @@
 +/*
 + *  ebt_mark
@@ -593,7 +605,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +EXPORT_NO_SYMBOLS;
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_mark_m.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_mark_m.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,61 @@
 +/*
 + *  ebt_mark_m
@@ -657,7 +669,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +EXPORT_NO_SYMBOLS;
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_redirect.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_redirect.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,71 @@
 +/*
 + *  ebt_redirect
@@ -731,7 +743,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +EXPORT_NO_SYMBOLS;
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_arp.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_arp.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,102 @@
 +/*
 + *  ebt_arp
@@ -836,7 +848,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +EXPORT_NO_SYMBOLS;
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_ip.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_ip.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,73 @@
 +/*
 + *  ebt_ip
@@ -912,7 +924,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +EXPORT_NO_SYMBOLS;
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_vlan.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_vlan.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,318 @@
 +/*
 + * Description: EBTables 802.1Q match extension kernelspace module.
@@ -1233,7 +1245,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +
 +EXPORT_NO_SYMBOLS;
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_log.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_log.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,100 @@
 +/*
 + *  ebt_log
@@ -1336,7 +1348,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +EXPORT_NO_SYMBOLS;
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_snat.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_snat.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,64 @@
 +/*
 + *  ebt_snat
@@ -1403,7 +1415,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +EXPORT_NO_SYMBOLS;
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_dnat.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebt_dnat.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,65 @@
 +/*
 + *  ebt_dnat
@@ -1471,7 +1483,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +EXPORT_NO_SYMBOLS;
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebtables.c	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/net/bridge/netfilter/ebtables.c	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,1484 @@
 +/*
 + *  ebtables
@@ -2958,7 +2970,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +module_exit(fini);
 +MODULE_LICENSE("GPL");
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebtables.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebtables.h	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,358 @@
 +/*
 + *  ebtables
@@ -3319,7 +3331,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +
 +#endif
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_arp.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_arp.h	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,26 @@
 +#ifndef __LINUX_BRIDGE_EBT_ARP_H
 +#define __LINUX_BRIDGE_EBT_ARP_H
@@ -3348,7 +3360,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +
 +#endif
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_ip.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_ip.h	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,24 @@
 +#ifndef __LINUX_BRIDGE_EBT_IP_H
 +#define __LINUX_BRIDGE_EBT_IP_H
@@ -3375,7 +3387,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +
 +#endif
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_vlan.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_vlan.h	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,20 @@
 +#ifndef __LINUX_BRIDGE_EBT_VLAN_H
 +#define __LINUX_BRIDGE_EBT_VLAN_H
@@ -3398,7 +3410,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +
 +#endif
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_log.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_log.h	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,17 @@
 +#ifndef __LINUX_BRIDGE_EBT_LOG_H
 +#define __LINUX_BRIDGE_EBT_LOG_H
@@ -3418,7 +3430,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +
 +#endif
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_nat.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_nat.h	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,13 @@
 +#ifndef __LINUX_BRIDGE_EBT_NAT_H
 +#define __LINUX_BRIDGE_EBT_NAT_H
@@ -3434,7 +3446,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +
 +#endif
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_redirect.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_redirect.h	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,11 @@
 +#ifndef __LINUX_BRIDGE_EBT_REDIRECT_H
 +#define __LINUX_BRIDGE_EBT_REDIRECT_H
@@ -3448,7 +3460,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +
 +#endif
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_mark_m.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_mark_m.h	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,15 @@
 +#ifndef __LINUX_BRIDGE_EBT_MARK_M_H
 +#define __LINUX_BRIDGE_EBT_MARK_M_H
@@ -3466,7 +3478,7 @@ ebtables-v2.0 vs 2.4.20-pre5 - 17 September 2002
 +
 +#endif
 --- /dev/null	Thu Aug 24 11:00:32 2000
-+++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_mark_t.h	Tue Sep 17 00:08:07 2002
++++ linux-2.4.20-pre5-ebtables/include/linux/netfilter_bridge/ebt_mark_t.h	Wed Sep 18 20:51:58 2002
 @@ -0,0 +1,12 @@
 +#ifndef __LINUX_BRIDGE_EBT_MARK_T_H
 +#define __LINUX_BRIDGE_EBT_MARK_T_H
