@@ -4,6 +4,7 @@
 #include <getopt.h>
 #include "../include/ebtables_u.h"
 #include "../include/ethernetdb.h"
+#include <linux/if_ether.h>
 #include <linux/netfilter_bridge/ebt_arp.h>
 
 #define ARP_OPCODE '1'
@@ -11,6 +12,8 @@
 #define ARP_PTYPE  '3'
 #define ARP_IP_S   '4'
 #define ARP_IP_D   '5'
+#define ARP_MAC_S  '6'
+#define ARP_MAC_D  '7'
 static struct option opts[] =
 {
 	{ "arp-opcode"    , required_argument, 0, ARP_OPCODE },
@@ -19,6 +22,8 @@ static struct option opts[] =
 	{ "arp-ptype"     , required_argument, 0, ARP_PTYPE  },
 	{ "arp-ip-src"    , required_argument, 0, ARP_IP_S   },
 	{ "arp-ip-dst"    , required_argument, 0, ARP_IP_D   },
+	{ "arp-mac-src"   , required_argument, 0, ARP_MAC_S  },
+	{ "arp-mac-dst"   , required_argument, 0, ARP_MAC_D  },
 	{ 0 }
 };
 
@@ -43,11 +48,13 @@ static void print_help()
 
 	printf(
 "arp options:\n"
-"--arp-opcode opcode            : ARP opcode (integer or string)\n"
-"--arp-htype type               : ARP hardware type (integer or string)\n"
-"--arp-ptype type               : ARP protocol type (hexadecimal or string)\n"
-"--arp-ip-src [!] address[/mask]: ARP IP source specification\n"
-"--arp-ip-dst [!] address[/mask]: ARP IP target specification\n"
+"--arp-opcode opcode             : ARP opcode (integer or string)\n"
+"--arp-htype type                : ARP hardware type (integer or string)\n"
+"--arp-ptype type                : ARP protocol type (hexadecimal or string)\n"
+"--arp-ip-src  [!] address[/mask]: ARP IP source specification\n"
+"--arp-ip-dst  [!] address[/mask]: ARP IP target specification\n"
+"--arp-mac-src [!] address[/mask]: ARP MAC source specification\n"
+"--arp-mac-dst [!] address[/mask]: ARP MAC target specification\n"
 " opcode strings: \n");
 	for (i = 0; i < NUMOPCODES; i++)
 		printf("%d = %s\n", i + 1, opcodes[i]);
@@ -67,11 +74,16 @@ static void init(struct ebt_entry_match *match)
 /* defined in ebt_ip.c */
 void parse_ip_address(char *address, uint32_t *addr, uint32_t *msk);
 
+/* defined in ebtables.c */
+int getmac_and_mask(char *from, char *to, char *mask);
+
 #define OPT_OPCODE 0x01
 #define OPT_HTYPE  0x02
 #define OPT_PTYPE  0x04
 #define OPT_IP_S   0x08
 #define OPT_IP_D   0x10
+#define OPT_MAC_S  0x20
+#define OPT_MAC_D  0x40
 static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
    unsigned int *flags, struct ebt_entry_match **match)
 {
@@ -80,6 +92,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 	char *end;
 	uint32_t *addr;
 	uint32_t *mask;
+	char *maddr;
+	char *mmask;
 
 	switch (c) {
 	case ARP_OPCODE:
@@ -172,6 +186,32 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			print_error("Missing ARP IP address argument");
 		parse_ip_address(argv[optind - 1], addr, mask);
 		break;
+
+	case ARP_MAC_S:
+	case ARP_MAC_D:
+		if (c == ARP_MAC_S) {
+			check_option(flags, OPT_MAC_S);
+			maddr = arpinfo->smaddr;
+			mmask = arpinfo->smmsk;
+			arpinfo->bitmask |= EBT_ARP_SRC_MAC;
+		} else {
+			check_option(flags, OPT_MAC_D);
+			maddr = arpinfo->dmaddr;
+			mmask = arpinfo->dmmsk;
+			arpinfo->bitmask |= EBT_ARP_DST_MAC;
+		}
+		if (check_inverse(optarg)) {
+			if (c == ARP_MAC_S)
+				arpinfo->invflags |= EBT_ARP_SRC_MAC;
+			else
+				arpinfo->invflags |= EBT_ARP_DST_MAC;
+		}
+		if (optind > argc)
+			print_error("Missing ARP MAC address argument");
+		if (getmac_and_mask(argv[optind - 1], maddr, mmask))
+			print_error("Problem with ARP MAC address argument");
+		break;
+
 	default:
 		return 0;
 	}
@@ -243,6 +283,43 @@ static void print(const struct ebt_u_entry *entry,
 			   (i == 3) ? "" : ".");
 		printf("%s ", mask_to_dotted(arpinfo->dmsk));
 	}
+	if (arpinfo->bitmask & EBT_ARP_SRC_MAC) {
+		int verdict;
+		printf("--arp-mac-src ");
+		if (arpinfo->invflags & EBT_ARP_SRC_MAC)
+			printf("! ");
+		for (i = 0; i < 6; i++)
+			printf("%x%s", ((unsigned char *)&arpinfo->smaddr)[i],
+			   (i == 5) ? "" : ":");
+		verdict = 0;
+		for (i = 0; i < 6; i++)
+			verdict = (arpinfo->smmsk[i] ^ 0xFF);
+		if (verdict != 0) {
+			printf("%s", "/");
+			for (i = 0; i < 6; i++)
+				printf("%x%s", ((unsigned char *)&arpinfo->smmsk)[i],
+				   (i == 5) ? "" : ":");
+			printf("%s", " ");
+		}
+	}
+	if (arpinfo->bitmask & EBT_ARP_DST_MAC) {
+		int verdict;
+		printf("--arp-mac-dst ");
+		if (arpinfo->invflags & EBT_ARP_DST_MAC)
+			printf("! ");
+		for (i = 0; i < 6; i++)
+			printf("%x%s", ((unsigned char *)&arpinfo->dmaddr)[i],
+			   (i == 5) ? "" : ":");
+		verdict = 0;
+		for (i = 0; i < 6; i++)
+			verdict = (arpinfo->dmmsk[i] ^ 0xFF);
+		if (verdict != 0) {
+			printf("%s", "/");
+			for (i = 0; i < 6; i++)
+				printf("%x%s", ((unsigned char *)&arpinfo->dmmsk)[i],
+				   (i == 5) ? "" : ":");
+		}
+	}
 }
 
 static int compare(const struct ebt_entry_match *m1,
@@ -277,6 +354,18 @@ static int compare(const struct ebt_entry_match *m1,
 		if (arpinfo1->daddr != arpinfo2->daddr)
 			return 0;
 		if (arpinfo1->dmsk != arpinfo2->dmsk)
+			return 0;
+	}
+	if (arpinfo1->bitmask & EBT_ARP_SRC_MAC) {
+		if (arpinfo1->smaddr != arpinfo2->smaddr)
+			return 0;
+		if (arpinfo1->smmsk != arpinfo2->smmsk)
+			return 0;
+	}
+	if (arpinfo1->bitmask & EBT_ARP_DST_MAC) {
+		if (arpinfo1->dmaddr != arpinfo2->dmaddr)
+			return 0;
+		if (arpinfo1->dmmsk != arpinfo2->dmmsk)
 			return 0;
 	}
 	return 1;
