@@ -133,9 +133,10 @@ command is an exception). All these options only apply to the selected
 Append a rule to the end of the selected chain.
 .TP
 .B "-D, --delete"
-Delete the specified rule from the selected chain. There are two versions
-of this command. A rule number (starting at 1) or the complete rule can be
-specified.
+Delete the specified rule from the selected chain. There are two ways to
+use this command. The first is by specifying an interval of rule numbers
+to delete, syntax: start_nr[:end_nr]. The second usage is by specifying
+the complete rule as it would have been specified when it was added.
 .TP
 .B "-I, --insert"
 Insert the specified rule into the selected chain at the specified rule number (1 meaning
