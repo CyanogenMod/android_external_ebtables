@@ -14,7 +14,8 @@ endif
 
 include extensions/Makefile
 
-OBJECTS:=getethertype.o ebtables.o communication.o $(EXT_OBJS)
+OBJECTS:=getethertype.o ebtables.o communication.o libebtc.o \
+useful_functions.o $(EXT_OBJS)
 
 KERNEL_INCLUDES?=include/
 
@@ -33,6 +34,12 @@ PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
 all: ebtables
 
 communication.o: communication.c include/ebtables_u.h
+	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
+
+libebtc.o: libebtc.c include/ebtables_u.h
+	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
+
+useful_functions.o: useful_functions.c include/ebtables_u.h
 	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
 
 getethertype.o: getethertype.c include/ethernetdb.h

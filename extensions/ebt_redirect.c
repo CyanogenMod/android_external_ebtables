@@ -38,7 +38,7 @@ static int parse(int c, char **argv, int argc,
 
 	switch (c) {
 	case REDIRECT_TARGET:
-		check_option(flags, OPT_REDIRECT_TARGET);
+		ebt_check_option(flags, OPT_REDIRECT_TARGET);
 		if (FILL_TARGET(optarg, redirectinfo->target))
 			print_error("Illegal --redirect-target target");
 		break;
@@ -102,5 +102,5 @@ static struct ebt_u_target redirect_target =
 static void _init(void) __attribute__ ((constructor));
 static void _init(void)
 {
-	register_target(&redirect_target);
+	ebt_register_target(&redirect_target);
 }

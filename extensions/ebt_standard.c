@@ -31,8 +31,6 @@ static void final_check(const struct ebt_u_entry *entry,
 {
 }
 
-struct ebt_u_entries *nr_to_chain(int nr);
-
 static void print(const struct ebt_u_entry *entry,
    const struct ebt_entry_target *target)
 {
@@ -41,7 +39,8 @@ static void print(const struct ebt_u_entry *entry,
 	if (verdict >= 0) {
 		struct ebt_u_entries *entries;
 
-		entries = nr_to_chain(verdict + NF_BR_NUMHOOKS);
+		entries = ebt_nr_to_chain(entry->replace,
+					  verdict + NF_BR_NUMHOOKS);
 		printf("%s", entries->name);
 		return;
 	}
@@ -81,5 +80,5 @@ static struct ebt_u_target standard =
 static void _init(void) __attribute__ ((constructor));
 static void _init(void)
 {
-	register_target(&standard);
+	ebt_register_target(&standard);
 }

@@ -57,8 +57,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 
 	switch (c) {
 	case '1':
-		check_option(flags, 1);
-		if (check_inverse(optarg))
+		ebt_check_option(flags, 1);
+		if (ebt_check_inverse(optarg))
 			ptinfo->invert = 1;
 		if (optind > argc)
 			print_error("Missing pkttype class specification");
@@ -132,5 +132,5 @@ static struct ebt_u_match pkttype_match =
 static void _init(void) __attribute((constructor));
 static void _init(void)
 {
-	register_match(&pkttype_match);
+	ebt_register_match(&pkttype_match);
 }

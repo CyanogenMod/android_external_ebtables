@@ -48,7 +48,7 @@ static int parse(int c, char **argv, int argc,
 
 	switch (c) {
 	case REPLY_MAC:
-		check_option(flags, OPT_REPLY_MAC);
+		ebt_check_option(flags, OPT_REPLY_MAC);
 		if (!(addr = ether_aton(optarg)))
 			print_error("Problem with specified "
 			            "--arpreply-mac mac");
@@ -56,7 +56,7 @@ static int parse(int c, char **argv, int argc,
 		mac_supplied = 1;
 		break;
 	case REPLY_TARGET:
-		check_option(flags, OPT_REPLY_TARGET);
+		ebt_check_option(flags, OPT_REPLY_TARGET);
 		if (FILL_TARGET(optarg, replyinfo->target))
 			print_error("Illegal --arpreply-target target");
 		break;
@@ -94,7 +94,7 @@ static void print(const struct ebt_u_entry *entry,
 	   (struct ebt_arpreply_info *)target->data;
 
 	printf("--arpreply-mac ");
-	print_mac(replyinfo->mac);
+	ebt_print_mac(replyinfo->mac);
 	if (replyinfo->target == EBT_DROP)
 		return;
 	printf(" --arpreply-target %s", TARGET_NAME(replyinfo->target));
@@ -128,5 +128,5 @@ static struct ebt_u_target arpreply_target =
 static void _init(void) __attribute__ ((constructor));
 static void _init(void)
 {
-	register_target(&arpreply_target);
+	ebt_register_target(&arpreply_target);
 }
