@@ -3,15 +3,14 @@
 # all protocol numbers are in hexadecimal form
 # maximum namesize = 20 characters
 # always put tabs or spaces between the name and the protocol number
-# don't use more than 4 digits for the protocol number
+# anything on a line after the protocol number is ignored
 # programs using this file should not be case sensitive
-# that's all :-))
-IPV4 	0800	put your comments behind, on the same line, after a tab
-X25	0805    or whitespace
+IPv4 	0800
+X25	0805
 ARP	0806
 802_1Q	8100	802.1Q Virtual LAN tagged frame
 IPX	8137
-IPV6	86DD
+IPv6	86DD
 NetBEUI	8191
 BPQ	08FF	G8BPQ AX.25 Ethernet Packet
 DEC	6000	DEC Assigned proto
