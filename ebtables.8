@@ -71,7 +71,9 @@ rule matches an Ethernet frame, then a processing specification tells
 what to do with that matching frame. The processing specification is
 called a 'target'. However, if the frame does not match the current
 rule in the chain, then the next rule in the chain is examined and so forth.
-The user can create new (user-defined) chains which can be used as the 'target' of a rule.
+The user can create new (user-defined) chains which can be used as the 'target'
+of a rule. User-defined chains are very useful to get better performance
+over the linear traversal of the rules.
 
 .SS TARGETS
 A firewall rule specifies criteria for an Ethernet frame and a frame
@@ -430,6 +432,8 @@ The interface via which a frame is received (for the
 chains). The flag
 .B --in-if
 is an alias for this option.
+If the interface name ends with '+', then
+any interface name that begins with this name will match.
 .TP
 .BR "--logical-in " "[!] \fIname\fP"
 The (logical) bridge interface via which a frame is received (for the
@@ -437,6 +441,8 @@ The (logical) bridge interface via which a frame is received (for the
 .BR FORWARD ,
 .BR PREROUTING " and " BROUTING
 chains).
+If the interface name ends with '+', then
+any interface name that begins with this name will match.
 .TP
 .BR "-o, --out-interface " "[!] \fIname\fP"
 The interface via which a frame is going to be sent (for the
@@ -447,6 +453,8 @@ and
 chains). The flag
 .B --out-if
 is an alias for this option.
+If the interface name ends with '+', then
+any interface name that begins with this name will match.
 .TP
 .BR "--logical-out " "[!] \fIname\fP"
 The (logical) bridge interface via which a frame is going to be sent (for
@@ -456,6 +464,8 @@ the
 and
 .B POSTROUTING
 chains).
+If the interface name ends with '+', then
+any interface name that begins with this name will match.
 .TP
 .BR "-s, --source " "[!] \fIaddress\fP[/\fImask\fP]"
 The source mac address. Both mask and address are written as 6 hexadecimal
