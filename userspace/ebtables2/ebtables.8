@@ -34,7 +34,7 @@ ebtables (v.2.0.7), ebtablesd, ebtablesu \- Ethernet bridge frame table administ
 .br
 .BR "ebtables " [ -t " table ] " -Z " [chain]"
 .br
-.BR "ebtables " [ -t " table ] " -L " [" -Z "] [chain] [ [ [" --Ln "] [" --Lc "] ] | [" --Lx "] ] [" --Lmac2 ]
+.BR "ebtables " [ -t " table ] " -L " [" -Z "] [chain] [ [" --Ln "] | [" --Lx "] ] [" --Lc "] [" --Lmac2 ]
 .br
 .BR "ebtables " [ -t " table ] " -N " chain [" "-P ACCEPT " | " DROP " | " RETURN" ]
 .br
@@ -299,7 +299,8 @@ command.
 .br
 .B "--Ln"
 .br
-Places the rule number in front of every rule.
+Places the rule number in front of every rule. This option is incompatible with the
+.BR --Lx " option."
 .br
 .B "--Lc"
 .br
@@ -307,7 +308,9 @@ Shows the counters at the end of each rule displayed by the
 .B "-L"
 command. Both a frame counter (pcnt) and a byte counter (bcnt) are displayed.
 The frame counter shows how many frames have matched the specific rule, the byte
-counter shows the sum of the frame sizes of these matching frames.
+counter shows the sum of the frame sizes of these matching frames. Using this option
+.BR "" "in combination with the " --Lx " option causes the counters to be written out"
+.BR "" "in the '" -c " <pcnt> <bcnt>' option format."
 .br
 .B "--Lx"
 .br
@@ -319,11 +322,11 @@ You can use this set of commands in an ebtables boot or reload
 script.  For example the output could be used at system startup.
 The 
 .B "--Lx"
-option is incompatible with both the
+option is incompatible with the
 .B "--Ln"
-and
-.B "--Lc"
-listing options.
+listing option. Using the
+.BR --Lx " option together with the " --Lc " option will cause the counters to be written out"
+.BR "" "in the '" -c " <pcnt> <bcnt>' option format."
 .br
 .B "--Lmac2"
 .br
