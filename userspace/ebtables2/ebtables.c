@@ -635,8 +635,9 @@ enddst:
 			print_bug("Target not found");
 		t->print(hlp, hlp->t);
 		if (replace.flags & LIST_C)
-			printf(", count = %llu",
-			   replace.counters[entries->counter_offset + i].pcnt);
+			printf(", pcnt = %llu -- bcnt = %llu",
+			   replace.counters[entries->counter_offset + i].pcnt,
+			   replace.counters[entries->counter_offset + i].bcnt);
 		printf("\n");
 		hlp = hlp->next;
 	}

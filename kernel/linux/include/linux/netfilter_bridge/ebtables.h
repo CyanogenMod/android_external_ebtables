@@ -30,6 +30,7 @@
 struct ebt_counter
 {
 	uint64_t pcnt;
+	uint64_t bcnt;
 };
 
 struct ebt_entries {
