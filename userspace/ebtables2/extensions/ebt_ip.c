@@ -1,7 +1,36 @@
+/*
+ *  ebtables ebt_ip: IP extension module for userspace
+ * 
+ *  Authors:
+ *   Bart De Schuymer <bart.de.schuymer@pandora.be>
+ *
+ *  Changes:
+ *    added ip-sport and ip-dport; parsing of port arguments is
+ *    based on code from iptables-1.2.7a
+ *    Innominate Security Technologies AG <mhopf@innominate.com>
+ *    September, 2002
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <netdb.h>
 #include "../include/ebtables_u.h"
 #include <linux/netfilter_bridge/ebt_ip.h>
 
@@ -9,16 +38,22 @@
 #define IP_DEST   '2'
 #define IP_myTOS  '3' // include/bits/in.h seems to already define IP_TOS
 #define IP_PROTO  '4'
+#define IP_SPORT  '5'
+#define IP_DPORT  '6'
 
 static struct option opts[] =
 {
-	{ "ip-source"     , required_argument, 0, IP_SOURCE },
-	{ "ip-src"        , required_argument, 0, IP_SOURCE },
-	{ "ip-destination", required_argument, 0, IP_DEST   },
-	{ "ip-dst"        , required_argument, 0, IP_DEST   },
-	{ "ip-tos"        , required_argument, 0, IP_myTOS  },
-	{ "ip-protocol"   , required_argument, 0, IP_PROTO  },
-	{ "ip-proto"      , required_argument, 0, IP_PROTO  },
+	{ "ip-source"           , required_argument, 0, IP_SOURCE },
+	{ "ip-src"              , required_argument, 0, IP_SOURCE },
+	{ "ip-destination"      , required_argument, 0, IP_DEST   },
+	{ "ip-dst"              , required_argument, 0, IP_DEST   },
+	{ "ip-tos"              , required_argument, 0, IP_myTOS  },
+	{ "ip-protocol"         , required_argument, 0, IP_PROTO  },
+	{ "ip-proto"            , required_argument, 0, IP_PROTO  },
+	{ "ip-source-port"      , required_argument, 0, IP_SPORT  },
+	{ "ip-sport"            , required_argument, 0, IP_SPORT  },
+	{ "ip-destination-port" , required_argument, 0, IP_DPORT  },
+	{ "ip-dport"            , required_argument, 0, IP_DPORT  },
 	{ 0 }
 };
 
@@ -127,6 +162,56 @@ char *mask_to_dotted(uint32_t mask)
 	return buf;
 }
 
+// transform a protocol and service name into a port number
+static uint16_t parse_port(const char *protocol, const char *name)
+{
+	struct servent *service;
+	char *end;
+	int port;
+
+	port = strtol(name, &end, 10);
+	if (*end != '\0') {
+		if (protocol && 
+		    (service = getservbyname(name, protocol)) != NULL)
+			return ntohs(service->s_port);
+	}
+	else if (port >= 0 || port <= 0xFFFF) {
+		return port;
+	}
+	print_error("Problem with specified %s port '%s'", 
+		    protocol?protocol:"", name);
+	return 0; /* never reached */
+}
+
+static void
+parse_port_range(const char *protocol, const char *portstring, uint16_t *ports)
+{
+	char *buffer;
+	char *cp;
+	
+	buffer = strdup(portstring);
+	if ((cp = strchr(buffer, ':')) == NULL)
+		ports[0] = ports[1] = parse_port(protocol, buffer);
+	else {
+		*cp = '\0';
+		cp++;
+		ports[0] = buffer[0] ? parse_port(protocol, buffer) : 0;
+		ports[1] = cp[0] ? parse_port(protocol, cp) : 0xFFFF;
+		
+		if (ports[0] > ports[1])
+			print_error("Invalid portrange (min > max)");
+	}
+	free(buffer);
+}
+
+static void print_port_range(uint16_t *ports)
+{
+	if (ports[0] == ports[1])
+		printf("%d ", ntohs(ports[0]));
+	else
+		printf("%d:%d ", ntohs(ports[0]), ntohs(ports[1]));
+}
+
 static void print_help()
 {
 	printf(
@@ -134,7 +219,9 @@ static void print_help()
 "--ip-src    [!] address[/mask]: ip source specification\n"
 "--ip-dst    [!] address[/mask]: ip destination specification\n"
 "--ip-tos    [!] tos           : ip tos specification\n"
-"--ip-proto  [!] protocol      : ip protocol specification\n");
+"--ip-proto  [!] protocol      : ip protocol specification\n"
+"--ip-sport  [!] port[:port]   : tcp/udp source port or port range\n"
+"--ip-dport  [!] port[:port]   : tcp/udp destination port or port range\n");
 }
 
 static void init(struct ebt_entry_match *match)
@@ -149,6 +236,8 @@ static void init(struct ebt_entry_match *match)
 #define OPT_DEST   0x02
 #define OPT_TOS    0x04
 #define OPT_PROTO  0x08
+#define OPT_SPORT  0x10
+#define OPT_DPORT  0x20
 static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
    unsigned int *flags, struct ebt_entry_match **match)
 {
@@ -181,6 +270,27 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		else
 			parse_ip_address(argv[optind - 1], &ipinfo->daddr,
 			   &ipinfo->dmsk);
+		break;
+
+	case IP_SPORT:
+	case IP_DPORT:
+		if (c == IP_SPORT) {
+			check_option(flags, OPT_SPORT);
+			ipinfo->bitmask |= EBT_IP_SPORT;
+			if (check_inverse(optarg))
+				ipinfo->invflags |= EBT_IP_SPORT;
+		} else {
+			check_option(flags, OPT_DPORT);
+			ipinfo->bitmask |= EBT_IP_DPORT;
+			if (check_inverse(optarg))
+				ipinfo->invflags |= EBT_IP_DPORT;
+		}
+		if (optind > argc)
+			print_error("Missing port argument");
+		if (c == IP_SPORT)
+			parse_port_range(NULL, argv[optind - 1], ipinfo->sport);
+		else
+			parse_port_range(NULL, argv[optind - 1], ipinfo->dport);
 		break;
 
 	case IP_myTOS:
@@ -219,9 +329,19 @@ static void final_check(const struct ebt_u_entry *entry,
    const struct ebt_entry_match *match, const char *name,
    unsigned int hookmask, unsigned int time)
 {
+ 	struct ebt_ip_info *ipinfo = (struct ebt_ip_info *)match->data;
+
 	if (entry->ethproto != ETH_P_IP || entry->invflags & EBT_IPROTO)
 		print_error("For IP filtering the protocol must be "
 		            "specified as IPv4");
+
+ 	if (ipinfo->bitmask & (EBT_IP_SPORT|EBT_IP_DPORT) &&
+ 		(!ipinfo->bitmask & EBT_IP_PROTO || 
+ 		ipinfo->invflags & EBT_IP_PROTO ||
+ 		(ipinfo->protocol!=IPPROTO_TCP && 
+ 			ipinfo->protocol!=IPPROTO_UDP)))
+ 		print_error("For port filtering the IP protocol must be "
+ 		            "either 6 (tcp) or 17 (udp)");
 }
 
 static void print(const struct ebt_u_entry *entry,
@@ -260,6 +380,20 @@ static void print(const struct ebt_u_entry *entry,
 			printf("! ");
 		printf("%d ", ipinfo->protocol);
 	}
+	if (ipinfo->bitmask & EBT_IP_SPORT) {
+		printf("--ip-sport ");
+		if (ipinfo->invflags & EBT_IP_SPORT) {
+			printf("! ");
+		}
+		print_port_range(ipinfo->sport);
+	}
+	if (ipinfo->bitmask & EBT_IP_DPORT) {
+		printf("--ip-dport ");
+		if (ipinfo->invflags & EBT_IP_DPORT) {
+			printf("! ");
+		}
+		print_port_range(ipinfo->dport);
+	}
 }
 
 static int compare(const struct ebt_entry_match *m1,
@@ -290,6 +424,14 @@ static int compare(const struct ebt_entry_match *m1,
 	}
 	if (ipinfo1->bitmask & EBT_IP_PROTO) {
 		if (ipinfo1->protocol != ipinfo2->protocol)
+			return 0;
+	}
+	if (ipinfo1->bitmask & EBT_IP_SPORT) {
+		if (ipinfo1->sport != ipinfo2->sport)
+			return 0;
+	}
+	if (ipinfo1->bitmask & EBT_IP_DPORT) {
+		if (ipinfo1->dport != ipinfo2->dport)
 			return 0;
 	}
 	return 1;
