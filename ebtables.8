@@ -372,6 +372,19 @@ The ip protocol.
 The flag
 .B --ip-proto
 is an alias for this option.
+.TP
+.BR "--ip-source-port " "[!] \fIport\fP[:\fIport\fP]"
+The source port or port range for the ip protocols 6 (TCP) and 17
+(UDP). If the first port is omitted, "0" is assumed; if the last
+is omitted, "65535" is assumed. The flag
+.B --ip-sport
+is an alias for this option.
+.TP
+.BR "--ip-destination-port " "[!] \fIport\fP[:\fIport\fP]"
+The destination port or port range for ip protocols 6 (TCP) and
+17 (UDP). The flag
+.B --ip-dport
+is an alias for this option.
 .SS arp
 Specify arp specific fields. These will only work if the protocol equals
 .BR ARP " or " RARP .
