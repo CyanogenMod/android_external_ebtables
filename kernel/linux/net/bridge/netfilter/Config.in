@@ -13,6 +13,7 @@ dep_tristate '    ebt: 802.3 filter support' CONFIG_BRIDGE_EBT_802_3 $CONFIG_BRI
 dep_tristate '    ebt: packet type filter support' CONFIG_BRIDGE_EBT_PKTTYPE $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: STP filter support' CONFIG_BRIDGE_EBT_STP $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: mark filter support' CONFIG_BRIDGE_EBT_MARKF $CONFIG_BRIDGE_NF_EBTABLES
+dep_tristate '    ebt: arp reply target support' CONFIG_BRIDGE_EBT_ARPREPLY $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: snat target support' CONFIG_BRIDGE_EBT_SNAT $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: dnat target support' CONFIG_BRIDGE_EBT_DNAT $CONFIG_BRIDGE_NF_EBTABLES
 dep_tristate '    ebt: redirect target support' CONFIG_BRIDGE_EBT_REDIRECT $CONFIG_BRIDGE_NF_EBTABLES
