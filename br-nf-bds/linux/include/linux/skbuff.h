@@ -135,8 +135,10 @@ struct sk_buff {
 	struct sock	*sk;			/* Socket we are owned by 			*/
 	struct timeval	stamp;			/* Time we arrived				*/
 	struct net_device	*dev;		/* Device we arrived on/are leaving by		*/
+#ifdef CONFIG_BRIDGE_NF
 	struct net_device	*physindev;	/* Physical device we arrived on		*/
 	struct net_device	*physoutdev;	/* Physical device we will leave by		*/
+#endif
 
 	/* Transport layer header */
 	union

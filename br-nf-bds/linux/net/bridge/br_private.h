@@ -4,7 +4,7 @@
  *	Authors:
  *	Lennert Buytenhek		<buytenh@gnu.org>
  *
- *	$Id: br_private.h,v 1.2 2002/08/24 08:44:41 bdschuym Exp $
+ *	$Id: br_private.h,v 1.3 2002/08/24 16:23:34 bdschuym Exp $
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
@@ -120,7 +120,6 @@ extern void br_dec_use_count(void);
 extern void br_inc_use_count(void);
 
 /* br_device.c */
-extern int br_dev_xmit(struct sk_buff *skb, struct net_device *dev);
 extern void br_dev_setup(struct net_device *dev);
 extern int br_dev_xmit(struct sk_buff *skb, struct net_device *dev);
 
