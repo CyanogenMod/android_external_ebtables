@@ -656,7 +656,7 @@ static int retrieve_from_file(char *filename, struct ebt_replace *repl,
 	fseek(file, 0, SEEK_END);
 	if (size != ftell(file)) {
 		ebt_print_error("File %s has wrong size", filename);
-		ret -1;
+		ret = -1;
 		goto close_file;
 	}
 	entries = (char *)malloc(repl->entries_size);
