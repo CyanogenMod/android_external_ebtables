@@ -28,13 +28,13 @@ static __u8 ebt_target_redirect(struct sk_buff **pskb, unsigned int hooknr,
 	return infostuff->target;
 }
 
-static int ebt_target_redirect_check(const char *tablename, unsigned int hooknr,
+static int ebt_target_redirect_check(const char *tablename, unsigned int hookmask,
    const struct ebt_entry *e, void *data, unsigned int datalen)
 {
 	struct ebt_redirect_info *infostuff = (struct ebt_redirect_info *) data;
 
-	if ( (strcmp(tablename, "nat") || hooknr != NF_BR_PRE_ROUTING) &&
-	     (strcmp(tablename, "broute") || hooknr != NF_BR_BROUTING) )
+	if ( (strcmp(tablename, "nat") || hookmask & ~(1 << NF_BR_PRE_ROUTING)) &&
+	     (strcmp(tablename, "broute") || hookmask & ~(1 << NF_BR_BROUTING)) )
 		return -EINVAL;
 	if (datalen != sizeof(struct ebt_redirect_info))
 		return -EINVAL;

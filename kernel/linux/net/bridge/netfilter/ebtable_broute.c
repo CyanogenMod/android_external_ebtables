@@ -21,13 +21,12 @@
 // EBT_ACCEPT means the frame will be bridged
 // EBT_DROP means the frame will be routed
 static struct ebt_entries initial_chain =
-  {0, EBT_ACCEPT, 0};
+  {0, "BROUTE", 0, EBT_ACCEPT, 0};
 
 static struct ebt_replace initial_table =
 {
   "broute", 1 << NF_BR_BROUTING, 0, sizeof(struct ebt_entries),
-  { [NF_BR_BROUTING]&initial_chain}, {},
-  0, NULL, (char *)&initial_chain
+  { [NF_BR_BROUTING]&initial_chain}, 0, NULL, (char *)&initial_chain
 };
 
 static int check(const struct ebt_table_info *info, unsigned int valid_hooks)

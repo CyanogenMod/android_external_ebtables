@@ -28,11 +28,23 @@
 
 struct ebt_u_entries
 {
-	__u8 policy;
+	int policy;
 	__u32 nentries;
+	// counter offset for this chain
+	unsigned int counter_offset;
+	// used for udc
+	unsigned int hook_mask;
+	char name[EBT_CHAIN_MAXNAMELEN];
 	struct ebt_u_entry *entries;
 };
 
+struct ebt_u_chain_list
+{
+	struct ebt_u_entries *udc;
+	struct ebt_u_chain_list *next;
+	// this is only used internally, in communications.c
+	char *kernel_start;
+};
 
 struct ebt_u_replace
 {
@@ -41,8 +53,8 @@ struct ebt_u_replace
 	// nr of rules in the table
 	unsigned int nentries;
 	struct ebt_u_entries *hook_entry[NF_BR_NUMHOOKS];
-	// how many counters in front of it?
-	unsigned int counter_entry[NF_BR_NUMHOOKS];
+	// user defined chains (udc) list
+	struct ebt_u_chain_list *udc;
 	// nr of counters userspace expects back
 	unsigned int num_counters;
 	// where the kernel will put the old counters
@@ -107,7 +119,7 @@ struct ebt_u_match
 	        struct ebt_entry_match **match);
 	void (*final_check)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_match *match,
-	   const char *name, unsigned int hook);
+	   const char *name, unsigned int hook_mask);
 	void (*print)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_match *match);
 	int (*compare)(const struct ebt_entry_match *m1,
@@ -134,7 +146,7 @@ struct ebt_u_watcher
 	   struct ebt_entry_watcher **watcher);
 	void (*final_check)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_watcher *watch, const char *name,
-	   unsigned int hook);
+	   unsigned int hook_mask);
 	void (*print)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_watcher *watcher);
 	int (*compare)(const struct ebt_entry_watcher *w1,
@@ -158,7 +170,7 @@ struct ebt_u_target
 	   struct ebt_entry_target **target);
 	void (*final_check)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_target *target, const char *name,
-	   unsigned int hook);
+	   unsigned int hook_mask);
 	void (*print)(const struct ebt_u_entry *entry,
 	   const struct ebt_entry_target *target);
 	int (*compare)(const struct ebt_entry_target *t1,

@@ -68,7 +68,7 @@ static int ebt_filter_arp(const struct sk_buff *skb,
 	return 0;
 }
 
-static int ebt_arp_check(const char *tablename, unsigned int hooknr,
+static int ebt_arp_check(const char *tablename, unsigned int hookmask,
    const struct ebt_entry *e, void *data, unsigned int datalen)
 {
 	struct ebt_arp_info *infostuff = (struct ebt_arp_info *) data;

@@ -17,17 +17,16 @@
 
 static struct ebt_entries initial_chains[] =
 {
-  {0, EBT_ACCEPT, 0},
-  {0, EBT_ACCEPT, 0},
-  {0, EBT_ACCEPT, 0}
+  {0, "INPUT", 0, EBT_ACCEPT, 0},
+  {0, "FORWARD", 0, EBT_ACCEPT, 0},
+  {0, "OUTPUT", 0, EBT_ACCEPT, 0}
 };
 
-static struct ebt_replace initial_table = 
-{ 
+static struct ebt_replace initial_table =
+{
   "filter", FILTER_VALID_HOOKS, 0, 3 * sizeof(struct ebt_entries),
   { [NF_BR_LOCAL_IN]&initial_chains[0], [NF_BR_FORWARD]&initial_chains[1],
-    [NF_BR_LOCAL_OUT]&initial_chains[2] },{},
-  0, NULL, (char *)initial_chains
+    [NF_BR_LOCAL_OUT]&initial_chains[2] }, 0, NULL, (char *)initial_chains
 };
 
 static int check(const struct ebt_table_info *info, unsigned int valid_hooks)

@@ -17,7 +17,7 @@
 
 static spinlock_t ebt_log_lock = SPIN_LOCK_UNLOCKED;
 
-static int ebt_log_check(const char *tablename, unsigned int hooknr,
+static int ebt_log_check(const char *tablename, unsigned int hookmask,
    const struct ebt_entry *e, void *data, unsigned int datalen)
 {
 	struct ebt_log_info *loginfo = (struct ebt_log_info *)data;

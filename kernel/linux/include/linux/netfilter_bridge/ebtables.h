@@ -17,6 +17,7 @@
 #include <linux/if_ether.h> // ETH_ALEN
 
 #define EBT_TABLE_MAXNAMELEN 32
+#define EBT_CHAIN_MAXNAMELEN EBT_TABLE_MAXNAMELEN
 #define EBT_FUNCTION_MAXNAMELEN EBT_TABLE_MAXNAMELEN
 
 // [gs]etsockopt numbers
@@ -30,18 +31,29 @@
 #define EBT_SO_GET_ENTRIES      (EBT_SO_GET_INFO+1)
 #define EBT_SO_GET_MAX          (EBT_SO_GET_ENTRIES+1)
 
-#define EBT_ACCEPT   0
-#define EBT_DROP     1
-#define EBT_CONTINUE 2
-#define NUM_STANDARD_TARGETS   3
+// verdicts >0 are "branches"
+#define EBT_ACCEPT   -1
+#define EBT_DROP     -2
+#define EBT_CONTINUE -3
+#define EBT_RETURN   -4
+#define NUM_STANDARD_TARGETS   4
+
+struct ebt_counter
+{
+	__u64 pcnt;
+};
 
 struct ebt_entries {
 	// this field is always set to zero (including userspace).
 	// See EBT_ENTRY_OR_ENTRIES.
 	// Must be same size as ebt_entry.bitmask
 	__u32 distinguisher;
-	// one standard (accept or drop) per hook
-	__u8 policy;
+	// the chain name
+	char name[EBT_CHAIN_MAXNAMELEN];
+	// counter offset for this chain
+	unsigned int counter_offset;
+	// one standard (accept, drop, return) per hook
+	int policy;
 	// nr. of entries
 	__u32 nentries;
 	// entry list
@@ -75,11 +87,6 @@ struct ebt_entries {
 #define EBT_ILOGICALOUT 0x40
 #define EBT_INV_MASK (EBT_IPROTO | EBT_IIN | EBT_IOUT | EBT_ILOGICALIN \
    | EBT_ILOGICALOUT | EBT_ISOURCE | EBT_IDEST)
-
-struct ebt_counter
-{
-	__u64 pcnt;
-};
 
 struct ebt_entry_match
 {
@@ -118,7 +125,7 @@ struct ebt_entry_target
 struct ebt_standard_target
 {
 	struct ebt_entry_target target;
-	__u8 verdict;
+	int verdict;
 };
 
 // one entry
@@ -158,8 +165,6 @@ struct ebt_replace
 	unsigned int entries_size;
 	// start of the chains
 	struct ebt_entries *hook_entry[NF_BR_NUMHOOKS];
-	// how many counters in front of it?
-	unsigned int counter_entry[NF_BR_NUMHOOKS];
 	// nr of counters userspace expects back
 	unsigned int num_counters;
 	// where the kernel will put the old counters
@@ -178,7 +183,7 @@ struct ebt_match
 	   const struct net_device *out, const void *matchdata,
 	   unsigned int datalen, const struct ebt_counter *c);
 	// 0 == let it in
-	int (*check)(const char *tablename, unsigned int hooknr,
+	int (*check)(const char *tablename, unsigned int hookmask,
 	   const struct ebt_entry *e, void *matchdata, unsigned int datalen);
 	void (*destroy)(void *matchdata, unsigned int datalen);
 	struct module *me;
@@ -192,7 +197,7 @@ struct ebt_watcher
 	   const struct net_device *out, const void *watcherdata,
 	   unsigned int datalen, const struct ebt_counter *c);
 	// 0 == let it in
-	int (*check)(const char *tablename, unsigned int hooknr,
+	int (*check)(const char *tablename, unsigned int hookmask,
 	   const struct ebt_entry *e, void *watcherdata, unsigned int datalen);
 	void (*destroy)(void *watcherdata, unsigned int datalen);
 	struct module *me;
@@ -210,10 +215,18 @@ struct ebt_target
 	       const void *targetdata,
 	       unsigned int datalen);
 	// 0 == let it in
-	int (*check)(const char *tablename, unsigned int hooknr,
+	int (*check)(const char *tablename, unsigned int hookmask,
 	   const struct ebt_entry *e, void *targetdata, unsigned int datalen);
 	void (*destroy)(void *targetdata, unsigned int datalen);
 	struct module *me;
+};
+
+// used for jumping from and into user defined chains (udc)
+struct ebt_chainstack
+{
+	struct ebt_entries *chaininfo; // pointer to chain data
+	struct ebt_entry *e; // pointer to entry data
+	unsigned int n; // n'th entry
 };
 
 struct ebt_table_info
@@ -223,9 +236,9 @@ struct ebt_table_info
 	unsigned int nentries;
 	// pointers to the start of the chains
 	struct ebt_entries *hook_entry[NF_BR_NUMHOOKS];
-	// how many counters in front of the counters bolonging to a chain
-	unsigned int counter_entry[NF_BR_NUMHOOKS];
 	struct ebt_counter *counters;
+	// room to maintain the stack used for jumping from and into udc
+	struct ebt_chainstack *chainstack;
 	char *entries;
 };
 

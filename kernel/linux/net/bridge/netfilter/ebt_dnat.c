@@ -26,14 +26,14 @@ static __u8 ebt_target_dnat(struct sk_buff **pskb, unsigned int hooknr,
 	return infostuff->target;
 }
 
-static int ebt_target_dnat_check(const char *tablename, unsigned int hooknr,
+static int ebt_target_dnat_check(const char *tablename, unsigned int hookmask,
    const struct ebt_entry *e, void *data, unsigned int datalen)
 {
 	struct ebt_nat_info *infostuff = (struct ebt_nat_info *) data;
 
-	if ( (strcmp(tablename, "nat") || 
-	   (hooknr != NF_BR_PRE_ROUTING && hooknr != NF_BR_LOCAL_OUT)) &&
-	   (strcmp(tablename, "broute") || hooknr != NF_BR_BROUTING) )
+	if ( (strcmp(tablename, "nat") ||
+	   (hookmask & ~(1 << NF_BR_PRE_ROUTING) | (1 << NF_BR_LOCAL_OUT))) &&
+	   (strcmp(tablename, "broute") || hookmask & ~(1 << NF_BR_BROUTING)) )
 		return -EINVAL;
 	if (datalen != sizeof(struct ebt_nat_info))
 		return -EINVAL;

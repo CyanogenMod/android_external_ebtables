@@ -26,7 +26,7 @@ static __u8 ebt_target_snat(struct sk_buff **pskb, unsigned int hooknr,
 	return infostuff->target;
 }
 
-static int ebt_target_snat_check(const char *tablename, unsigned int hooknr,
+static int ebt_target_snat_check(const char *tablename, unsigned int hookmask,
    const struct ebt_entry *e, void *data, unsigned int datalen)
 {
 	struct ebt_nat_info *infostuff = (struct ebt_nat_info *) data;
@@ -35,7 +35,7 @@ static int ebt_target_snat_check(const char *tablename, unsigned int hooknr,
 		return -EINVAL;
 	if (datalen != sizeof(struct ebt_nat_info))
 		return -EINVAL;
-	if (hooknr != NF_BR_POST_ROUTING)
+	if (hookmask & ~(1 << NF_BR_POST_ROUTING))
 		return -EINVAL;
 	if (infostuff->target >= NUM_STANDARD_TARGETS)
 		return -EINVAL;

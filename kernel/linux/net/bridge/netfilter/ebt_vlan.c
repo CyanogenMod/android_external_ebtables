@@ -99,7 +99,7 @@ static int ebt_filter_vlan (const struct sk_buff *skb,
  * ebt_vlan_check() is called when userspace delivers the table to the kernel, 
  * * it is called to check that userspace doesn't give a bad table.
  */
-static int ebt_vlan_check (const char *tablename, unsigned int hooknr,
+static int ebt_vlan_check (const char *tablename, unsigned int hookmask,
 			   const struct ebt_entry *e, void *data,
 			   unsigned int datalen)
 {

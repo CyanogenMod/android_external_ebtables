@@ -90,7 +90,7 @@ static inline int ebt_dev_check(char *entry, const struct net_device *device)
 	if (!device)
 		return 1;
 	return strncmp(entry, device->name, IFNAMSIZ);
-}	
+}
 
 // Do some firewalling
 unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
@@ -101,16 +101,21 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 	struct ebt_entry *point;
 	struct ebt_counter *counter_base;
 	struct ebt_entry_target *t;
-	__u8 verdict;
+	int verdict, sp = 0;
+	struct ebt_chainstack *cs;
+	struct ebt_entries *chaininfo;
 
 	read_lock_bh(&table->lock);
+	cs = table->private->chainstack;
+	chaininfo = table->private->hook_entry[hook];
 	nentries = table->private->hook_entry[hook]->nentries;
 	point = (struct ebt_entry *)(table->private->hook_entry[hook]->data);
-	counter_base = table->private->counters +
-	   cpu_number_map(smp_processor_id()) * table->private->nentries +
-	   table->private->counter_entry[hook];
+	#define cb_base table->private->counters + \
+	   cpu_number_map(smp_processor_id()) * table->private->nentries
+	counter_base = cb_base + table->private->hook_entry[hook]->counter_offset;
 	#define FWINV(bool,invflg) ((bool) ^ !!(point->invflags & invflg))
- 	for (i = 0; i < nentries; i++) {
+	i = 0;
+ 	while (i < nentries) {
 		if ( ( point->bitmask & EBT_NOPROTO ||
 		   FWINV(point->ethproto == ((**pskb).mac.ethernet)->h_proto,
 		      EBT_IPROTO)
@@ -175,20 +180,58 @@ unsigned int ebt_do_table (unsigned int hook, struct sk_buff **pskb,
 				read_unlock_bh(&table->lock);
 				return NF_DROP;
 			}
-			if (verdict != EBT_CONTINUE) {
+			if (verdict == EBT_RETURN) {
+letsreturn:
+				if (sp == 0) {
+					BUGPRINT("return target on base chain\n");
+					// No oopsen, hopefully
+					return NF_DROP;
+				}
+				sp--;
+				// put all the local variables right
+				i = cs[sp].n;
+				chaininfo = cs[sp].chaininfo;
+				nentries = chaininfo->nentries;
+				point = cs[sp].e;
+				counter_base = cb_base +
+				   chaininfo->counter_offset;
+				continue;
+			}
+			if (verdict == EBT_CONTINUE)
+				goto letscontinue;
+			if (verdict < 0) {
+				BUGPRINT("bogus standard verdict\n");
 				read_unlock_bh(&table->lock);
-				BUGPRINT("Illegal target while "
-				         "firewalling!!\n");
-				// Try not to get oopsen
 				return NF_DROP;
 			}
+			// jump to a udc
+			cs[sp].n = i + 1;
+			cs[sp].chaininfo = chaininfo;
+			cs[sp].e = (struct ebt_entry *)
+			   (((char *)point) + point->next_offset);
+			i = 0;
+			chaininfo = (struct ebt_entries *) (((char *)chaininfo) + verdict);
+			if (chaininfo->distinguisher) {
+				BUGPRINT("jump to non-chain\n");
+				read_unlock_bh(&table->lock);
+				return NF_DROP;
+			}
+			nentries = chaininfo->nentries;
+			point = (struct ebt_entry *)chaininfo->data;
+			counter_base = cb_base + chaininfo->counter_offset;
+			sp++;
+			continue;
 		}
 letscontinue:
 		point = (struct ebt_entry *)
 		   (((char *)point) + point->next_offset);
+		i++;
 	}
 
-	if ( table->private->hook_entry[hook]->policy == EBT_ACCEPT ) {
+	// I actually like this :)
+	if (chaininfo->policy == EBT_RETURN)
+		goto letsreturn;
+	if (chaininfo->policy == EBT_ACCEPT) {
 		read_unlock_bh(&table->lock);
 		return NF_ACCEPT;
 	}
@@ -324,7 +367,7 @@ static inline int
 ebt_check_entry_size_and_hooks(struct ebt_entry *e,
    struct ebt_table_info *newinfo, char *base, char *limit,
    struct ebt_entries **hook_entries, unsigned int *n, unsigned int *cnt,
-   unsigned int *totalcnt, unsigned int valid_hooks)
+   unsigned int *totalcnt, unsigned int *udc_cnt, unsigned int valid_hooks)
 {
 	int i;
 
@@ -336,7 +379,8 @@ ebt_check_entry_size_and_hooks(struct ebt_entry *e,
 			break;
 	}
 	// beginning of a new chain
-	if (i != NF_BR_NUMHOOKS) {
+	// if i == NF_BR_NUMHOOKS it must be a user defined chain
+	if (i != NF_BR_NUMHOOKS || !(e->bitmask & EBT_ENTRY_OR_ENTRIES)) {
 		if ((e->bitmask & EBT_ENTRY_OR_ENTRIES) != 0) {
 			// we make userspace set this right,
 			// so there is no misunderstanding
@@ -359,13 +403,23 @@ ebt_check_entry_size_and_hooks(struct ebt_entry *e,
 		}
 		if (((struct ebt_entries *)e)->policy != EBT_DROP &&
 		   ((struct ebt_entries *)e)->policy != EBT_ACCEPT) {
-			BUGPRINT("bad policy\n");
+			// only RETURN from udc
+			if (i != NF_BR_NUMHOOKS ||
+			   ((struct ebt_entries *)e)->policy != EBT_RETURN) {
+				BUGPRINT("bad policy\n");
+				return -EINVAL;
+			}
+		}
+		if (i == NF_BR_NUMHOOKS) // it's a user defined chain
+			(*udc_cnt)++;
+		else
+			newinfo->hook_entry[i] = (struct ebt_entries *)e;
+		if (((struct ebt_entries *)e)->counter_offset != *totalcnt) {
+			BUGPRINT("counter_offset != totalcnt");
 			return -EINVAL;
 		}
 		*n = ((struct ebt_entries *)e)->nentries;
 		*cnt = 0;
-		newinfo->hook_entry[i] = (struct ebt_entries *)e;
-		newinfo->counter_entry[i] = *totalcnt;
 		return 0;
 	}
 	// a plain old entry, heh
@@ -375,18 +429,52 @@ ebt_check_entry_size_and_hooks(struct ebt_entry *e,
 		BUGPRINT("entry offsets not in right order\n");
 		return -EINVAL;
 	}
-	if (((char *)e) + e->next_offset - newinfo->entries > limit - base) {
-		BUGPRINT("entry offsets point too far\n");
+	// this is not checked anywhere else
+	if (e->next_offset - e->target_offset < sizeof(struct ebt_entry_target)) {
+		BUGPRINT("target size too small\n");
 		return -EINVAL;
 	}
 
-	if ((e->bitmask & EBT_ENTRY_OR_ENTRIES) == 0) {
-		BUGPRINT("EBT_ENTRY_OR_ENTRIES should be set in "
-		         "bitmask for an entry\n");
-		return -EINVAL;
-	}
 	(*cnt)++;
 	(*totalcnt)++;
+	return 0;
+}
+
+struct ebt_cl_stack
+{
+	struct ebt_chainstack cs;
+	int from;
+	unsigned int hookmask;
+};
+
+// we need these positions to check that the jumps to a different part of the
+// entries is a jump to the beginning of a new chain.
+static inline int
+ebt_get_udc_positions(struct ebt_entry *e, struct ebt_table_info *newinfo,
+   struct ebt_entries **hook_entries, unsigned int *n, unsigned int valid_hooks,
+   struct ebt_cl_stack *udc)
+{
+	int i;
+
+	// we're only interested in chain starts
+	if (e->bitmask & EBT_ENTRY_OR_ENTRIES)
+		return 0;
+	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
+		if ((valid_hooks & (1 << i)) == 0)
+			continue;
+		if (newinfo->hook_entry[i] == (struct ebt_entries *)e)
+			break;
+	}
+	// only care about udc
+	if (i != NF_BR_NUMHOOKS)
+		return 0;
+
+	udc[*n].cs.chaininfo = (struct ebt_entries *)e;
+	// these initialisations are depended on later in check_chainloops()
+	udc[*n].cs.n = 0;
+	udc[*n].hookmask = 0;
+
+	(*n)++;
 	return 0;
 }
 
@@ -418,11 +506,12 @@ ebt_cleanup_watcher(struct ebt_entry_watcher *w, unsigned int *i)
 
 static inline int
 ebt_check_entry(struct ebt_entry *e, struct ebt_table_info *newinfo,
-   const char *name, unsigned int *cnt, unsigned int valid_hooks)
+   const char *name, unsigned int *cnt, unsigned int valid_hooks,
+   struct ebt_cl_stack *cl_s, unsigned int udc_cnt)
 {
 	struct ebt_entry_target *t;
 	struct ebt_target *target;
-	unsigned int i, j, hook = 0;
+	unsigned int i, j, hook = 0, hookmask = 0;
 	int ret;
 
 	// Don't mess with the struct ebt_entries
@@ -454,18 +543,34 @@ ebt_check_entry(struct ebt_entry *e, struct ebt_table_info *newinfo,
 		else
 			break;
 	}
+	if (i < NF_BR_NUMHOOKS)
+		hookmask = (1 << hook);
+	else {
+		for (i = 0; i < udc_cnt; i++) {
+			if ((char *)(cl_s[i].cs.chaininfo) < (char *)e)
+				hook = i;
+			else
+				break;
+		}
+		// sanity check
+		if (i == udc_cnt) {
+			BUGPRINT("serious trouble\n");
+			return -EFAULT;
+		}
+		hookmask = cl_s[i].hookmask;
+	}
 	i = 0;
-	ret = EBT_MATCH_ITERATE(e, ebt_check_match, e, name, hook, &i);
+	ret = EBT_MATCH_ITERATE(e, ebt_check_match, e, name, hookmask, &i);
 	if (ret != 0)
 		goto cleanup_matches;
 	j = 0;
-	ret = EBT_WATCHER_ITERATE(e, ebt_check_watcher, e, name, hook, &j);
+	ret = EBT_WATCHER_ITERATE(e, ebt_check_watcher, e, name, hookmask, &j);
 	if (ret != 0)
 		goto cleanup_watchers;
 	t = (struct ebt_entry_target *)(((char *)e) + e->target_offset);
 	t->u.name[EBT_FUNCTION_MAXNAMELEN - 1] = '\0';
 	target = find_target_lock(t->u.name, &ret, &ebt_mutex);
-	if (!target) 
+	if (!target)
 		goto cleanup_watchers;
 	if (target->me)
 		__MOD_INC_USE_COUNT(target->me);
@@ -479,14 +584,14 @@ ebt_check_entry(struct ebt_entry *e, struct ebt_table_info *newinfo,
 			ret = -EFAULT;
 			goto cleanup_watchers;
 		}
-		if (((struct ebt_standard_target *)t)->verdict >=
-		   NUM_STANDARD_TARGETS) {
+		if (((struct ebt_standard_target *)t)->verdict <
+		   -NUM_STANDARD_TARGETS) {
 			BUGPRINT("Invalid standard target\n");
 			ret = -EFAULT;
 			goto cleanup_watchers;
 		}
 	} else if (t->u.target->check &&
-	   t->u.target->check(name, hook, e, t->data,
+	   t->u.target->check(name, hookmask, e, t->data,
 	   t->target_size) != 0) {
 		if (t->u.target->me)
 			__MOD_DEC_USE_COUNT(t->u.target->me);
@@ -523,12 +628,78 @@ ebt_cleanup_entry(struct ebt_entry *e, unsigned int *cnt)
 	return 0;
 }
 
+// checks for loops and sets the hook mask for udc
+// the hook mask for udc tells us from which base chains the udc can be
+// accessed. This mask is a parameter to the check() functions of the extensions
+int check_chainloops(struct ebt_entries *chain, struct ebt_cl_stack *cl_s,
+   unsigned int udc_cnt, unsigned int hooknr, char *base)
+{
+	int i, chain_nr = -1, pos = 0, nentries = chain->nentries, verdict;
+	struct ebt_entry *e = (struct ebt_entry *)chain->data;
+	struct ebt_entry_target *t;
+
+	while (pos < nentries || chain_nr != -1) {
+		// end of udc, go back one 'recursion' step
+		if (pos == nentries) {
+			// put back values of the time when this chain was called
+			e = cl_s[chain_nr].cs.e;
+			nentries = cl_s[cl_s[chain_nr].from].cs.chaininfo->nentries;
+			pos = cl_s[chain_nr].cs.n;
+			// make sure we won't see a loop that isn't one
+			cl_s[chain_nr].cs.n = 0;
+			chain_nr = cl_s[chain_nr].from;
+		}
+		t = (struct ebt_entry_target *)
+		   (((char *)e) + e->target_offset);
+		t->u.name[EBT_FUNCTION_MAXNAMELEN - 1] = '\0';
+		if (strcmp(t->u.name, EBT_STANDARD_TARGET))
+			goto letscontinue;
+		if (e->target_offset + sizeof(struct ebt_standard_target) >
+		   e->next_offset) {
+			BUGPRINT("Standard target size too big\n");
+			return -1;
+		}
+		verdict = ((struct ebt_standard_target *)t)->verdict;
+		if (verdict >= 0) { // jump to another chain
+			struct ebt_entries *hlp2 =
+			   (struct ebt_entries *)(base + verdict);
+			for (i = 0; i < udc_cnt; i++)
+				if (hlp2 == cl_s[i].cs.chaininfo)
+					break;
+			// bad destination or loop
+			if (i == udc_cnt) {
+				BUGPRINT("bad destination\n");
+				return -1;
+			}
+			if (cl_s[i].cs.n) {
+				BUGPRINT("loop\n");
+				return -1;
+			}
+			cl_s[i].cs.n = pos + 1;
+			pos = 0;
+			cl_s[i].cs.e = ((void *)e + e->next_offset);
+			e = (struct ebt_entry *)(hlp2->data);
+			nentries = hlp2->nentries;
+			cl_s[i].from = chain_nr;
+			chain_nr = i;
+			// this udc is accessible from the base chain for hooknr
+			cl_s[i].hookmask |= (1 << hooknr);
+			continue;
+		}
+letscontinue:
+		e = (void *)e + e->next_offset;
+		pos++;
+	}
+	return 0;
+}
+
 // do the parsing of the table/chains/entries/matches/watchers/targets, heh
 static int translate_table(struct ebt_replace *repl,
    struct ebt_table_info *newinfo)
 {
-	unsigned int i, j, k;
+	unsigned int i, j, k, udc_cnt;
 	int ret;
+	struct ebt_cl_stack *cl_s = NULL; // used in the checking for chain loops
 
 	i = 0;
 	while (i < NF_BR_NUMHOOKS && !(repl->valid_hooks & (1 << i)))
@@ -553,10 +724,8 @@ static int translate_table(struct ebt_replace *repl,
 		i = j;
 	}
 
-	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
+	for (i = 0; i < NF_BR_NUMHOOKS; i++)
 		newinfo->hook_entry[i] = NULL;
-		newinfo->counter_entry[i] = 0;
-	}
 
 	newinfo->entries_size = repl->entries_size;
 	newinfo->nentries = repl->nentries;
@@ -566,10 +735,11 @@ static int translate_table(struct ebt_replace *repl,
 	j = 0; // holds the up to now counted entries for the chain
 	k = 0; // holds the total nr. of entries, should equal
 	       // newinfo->nentries afterwards
+	udc_cnt = 0; // will hold the nr. of user defined chains (udc)
 	ret = EBT_ENTRY_ITERATE(newinfo->entries, newinfo->entries_size,
 	   ebt_check_entry_size_and_hooks, newinfo, repl->entries,
 	   repl->entries + repl->entries_size, repl->hook_entry, &i, &j, &k,
-	   repl->valid_hooks);
+	   &udc_cnt, repl->valid_hooks);
 
 	if (ret != 0)
 		return ret;
@@ -587,22 +757,70 @@ static int translate_table(struct ebt_replace *repl,
 	// check if all valid hooks have a chain
 	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
 		if (newinfo->hook_entry[i] == NULL &&
-		   (repl->valid_hooks & (1 << i))){
+		   (repl->valid_hooks & (1 << i))) {
 			BUGPRINT("Valid hook without chain\n");
 			return -EINVAL;
 		}
 	}
+
+	// Get the location of the udc, put them in an array
+	// While we're at it, allocate the chainstack
+	if (udc_cnt) {
+		// this will get free'd in do_replace()/ebt_register_table()
+		// if an error occurs
+		newinfo->chainstack = (struct ebt_chainstack *)
+		   vmalloc(udc_cnt * sizeof(struct ebt_chainstack));
+		if (!newinfo->chainstack)
+			return -ENOMEM;
+		cl_s = (struct ebt_cl_stack *)
+		   vmalloc(udc_cnt * sizeof(struct ebt_cl_stack));
+		if (!cl_s)
+			return -ENOMEM;
+		i = 0; // the i'th udc
+		EBT_ENTRY_ITERATE(newinfo->entries, newinfo->entries_size,
+		   ebt_get_udc_positions, newinfo, repl->hook_entry, &i,
+		   repl->valid_hooks, cl_s);
+		// sanity check
+		if (i != udc_cnt) {
+			BUGPRINT("i != udc_cnt\n");
+			vfree(cl_s);
+			return -EFAULT;
+		}
+	}
+
+	// Check for loops
+	for (i = 0; i < NF_BR_NUMHOOKS; i++)
+		if (repl->valid_hooks & (1 << i))
+			if (check_chainloops(newinfo->hook_entry[i],
+			   cl_s, udc_cnt, i, newinfo->entries)) {
+				if (cl_s)
+					vfree(cl_s);
+				return -EINVAL;
+			}
+
+	// we now know the following (along with E=mc²):
+	// - the nr of entries in each chain is right
+	// - the size of the allocated space is right
+	// - all valid hooks have a corresponding chain
+	// - there are no loops
+	// - wrong data can still be on the level of a single entry
+	// - could be there are jumps to places that are not the
+	//   beginning of a chain. This can only occur in chains that
+	//   are not accessible from any base chains, so we don't care.
 
 	// we just don't trust anything
 	repl->name[EBT_TABLE_MAXNAMELEN - 1] = '\0';
 	// used to know what we need to clean up if something goes wrong
 	i = 0;
 	ret = EBT_ENTRY_ITERATE(newinfo->entries, newinfo->entries_size,
-	   ebt_check_entry, newinfo, repl->name, &i, repl->valid_hooks);
+	   ebt_check_entry, newinfo, repl->name, &i, repl->valid_hooks,
+	   cl_s, udc_cnt);
 	if (ret != 0) {
 		EBT_ENTRY_ITERATE(newinfo->entries, newinfo->entries_size,
 		   ebt_cleanup_entry, &i);
 	}
+	if (cl_s)
+		vfree(cl_s);
 	return ret;
 }
 
@@ -690,6 +908,8 @@ static int do_replace(void *user, unsigned int len)
 	else
 		counterstmp = NULL;
 
+	// this can get initialized by translate_table()
+	newinfo->chainstack = NULL;
 	ret = translate_table(&tmp, newinfo);
 
 	if (ret != 0)
@@ -752,6 +972,9 @@ free_unlock:
 free_counterstmp:
 	if (counterstmp)
 		vfree(counterstmp);
+	// can be initialized in translate_table()
+	if (newinfo->chainstack)
+		vfree(newinfo->chainstack);
 free_entries:
 	if (newinfo->entries)
 		vfree(newinfo->entries);
@@ -877,6 +1100,7 @@ int ebt_register_table(struct ebt_table *table)
 		newinfo->counters = NULL;
 
 	// fill in newinfo and parse the entries
+	newinfo->chainstack = NULL;
 	ret = translate_table(table->table, newinfo);
 	if (ret != 0) {
 		BUGPRINT("Translate_table failed\n");
@@ -909,6 +1133,8 @@ free_unlock:
 free_counters:
 	if (newinfo->counters)
 		vfree(newinfo->counters);
+	if (newinfo->chainstack)
+		vfree(newinfo->chainstack);
 free_entries:
 	vfree(newinfo->entries);
 free_newinfo:
@@ -1091,8 +1317,6 @@ static int copy_everything_to_user(struct ebt_table *t, void *user, int *len)
 		return -EFAULT;
 	}
 	// make userspace's life easier
-	memcpy(tmp.counter_entry, info->counter_entry,
-	   NF_BR_NUMHOOKS * sizeof(int));
 	memcpy(tmp.hook_entry, info->hook_entry,
 	   NF_BR_NUMHOOKS * sizeof(struct ebt_entries *));
 	for (i = 0; i < NF_BR_NUMHOOKS; i++)

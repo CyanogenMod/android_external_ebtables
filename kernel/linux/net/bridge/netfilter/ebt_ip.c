@@ -39,7 +39,7 @@ static int ebt_filter_ip(const struct sk_buff *skb,
 	return 0;
 }
 
-static int ebt_ip_check(const char *tablename, unsigned int hooknr,
+static int ebt_ip_check(const char *tablename, unsigned int hookmask,
    const struct ebt_entry *e, void *data, unsigned int datalen)
 {
 	struct ebt_ip_info *infostuff = (struct ebt_ip_info *) data;
