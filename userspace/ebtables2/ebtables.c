@@ -927,12 +927,34 @@ static void list_rules()
 	}
 }
 
+static void counters_nochange()
+{
+	int i;
+
+	replace.num_counters = replace.nentries;
+	if (replace.nentries) {
+		/*
+		 * '+ 1' for the CNT_END
+		 */
+		if (!(replace.counterchanges = (unsigned short *) malloc(
+		   (replace.nentries + 1) * sizeof(unsigned short))))
+			print_memory();
+		/*
+		 * done nothing special to the rules
+		 */
+		for (i = 0; i < replace.nentries; i++)
+			replace.counterchanges[i] = CNT_NORM;
+		replace.counterchanges[replace.nentries] = CNT_END;
+	}
+	else
+		replace.counterchanges = NULL;
+}
+
 /*
  * execute command P
  */
 static void change_policy(int policy)
 {
-	int i;
 	struct ebt_u_entries *entries = to_chain();
 
 	/*
@@ -940,25 +962,8 @@ static void change_policy(int policy)
 	 */
 	if (entries->policy != policy) {
 		entries->policy = policy;
-		replace.num_counters = replace.nentries;
-		if (replace.nentries) {
-			/*
-			 * '+ 1' for the CNT_END
-			 */
-			if (!(replace.counterchanges = (unsigned short *) malloc(
-			   (replace.nentries + 1) * sizeof(unsigned short))))
-				print_memory();
-			/*
-			 * done nothing special to the rules
-			 */
-			for (i = 0; i < replace.nentries; i++)
-				replace.counterchanges[i] = CNT_NORM;
-			replace.counterchanges[replace.nentries] = CNT_END;
-		}
-		else
-			replace.counterchanges = NULL;
-	}
-	else
+		counters_nochange();
+	} else
 		exit(0);
 }
 
@@ -1727,6 +1732,7 @@ int main(int argc, char *argv[])
 				while (*cl2)
 					cl2 = &((*cl2)->next);
 				*cl2 = cl;
+				counters_nochange();
 				break;
 			}
 			if ((replace.selected_hook = get_hooknr(optarg)) == -1)
@@ -1746,6 +1752,7 @@ int main(int argc, char *argv[])
 					   , argv[optind]);
 				entries = to_chain();
 				strcpy(entries->name, argv[optind]);
+				counters_nochange();
 				optind++;
 				break;
 			}
@@ -1760,7 +1767,8 @@ int main(int argc, char *argv[])
 				 * one we're deleting
 				 */
 				check_for_references(replace.selected_hook - NF_BR_NUMHOOKS);
-				flush_chains();
+				if (flush_chains() == -1)
+					counters_nochange();
 				entries = to_chain();
 				cl2 = &(replace.udc);
 				while ((*cl2)->udc != entries)
