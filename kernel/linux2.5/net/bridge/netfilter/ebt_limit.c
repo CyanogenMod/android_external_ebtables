@@ -82,7 +82,7 @@ static int ebt_limit_check(const char *tablename, unsigned int hookmask,
 static struct ebt_match ebt_limit_reg =
 {
 	.name		= EBT_LIMIT_MATCH,
-	.target		= ebt_limit_match,
+	.match		= ebt_limit_match,
 	.check		= ebt_limit_check,
 	.me		= THIS_MODULE,
 };
