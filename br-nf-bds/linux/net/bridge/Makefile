@@ -16,9 +16,7 @@ endif
 O_TARGET	:= bridge.o
 obj-y		:= br.o br_device.o br_fdb.o br_forward.o br_if.o br_input.o \
 			br_ioctl.o br_notify.o br_stp.o br_stp_bpdu.o \
-			br_stp_if.o br_stp_timer.o
+			br_stp_if.o br_stp_timer.o br_netfilter.o
 obj-m		:= $(O_TARGET)
-
-obj-$(CONFIG_BRIDGE_NF) += br_netfilter.o
 
 include $(TOPDIR)/Rules.make
