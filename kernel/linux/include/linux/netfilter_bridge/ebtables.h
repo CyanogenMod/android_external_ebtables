@@ -208,7 +208,7 @@ struct ebt_target
 	struct list_head list;
 	const char name[EBT_FUNCTION_MAXNAMELEN];
 	// returns one of the standard verdicts
-	__u8 (*target)(struct sk_buff **pskb,
+	int (*target)(struct sk_buff **pskb,
 	       unsigned int hooknr,
 	       const struct net_device *in,
 	       const struct net_device *out,

@@ -15,7 +15,7 @@
 #include <linux/module.h>
 #include <net/sock.h>
 
-static __u8 ebt_target_snat(struct sk_buff **pskb, unsigned int hooknr,
+static int ebt_target_snat(struct sk_buff **pskb, unsigned int hooknr,
    const struct net_device *in, const struct net_device *out,
    const void *data, unsigned int datalen)
 {
