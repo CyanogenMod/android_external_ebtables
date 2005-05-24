@@ -59,6 +59,7 @@ struct ebt_cntchanges;
 struct ebt_cntchanges
 {
 	unsigned short type;
+	unsigned short change; /* determines incremental/decremental/change */
 	struct ebt_cntchanges *next;
 };
 
@@ -259,7 +260,7 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 void ebt_zero_counters(struct ebt_u_replace *replace);
 void ebt_change_counters(struct ebt_u_replace *replace,
 		     struct ebt_u_entry *new_entry, int begin, int end,
-		     struct ebt_counter *cnt);
+		     struct ebt_counter *cnt, int mask);
 void ebt_new_chain(struct ebt_u_replace *replace, const char *name, int policy);
 void ebt_delete_chain(struct ebt_u_replace *replace);
 void ebt_rename_chain(struct ebt_u_replace *replace, const char *name);
@@ -329,8 +330,6 @@ __ret;})
 #define CNT_OWRITE 	3
 #define CNT_ZERO 	4
 #define CNT_CHANGE 	5
-#define CNT_INCR 	6
-#define CNT_DECR 	7
 
 extern const char *ebt_hooknames[NF_BR_NUMHOOKS];
 extern const char *ebt_standard_targets[NUM_STANDARD_TARGETS];
