@@ -1,0 +1,108 @@
+#!/bin/bash
+#
+# init script for the Ethernet Bridge filter tables
+#
+# Written by Dag Wieers <dag@wieers.com>.
+# Modified by Rok Papez <rok.papez@arnes.si>.
+#
+# chkconfig: - 15 85
+# description: Ethernet Bridge filtering tables
+#
+# config: /etc/sysconfig/ebtables
+
+source /etc/init.d/functions
+source /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 0
+
+[ -x /sbin/ebtables ] || exit 1
+[ -x /sbin/ebtables-save ] || exit 1
+[ -x /sbin/ebtables-restore ] || exit 1
+
+[ "$1" == "save" -o -r /etc/sysconfig/ebtables ] || exit 1
+
+RETVAL=0
+prog="ebtables"
+desc="Ethernet bridge filtering"
+
+start() {
+	echo -n $"Starting $desc ($prog): "
+	/sbin/ebtables-restore < /etc/sysconfig/ebtables || RETVAL=1
+
+	if [ $RETVAL -eq 0 ]; then
+		success "$prog startup"
+		rm -f /var/lock/subsys/$prog
+	else
+		failure "$prog startup"
+	fi
+
+	echo
+	return $RETVAL
+}
+
+stop() {
+	echo -n $"Stopping $desc ($prog): "
+	/sbin/ebtables -t filter --init-table || RETVAL=1
+	/sbin/ebtables -t nat --init-table || RETVAL=1
+	/sbin/ebtables -t broute --init-table || RETVAL=1
+
+	for mod in $(grep -E '^(ebt|ebtable)_' /proc/modules | cut -f1 -d' ') ebtables; do
+		rmmod $mod || RETVAL=1
+	done
+
+	if [ $RETVAL -eq 0 ]; then
+		success "$prog shutdown"
+		rm -f %{_localstatedir}/lock/subsys/$prog
+	else
+		failure "$prog shutdown"
+	fi
+
+	echo
+	return $RETVAL
+}
+
+restart() {
+	stop
+	start
+}
+
+save() {
+	echo -n $"Saving $desc ($prog): "
+	/sbin/ebtables-save > /etc/sysconfig/ebtables || RETVAL=1
+
+	if [ $RETVAL -eq 0 ]; then
+		success "$prog saved"
+	else
+		failure "$prog saved"
+	fi
+	echo
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart|reload)
+	restart
+	;;
+  condrestart)
+	[ -e /var/lock/subsys/$prog ] && restart
+	RETVAL=$?
+	;;
+  save)
+	save
+	;;
+  status)
+	/sbin/ebtables-save
+	RETVAL=$?
+	;;
+  *)
+	echo $"Usage $0 {start|stop|restart|condrestart|save|status}"
+	RETVAL=1
+esac
+
+exit $RETVAL
