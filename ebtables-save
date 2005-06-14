@@ -1,0 +1,53 @@
+#!/usr/bin/perl -w
+#
+#
+# A script that generates text output of the ebtables rules.
+# Similar to iptables-save.
+#
+# It can be used to store active configuration to /etc/sysconfig/ebtables
+
+use strict;
+my $table;
+
+# ========================================================
+# Process filter table
+# ========================================================
+sub process_table {
+    my $chain = "";
+    my $rules = "";
+    my $chains = "";
+    my $line = "";
+
+    foreach $line (split("\n",$_[0])) {
+        if ($line =~ m/Bridge table: (.*)/) {
+            print "*$1\n";
+            next;
+        }
+        if ($line =~ m/Bridge chain: (.*?), entries:.* policy: (.*)/) {
+            $chains = $chains . ":$1 $2\n";
+            $chain = $1;
+            next;
+        }
+        if ($line =~ m/^$/) {
+            next;
+        }
+        $rules = $rules . "-A $chain $line\n";
+    }
+
+    print $chains;
+    print $rules;
+    print "\n";
+}
+# ========================================================
+
+unless (-x "/sbin/ebtables") { exit -1 };
+$table =`/sbin/ebtables -t filter -L`;
+unless ($? == 0) { print $table; exit -1 };
+&process_table($table);
+$table =`/sbin/ebtables -t nat -L`;
+unless ($? == 0) { print $table; exit -1 };
+&process_table($table);
+$table =`/sbin/ebtables -t broute -L`;
+unless ($? == 0) { print $table; exit -1 };
+&process_table($table);
+
