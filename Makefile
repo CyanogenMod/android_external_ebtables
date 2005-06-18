@@ -2,17 +2,17 @@
 
 PROGNAME:=ebtables
 PROGVERSION:=2.0.7
-PROGDATE:=January\ 2004
+PROGDATE:=June\ 2005
 
 # default paths
 LIBDIR:=/usr/lib
 MANDIR:=/usr/local/man
-BINDIR:=/usr/sbin
+BINDIR:=/usr/local/sbin
 ETCDIR:=/etc
 DESTDIR:=
 
 # include DESTDIR param
-override LIBDIR:=$(DESTDIR)$(LIBDIR)
+override LIBDIR:=$(DESTDIR)$(LIBDIR)/$(PROGNAME)
 override MANDIR:=$(DESTDIR)$(MANDIR)
 override BINDIR:=$(DESTDIR)$(BINDIR)
 override ETCDIR:=$(DESTDIR)$(ETCDIR)
@@ -29,7 +29,7 @@ endif
 include extensions/Makefile
 
 OBJECTS2:=getethertype.o communication.o libebtc.o \
-useful_functions.o
+useful_functions.o ebtables.o
 
 OBJECTS:=$(OBJECTS2) ebtables.o $(EXT_OBJS) $(EXT_LIBS)
 
@@ -61,6 +61,10 @@ PROGSPECSD:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DEBTD_PIPE=\"$(PIPE)\" \
 	-DEBTD_PIPE_DIR=\"$(PIPE_DIR)\"
 
+# Uncomment for debugging (slower)
+#PROGSPECS+=-DEBT_DEBUG
+#PROGSPECSD+=-DEBT_DEBUG
+
 all: ebtables daemon
 
 communication.o: communication.c include/ebtables_u.h
@@ -78,24 +82,26 @@ getethertype.o: getethertype.c include/ethernetdb.h
 ebtables.o: ebtables.c include/ebtables_u.h
 	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
 
-ebtables-standalone.o: ebtables-standalone.c ebtables.c include/ebtables_u.h
-	$(CC) $(CFLAGS) $(PROGSPECS) -c $< ebtables.c -o $@ -I$(KERNEL_INCLUDES)
+ebtables-standalone.o: ebtables-standalone.c include/ebtables_u.h
+	$(CC) $(CFLAGS) $(PROGSPECS) -c $< -o $@ -I$(KERNEL_INCLUDES)
 
-ebtables: $(OBJECTS) ebtables-standalone.o
+.PHONY: libebtc
+libebtc: $(OBJECTS2)
 	$(LD) -shared -soname libebtc.so -o libebtc.so -lc $(OBJECTS2)
-	$(CC) $(CFLAGS) -o $@ ebtables-standalone.o -I$(KERNEL_INCLUDES) -L/root/ \
-	-L. -Lextensions/ -lebtc $(EXT_LIBSI)
+
+ebtables: $(OBJECTS) ebtables-standalone.o libebtc
+	$(CC) $(CFLAGS) -o $@ ebtables-standalone.o -I$(KERNEL_INCLUDES) -L. -Lextensions -lebtc $(EXT_LIBSI) \
+	-Wl,-rpath,$(LIBDIR)
 
 ebtablesu: ebtablesu.c
 	$(CC) $(CFLAGS) $(PROGSPECSD) $< -o $@
 
-ebtablesd.o: ebtablesd.c ebtables.c include/ebtables_u.h
-	$(CC) $(CFLAGS) $(PROGSPECSD) -c $< ebtables.c -o $@  -I$(KERNEL_INCLUDES)
+ebtablesd.o: ebtablesd.c include/ebtables_u.h
+	$(CC) $(CFLAGS) $(PROGSPECSD) -c $< -o $@  -I$(KERNEL_INCLUDES)
 
-ebtablesd: $(OBJECTS) ebtablesd.o
-	$(LD) -shared -soname libebtc.so -o libebtc.so -lc $(OBJECTS2)
-	$(CC) $(CFLAGS) -o $@ ebtablesd.o -I$(KERNEL_INCLUDES) -L/root/ \
-	-L. -Lextensions/ -lebtc $(EXT_LIBSI)
+ebtablesd: $(OBJECTS) ebtablesd.o libebtc
+	$(CC) $(CFLAGS) -o $@ ebtablesd.o -I$(KERNEL_INCLUDES) -L. -Lextensions -lebtc $(EXT_LIBSI) \
+	-Wl,-rpath,$(LIBDIR)
 
 .PHONY: daemon
 daemon: ebtablesd ebtablesu
