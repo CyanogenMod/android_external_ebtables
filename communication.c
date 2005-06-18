@@ -350,7 +350,9 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 	new = newcounters;
 	while (cc) {
 		if (!next) {
-			while (!(entries = ebt_nr_to_chain(u_repl, chainnr++)));
+			while (!(entries = ebt_nr_to_chain(u_repl, chainnr++)))
+				if (chainnr > NF_BR_NUMHOOKS)
+					goto letscontinue;/* Prevent infinite loop for -D x:-1 */
 			if (!(next = entries->entries))
 				continue;
 		}
@@ -397,6 +399,7 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 		}
 		cc = cc->next;
 	}
+letscontinue:
 
 	free(u_repl->counters);
 	u_repl->counters = newcounters;
