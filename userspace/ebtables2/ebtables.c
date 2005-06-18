@@ -28,6 +28,7 @@
 #include "include/ebtables_u.h"
 #include "include/ethernetdb.h"
 
+/* Checks whether a command has already been specified */
 #define OPT_COMMANDS (replace->flags & OPT_COMMAND || replace->flags & OPT_ZERO)
 
 #define OPT_COMMAND	0x01
@@ -102,8 +103,8 @@ static struct ebt_u_table *table;
 
 /* The pointers in here are special:
  * The struct ebt_target pointer is actually a struct ebt_u_target pointer.
- * instead of making yet a few other structs, we just do a cast.
  * I do not feel like using a union.
+ * We need a struct ebt_u_target pointer because we know the address of the data
  * they point to won't change. We want to allow that the struct ebt_u_target.t
  * member can change.
  * The same holds for the struct ebt_match and struct ebt_watcher pointers */
@@ -112,9 +113,8 @@ static struct ebt_u_entry *new_entry;
 
 static int global_option_offset;
 #define OPTION_OFFSET 256
-static struct option *
-merge_options(struct option *oldopts, const struct option *newopts,
-	    unsigned int *options_offset)
+static struct option *merge_options(struct option *oldopts,
+   const struct option *newopts, unsigned int *options_offset)
 {
 	unsigned int num_old, num_new, i;
 	struct option *merge;
@@ -194,6 +194,8 @@ static void list_em(struct ebt_u_entries *entries, struct ebt_cntchanges *cc)
 
 	if (replace->flags & LIST_MAC2)
 		ebt_printstyle_mac = 2;
+	else
+		ebt_printstyle_mac = 0;
 	hlp = entries->entries;
 	if (replace->flags & LIST_X && entries->policy != EBT_ACCEPT) {
 		printf("ebtables -t %s -P %s %s\n", replace->name,
@@ -204,10 +206,12 @@ static void list_em(struct ebt_u_entries *entries, struct ebt_cntchanges *cc)
 		   ebt_standard_targets[-entries->policy - 1]);
 	}
 
-	i = entries->nentries;
-	while (i > 9) {
-		space++;
-		i /= 10;
+	if (replace->flags & LIST_N) {
+		i = entries->nentries;
+		while (i > 9) {
+			space++;
+			i /= 10;
+		}
 	}
 
 	for (i = 0; i < entries->nentries; i++) {
@@ -316,11 +320,13 @@ static void list_em(struct ebt_u_entries *entries, struct ebt_cntchanges *cc)
 			uint64_t pcnt = hlp->cnt.pcnt;
 			uint64_t bcnt = hlp->cnt.bcnt;
 
+#ifdef EBT_DEBUG
 			while (cc->type == CNT_DEL)
 				cc = cc->next;
-			if (cc->change != 0) /* in daemon mode, only change==0 is allowed */
+			if (cc->change != 0) /* In daemon mode, only change==0 is allowed */
 				ebt_print_bug("cc->change != 0");
 			cc = cc->next;
+#endif
 			if (replace->flags & LIST_X)
 				printf("-c %llu %llu", pcnt, bcnt);
 			else
@@ -399,12 +405,17 @@ ATOMIC_ENV_VARIABLE "          : if set <FILE> (see above) will equal its value"
 /* Execute command L */
 static void list_rules()
 {
-	int i, j;
+	int i;
+#ifdef EBT_DEBUG
+	int j;
+#endif
 	struct ebt_cntchanges *cc = replace->counterchanges;
 
 	if (!(replace->flags & LIST_X))
 		printf("Bridge table: %s\n", table->name);
 	if (replace->selected_chain != -1) {
+#ifdef EBT_DEBUG
+
 		for (i = 0; i < replace->selected_chain; i++) {
 			if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
 				continue;
@@ -415,6 +426,7 @@ static void list_rules()
 				cc = cc->next;
 			}
 		}
+#endif
 		list_em(ebt_to_chain(replace), cc);
 	} else {
 		struct ebt_u_chain_list *cl = replace->udc;
@@ -439,20 +451,26 @@ static void list_rules()
 			if (i < NF_BR_NUMHOOKS) {
 				if (replace->hook_entry[i]) {
 					list_em(replace->hook_entry[i], cc);
+#ifdef EBT_DEBUG
 					j = replace->hook_entry[i]->nentries;
+#endif
 				}
 			} else {
 				if (!cl)
 					break;
 				list_em(cl->udc, cc);
+#ifdef EBT_DEBUG
 				j = cl->udc->nentries;
+#endif
 				cl = cl->next;
 			}
+#ifdef EBT_DEBUG
 			while (j) {
 				if (cc->type != CNT_DEL)
 					j--;
 				cc = cc->next;
 			}
+#endif
 			i++;
 		}
 	}
@@ -485,7 +503,8 @@ static int parse_rule_range(const char *argv, int *rule_nr, int *rule_nr_end)
 }
 
 /* Incrementing or decrementing rules in daemon mode is not supported as the
- * involved code overload is not worth it. */
+ * involved code overload is not worth it (too annoying to take the increased
+ * counters in the kernel into account). */
 static int parse_change_counters_rule(int argc, char **argv, int *rule_nr, int *rule_nr_end, int exec_style)
 {
 	char *buffer;
@@ -562,6 +581,7 @@ void ebt_early_init_once()
 	ebt_iterate_targets(merge_target);
 }
 
+/* We use exec_style instead of #ifdef's because ebtables.so is a shared object. */
 int do_command(int argc, char *argv[], int exec_style,
                struct ebt_u_replace *replace_)
 {
