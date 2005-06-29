@@ -22,14 +22,14 @@ WHAT GETS INSTALLED?
   change the directory, include PIPE_DIR=<<dir>>. There is no option
   to change the name of the pipe.
 - the userspace programs ebtables ebtablesu and ebtablesd are compiled and
-  the executables are copied by default to /usr/sbin/ebtables. If you want
+  the executables are copied by default to /usr/local/sbin/ebtables. If you want
   to put the executables somewhere else, include BINPATH=<<path>>.
 
 That's all
 
 ADDITIONAL PROGRAM(S):
 ----------------------
-examples/ulog/test_ulog.c
+-- examples/ulog/test_ulog.c --
 
 Contains an example to receive and parse netlink messages containing
 packets seen by the ebtables ulog watcher.
@@ -40,3 +40,8 @@ Compile with:
 Usage:
 %examples/ulog/test_ulog NETLINK_GROUP
 %ebtables -A chain --ulog-nlgroup NETLINK_GROUP
+
+-- examples/perf_test/perf_test --
+
+A test script to compare the performance for the different ways to
+construct an ebtables table.
