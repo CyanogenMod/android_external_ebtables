@@ -21,9 +21,9 @@
 #
 
 export PIPE=/tmp/ebtables-v2.0.7/ebtablesd_pipe
-export EBTABLES=/usr/sbin/ebtables
-export EBTABLESD=/usr/sbin/ebtablesd
-export EBTABLESU=/usr/sbin/ebtablesu
+export EBTABLES=/usr/local/sbin/ebtables
+export EBTABLESD=/usr/local/sbin/ebtablesd
+export EBTABLESU=/usr/local/sbin/ebtablesu
 
 if [[ $# = 0 ]]
 then
