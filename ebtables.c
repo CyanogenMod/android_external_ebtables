@@ -781,6 +781,7 @@ print_zero:
 		case 'M': /* Modprobe */
 			if (OPT_COMMANDS)
 				ebt_print_error2("Please put the -M option earlier");
+			free(ebt_modprobe);
 			ebt_modprobe = optarg;
 			break;
 		case 'h': /* Help */

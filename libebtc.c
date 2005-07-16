@@ -109,22 +109,22 @@ void ebt_list_extensions()
         struct ebt_u_watcher *w = ebt_watchers;
 
 	PRINT_VERSION;
-	printf("Supported userspace extensions:\n\nSupported tables:\n");
+	printf("Loaded userspace extensions:\n\nLoaded tables:\n");
         while (tbl) {
 		printf("%s\n", tbl->name);
                 tbl = tbl->next;
 	}
-	printf("\nSupported targets:\n");
+	printf("\nLoaded targets:\n");
         while (t) {
 		printf("%s\n", t->name);
                 t = t->next;
 	}
-	printf("\nSupported matches:\n");
+	printf("\nLoaded matches:\n");
         while (m) {
 		printf("%s\n", m->name);
                 m = m->next;
 	}
-	printf("\nSupported watchers:\n");
+	printf("\nLoaded watchers:\n");
         while (w) {
 		printf("%s\n", w->name);
                 w = w->next;
@@ -191,14 +191,10 @@ void ebt_cleanup_replace(struct ebt_u_replace *replace)
 	replace->flags = 0;
 	replace->command = 0;
 	replace->selected_chain = -1;
-	if (replace->filename) {
-		free(replace->filename);
-		replace->filename = NULL;
-	}
-	if (replace->counters) {
-		free(replace->counters);
-		replace->counters = NULL;
-	}
+	free(replace->filename);
+	replace->filename = NULL;
+	free(replace->counters);
+	replace->counters = NULL;
 
 	i = -1;
 	while (1) {
@@ -218,11 +214,10 @@ void ebt_cleanup_replace(struct ebt_u_replace *replace)
 			u_e1 = u_e2;
 		}
 	}
-	for (i = 0; i < NF_BR_NUMHOOKS; i++)
-		if (replace->hook_entry[i]) {
-			free(replace->hook_entry[i]);
-			replace->hook_entry[i] = NULL;
-		}
+	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
+		free(replace->hook_entry[i]);
+		replace->hook_entry[i] = NULL;
+	}
 	udc1 = replace->udc;
 	while (udc1) {
 		free(udc1->udc);
@@ -234,7 +229,7 @@ void ebt_cleanup_replace(struct ebt_u_replace *replace)
 	cc1 = replace->counterchanges;
 	while (cc1) {
 		cc2 = cc1->next;
-		free(cc2);
+		free(cc1);
 		cc1 = cc2;
 	}
 	replace->counterchanges = NULL;
@@ -251,8 +246,8 @@ void ebt_reinit_extensions()
 	/* The init functions should determine by themselves whether they are
 	 * called for the first time or not (when necessary). */
 	for (m = ebt_matches; m; m = m->next) {
-		size = EBT_ALIGN(m->size) + sizeof(struct ebt_entry_match);
 		if (m->used) {
+			size = EBT_ALIGN(m->size) + sizeof(struct ebt_entry_match);
 			m->m = (struct ebt_entry_match *)malloc(size);
 			if (!m->m)
 				ebt_print_memory();
@@ -264,8 +259,8 @@ void ebt_reinit_extensions()
 		m->init(m->m);
 	}
 	for (w = ebt_watchers; w; w = w->next) {
-		size = EBT_ALIGN(w->size) + sizeof(struct ebt_entry_watcher);
 		if (w->used) {
+			size = EBT_ALIGN(w->size) + sizeof(struct ebt_entry_watcher);
 			w->w = (struct ebt_entry_watcher *)malloc(size);
 			if (!w->w)
 				ebt_print_memory();
@@ -277,8 +272,8 @@ void ebt_reinit_extensions()
 		w->init(w->w);
 	}
 	for (t = ebt_targets; t; t = t->next) {
-		size = EBT_ALIGN(t->size) + sizeof(struct ebt_entry_target);
 		if (t->used) {
+			size = EBT_ALIGN(t->size) + sizeof(struct ebt_entry_target);
 			t->t = (struct ebt_entry_target *)malloc(size);
 			if (!t->t)
 				ebt_print_memory();
@@ -327,7 +322,9 @@ static char *get_modprobe(void)
 	if (ret) {
 		if (read(procfile, ret, 1024) == -1)
 			goto fail;
-		ret[1023] = '\0';
+		/* The kernel adds a '\n' */
+		ret[1023] = '\n';
+		*strchr(ret, '\n') = '\0';
 		close(procfile);
 		return ret;
 	}
@@ -344,12 +341,12 @@ int ebtables_insmod(const char *modname)
 	char *buf = NULL;
 	char *argv[3];
 
-	/* If they don't explicitly set it, read out of kernel */
+	/* If they don't explicitly set it, read out of /proc */
 	if (!ebt_modprobe) {
 		buf = get_modprobe();
 		if (!buf)
 			return -1;
-		ebt_modprobe = buf;
+		ebt_modprobe = buf; /* Keep the value for possible later use */
 	}
 
 	switch (fork()) {
@@ -368,7 +365,6 @@ int ebtables_insmod(const char *modname)
 		wait(NULL);
 	}
 
-	free(buf);
 	return 0;
 }
 
@@ -775,7 +771,8 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 }
 
 /* If *begin==*end==0 then find the rule corresponding to new_entry,
- * else make the rule numbers positive and check for bad rule numbers. */
+ * else make the rule numbers positive (starting from 0) and check
+ * for bad rule numbers. */
 static int check_and_change_rule_number(struct ebt_u_replace *replace,
    struct ebt_u_entry *new_entry, int *begin, int *end)
 {
@@ -794,7 +791,7 @@ static int check_and_change_rule_number(struct ebt_u_replace *replace,
 	if ((*begin * *end == 0) && (*begin + *end != 0))
 		ebt_print_bug("begin and end should be either both zero, "
 			      "either both non-zero");
-	if (*begin != 0 && *end != 0) {
+	if (*begin != 0) {
 		(*begin)--;
 		(*end)--;
 	} else {
