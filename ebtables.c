@@ -712,11 +712,13 @@ int do_command(int argc, char *argv[], int exec_style,
 					return -1;
 			} else if (c == 'I') {
 				if (optind >= argc || (argv[optind][0] == '-' && (argv[optind][1] < '0' || argv[optind][1] > '9')))
-					ebt_print_error2("No rulenr for -I specified");
-				rule_nr = strtol(argv[optind], &buffer, 10);
-				if (*buffer != '\0')
-					ebt_print_error2("Problem with the specified rule number '%s'", argv[optind]);
-				optind++;
+					rule_nr = 1;
+				else {
+					rule_nr = strtol(argv[optind], &buffer, 10);
+					if (*buffer != '\0')
+						ebt_print_error2("Problem with the specified rule number '%s'", argv[optind]);
+					optind++;
+				}
 			} else if (c == 'P') {
 handle_P:
 				if (optind >= argc)

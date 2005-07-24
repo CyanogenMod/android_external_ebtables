@@ -87,6 +87,9 @@ This file can be read later, e.g. with
 .BR "" "The " quit " command lets ebtablesd finish gracefully."
 All commands, options and extensions that ebtables uses can be used with ebtablesu, except for
 .BR --init-table ", " --atomic-file ", " --atomic-commit ", " --atomic-init ", " --atomic-save " and " -h .
+When using ebtablesd, don't use spaces in string arguments
+(like the
+.BR --log-prefix " argument)."
 .br
 Example usage:
 .br
@@ -117,7 +120,6 @@ Example usage:
 # echo "ebtablesu commit filter" >> $PIPE
 .br
 # echo "ebtablesu quit" >> $PIPE
-
 .SS CHAINS
 There are three ebtables tables with built-in chains in the
 Linux kernel. These tables are used to divide functionality into
@@ -268,10 +270,12 @@ First the packet counter is specified, then the byte counter. If the specified c
 with a '+', the counter values are added to the respective current counter values.
 If the specified counters start with a '-', the counter values are decreased from the respective
 current counter values. No bounds checking is done. If the counters don't start with '+' or '-',
-the current counters are changed to the specified counters.
+the current counters are changed to the specified counters. In daemon mode, using '+' or '-' is not
+allowed (due to technical reasons).
 .TP
 .B "-I, --insert"
-Insert the specified rule into the selected chain at the specified rule number.
+Insert the specified rule into the selected chain at the specified rule number. If the
+rule number is not specified, the rule is added at the head of the chain.
 If the current number of rules equals
 .IR N ,
 then the specified number can be
