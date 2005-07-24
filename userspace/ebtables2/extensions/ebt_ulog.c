@@ -118,7 +118,7 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		uloginfo->qthreshold = i;
 		break;
 	case ULOG_ULOG:
-		if (ebt_check_inverse2(optarg))
+		if (ebt_check_inverse(optarg))
 			goto inverse_invalid;
 		ebt_check_option2(flags, OPT_ULOG);
 		break;
