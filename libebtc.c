@@ -869,7 +869,7 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 		u_e = &(*u_e)->next;
 	/* Remove the rules */
 	j = nr_deletes;
-	while(j--) {
+	while (j--) {
 		u_e2 = *u_e;
 		*u_e = (*u_e)->next;
 		/* Free everything */
@@ -941,8 +941,10 @@ void ebt_change_counters(struct ebt_u_replace *replace,
 				u_e->cnt.pcnt = (*cnt).pcnt;
 				u_e->cnt_surplus.pcnt = 0;
 			} else {
+#ifdef EBT_DEBUG
 				if (cc->type != CNT_NORM)
 					ebt_print_bug("cc->type != CNT_NORM");
+#endif
 				u_e->cnt_surplus.pcnt = (*cnt).pcnt;
 			}
 
@@ -950,8 +952,10 @@ void ebt_change_counters(struct ebt_u_replace *replace,
 				u_e->cnt.bcnt = (*cnt).bcnt;
 				u_e->cnt_surplus.bcnt = 0;
 			} else {
+#ifdef EBT_DEBUG
 				if (cc->type != CNT_NORM)
 					ebt_print_bug("cc->type != CNT_NORM");
+#endif
 				u_e->cnt_surplus.bcnt = (*cnt).bcnt;
 			}
 			if (cc->type == CNT_NORM || cc->type == CNT_ZERO)
@@ -985,8 +989,10 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 				continue;
 			entries = ebt_nr_to_chain(replace, i);
 			if (!entries) {
+#ifdef EBT_DEBUG
 				if (i < NF_BR_NUMHOOKS)
 					ebt_print_bug("i < NF_BR_NUMHOOKS");
+#endif
 				break;
 			}
 			next = entries->entries;
@@ -996,7 +1002,6 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 			}
 		}
 	} else {
-		next = entries->entries;
 		if (entries->nentries == 0)
 			return;
 
@@ -1019,6 +1024,7 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 			}
 			cc = cc->next;
 		}
+		next = entries->entries;
 		while (next) {
 			next->cnt.bcnt = next->cnt.pcnt = 0;
 			next = next->next;
