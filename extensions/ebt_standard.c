@@ -47,8 +47,7 @@ static void print(const struct ebt_u_entry *entry,
 	if (verdict >= 0) {
 		struct ebt_u_entries *entries;
 
-		entries = ebt_nr_to_chain(entry->replace,
-					  verdict + NF_BR_NUMHOOKS);
+		entries = entry->replace->chains[verdict + NF_BR_NUMHOOKS];
 		printf("%s", entries->name);
 		return;
 	}
