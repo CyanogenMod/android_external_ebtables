@@ -406,73 +406,24 @@ ATOMIC_ENV_VARIABLE "          : if set <FILE> (see above) will equal its value"
 static void list_rules()
 {
 	int i;
-#ifdef EBT_DEBUG
-	int j;
-#endif
 	struct ebt_cntchanges *cc = replace->counterchanges;
 
 	if (!(replace->flags & LIST_X))
 		printf("Bridge table: %s\n", table->name);
-	if (replace->selected_chain != -1) {
-#ifdef EBT_DEBUG
-
-		for (i = 0; i < replace->selected_chain; i++) {
-			if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
-				continue;
-			j = ebt_nr_to_chain(replace, i)->nentries;
-			while (j) {
-				if (cc->type != CNT_DEL)
-					j--;
-				cc = cc->next;
-			}
-		}
-#endif
+	if (replace->selected_chain != -1)
 		list_em(ebt_to_chain(replace), cc);
-	} else {
-		struct ebt_u_chain_list *cl = replace->udc;
-
+	else {
 		/* Create new chains and rename standard chains when necessary */
-		if (replace->flags & LIST_X) {
-			while (cl) {
-				printf("ebtables -t %s -N %s\n", replace->name,
-				   cl->udc->name);
-				cl = cl->next;
-			}
-			cl = replace->udc;
+		if (replace->flags & LIST_X && replace->num_chains > NF_BR_NUMHOOKS) {
+			for (i = NF_BR_NUMHOOKS; i < replace->num_chains; i++)
+				printf("ebtables -t %s -N %s\n", replace->name, replace->chains[i]->name);
 			for (i = 0; i < NF_BR_NUMHOOKS; i++)
-				if (replace->hook_entry[i] &&
-				   strcmp(replace->hook_entry[i]->name, ebt_hooknames[i]))
-					printf("ebtables -t %s -E %s %s\n",
-					   replace->name, ebt_hooknames[i],
-					   replace->hook_entry[i]->name);
+				if (replace->chains[i] && strcmp(replace->chains[i]->name, ebt_hooknames[i]))
+					printf("ebtables -t %s -E %s %s\n", replace->name, ebt_hooknames[i], replace->chains[i]->name);
 		}
-		i = 0;
-		while (1) {
-			if (i < NF_BR_NUMHOOKS) {
-				if (replace->hook_entry[i]) {
-					list_em(replace->hook_entry[i], cc);
-#ifdef EBT_DEBUG
-					j = replace->hook_entry[i]->nentries;
-#endif
-				}
-			} else {
-				if (!cl)
-					break;
-				list_em(cl->udc, cc);
-#ifdef EBT_DEBUG
-				j = cl->udc->nentries;
-#endif
-				cl = cl->next;
-			}
-#ifdef EBT_DEBUG
-			while (j) {
-				if (cc->type != CNT_DEL)
-					j--;
-				cc = cc->next;
-			}
-#endif
-			i++;
-		}
+		for (i = 0; i < replace->num_chains; i++)
+			if (replace->chains[i])
+				list_em(replace->chains[i], cc);
 	}
 }
 
@@ -1223,7 +1174,7 @@ check_extension:
 			struct ebt_u_entry *e;
 
 			i++;
-			entries = ebt_nr_to_chain(replace, i);
+			entries = replace->chains[i];
 			if (!entries) {
 				if (i < NF_BR_NUMHOOKS)
 					continue;

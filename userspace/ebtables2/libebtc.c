@@ -34,7 +34,6 @@
 #include <sys/wait.h>
 
 static void decrease_chain_jumps(struct ebt_u_replace *replace);
-static void remove_udc(struct ebt_u_replace *replace);
 static int iterate_entries(struct ebt_u_replace *replace, int type);
 
 /* The standard names */
@@ -180,7 +179,6 @@ void ebt_cleanup_replace(struct ebt_u_replace *replace)
 {
 	int i;
 	struct ebt_u_entries *entries;
-	struct ebt_u_chain_list *udc1, *udc2;
 	struct ebt_cntchanges *cc1, *cc2;
 	struct ebt_u_entry *u_e1, *u_e2;
 
@@ -196,16 +194,9 @@ void ebt_cleanup_replace(struct ebt_u_replace *replace)
 	free(replace->counters);
 	replace->counters = NULL;
 
-	i = -1;
-	while (1) {
-		i++;
-		entries = ebt_nr_to_chain(replace, i);
-		if (!entries) {
-			if (i < NF_BR_NUMHOOKS)
-				continue;
-			else
-				break;
-		}
+	for (i = 0; i < replace->num_chains; i++) {
+		if (!(entries = replace->chains[i]))
+			continue;
 		u_e1 = entries->entries;
 		while (u_e1) {
 			ebt_free_u_entry(u_e1);
@@ -213,19 +204,9 @@ void ebt_cleanup_replace(struct ebt_u_replace *replace)
 			free(u_e1);
 			u_e1 = u_e2;
 		}
+		free(entries);
+		replace->chains[i] = NULL;
 	}
-	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
-		free(replace->hook_entry[i]);
-		replace->hook_entry[i] = NULL;
-	}
-	udc1 = replace->udc;
-	while (udc1) {
-		free(udc1->udc);
-		udc2 = udc1->next;
-		free(udc1);
-		udc1 = udc2;
-	}
-	replace->udc = NULL;
 	cc1 = replace->counterchanges;
 	while (cc1) {
 		cc2 = cc1->next;
@@ -368,55 +349,18 @@ int ebtables_insmod(const char *modname)
 	return 0;
 }
 
-/* Gives back a pointer to the chain base, based on nr.
- * If nr >= NF_BR_NUMHOOKS you'll get back a user-defined chain.
- * Returns NULL on failure. */
-struct ebt_u_entries *ebt_nr_to_chain(const struct ebt_u_replace *replace, int nr)
-{
-	if (nr == -1)
-		return NULL;
-	if (nr < NF_BR_NUMHOOKS)
-		return replace->hook_entry[nr];
-	else {
-		int i;
-		struct ebt_u_chain_list *cl = replace->udc;
-
-		i = nr - NF_BR_NUMHOOKS;
-		while (i > 0 && cl) {
-			cl = cl->next;
-			i--;
-		}
-		if (cl)
-			return cl->udc;
-		else
-			return NULL;
-	}
-}
-
-/* Gives back a pointer to the chain base of selected_chain */
-struct ebt_u_entries *ebt_to_chain(const struct ebt_u_replace *replace)
-{
-	return ebt_nr_to_chain(replace, replace->selected_chain);
-}
-
 /* Parse the chain name and return a pointer to the chain base.
  * Returns NULL on failure. */
-struct ebt_u_entries *ebt_name_to_chain(const struct ebt_u_replace *replace,
-					const char* arg)
+struct ebt_u_entries *ebt_name_to_chain(const struct ebt_u_replace *replace, const char* arg)
 {
 	int i;
-	struct ebt_u_chain_list *cl = replace->udc;
+	struct ebt_u_entries *chain;
 
-	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
-		if (!replace->hook_entry[i])
+	for (i = 0; i < replace->num_chains; i++) {
+		if (!(chain = replace->chains[i]))
 			continue;
-		if (!strcmp(arg, replace->hook_entry[i]->name))
-			return replace->hook_entry[i];
-	}
-	while(cl) {
-		if (!strcmp(arg, cl->udc->name))
-			return cl->udc;
-		cl = cl->next;
+		if (!strcmp(arg, chain->name))
+			return chain;
 	}
 	return NULL;
 }
@@ -426,19 +370,12 @@ struct ebt_u_entries *ebt_name_to_chain(const struct ebt_u_replace *replace,
 int ebt_get_chainnr(const struct ebt_u_replace *replace, const char* arg)
 {
 	int i;
-	struct ebt_u_chain_list *cl = replace->udc;
 
-	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
-		if (!replace->hook_entry[i])
+	for (i = 0; i < replace->num_chains; i++) {
+		if (!replace->chains[i])
 			continue;
-		if (!strcmp(arg, replace->hook_entry[i]->name))
+		if (!strcmp(arg, replace->chains[i]->name))
 			return i;
-	}
-	while(cl) {
-		if (!strcmp(arg, cl->udc->name))
-			return i;
-		i++;
-		cl = cl->next;
 	}
 	return -1;
 }
@@ -479,16 +416,9 @@ void ebt_flush_chains(struct ebt_u_replace *replace)
 		replace->nentries = 0;
 
 		/* Free everything and zero (n)entries */
-		i = -1;
-		while (1) {
-			i++;
-			entries = ebt_nr_to_chain(replace, i);
-			if (!entries) {
-				if (i < NF_BR_NUMHOOKS)
-					continue;
-				else
-					break;
-			}
+		for (i = 0; i < replace->num_chains; i++) {
+			if (!(entries = replace->chains[i]))
+				continue;
 			entries->nentries = 0;
 			entries->counter_offset = 0;
 			u_e = entries->entries;
@@ -522,16 +452,9 @@ void ebt_flush_chains(struct ebt_u_replace *replace)
 
 	/* Delete the counters belonging to the specified chain,
 	 * update counter_offset */
-	i = -1;
-	while (1) {
-		i++;
-		entries = ebt_nr_to_chain(replace, i);
-		if (!entries) {
-			if (i < NF_BR_NUMHOOKS)
-				continue;
-			else
-				break;
-		}
+	for (i = 0; i < replace->num_chains; i++) {
+		if (!(entries = replace->chains[i]))
+			continue;
 		if (i > replace->selected_chain) {
 			entries->counter_offset -= numdel;
 			continue;
@@ -682,8 +605,7 @@ letscontinue:;
  * pointers so that they point to ebt_{match,watcher,target}, before adding
  * the rule to the chain. Don't free() the ebt_{match,watcher,target} and
  * don't reuse the new_entry after a successful call to ebt_add_rule() */
-void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
-		  int rule_nr)
+void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry, int rule_nr)
 {
 	int i, j;
 	struct ebt_u_entry **u_e;
@@ -707,9 +629,9 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 
 	/* Handle counter stuff */
 	for (i = 0; i < replace->selected_chain; i++) {
-		if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
+		if (!(replace->chains[i]))
 			continue;
-		j = ebt_nr_to_chain(replace, i)->nentries;
+		j = replace->chains[i]->nentries;
 		while (j) {
 			if (cc->type != CNT_DEL)
 				j--;
@@ -756,17 +678,11 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry,
 	}
 	new_entry->t = ((struct ebt_u_target *)new_entry->t)->t;
 	/* Update the counter_offset of chains behind this one */
-	i = replace->selected_chain;
-	while (1) {
-		i++;
-		entries = ebt_nr_to_chain(replace, i);
-		if (!entries) {
-			if (i < NF_BR_NUMHOOKS)
-				continue;
-			else
-				break;
-		} else
-			entries->counter_offset++;
+	for (i = replace->selected_chain+1; i < replace->num_chains; i++) {
+		entries = replace->chains[i];
+		if (!(entries = replace->chains[i]))
+			continue;
+		entries->counter_offset++;
 	}
 }
 
@@ -830,9 +746,9 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 
 	/* Handle counter stuff */
 	for (i = 0; i < replace->selected_chain; i++) {
-		if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
+		if (!(replace->chains[i]))
 			continue;
-		j = ebt_nr_to_chain(replace, i)->nentries;
+		j = replace->chains[i]->nentries;
 		while (j) {
 			if (cc->type != CNT_DEL)
 				j--;
@@ -879,16 +795,10 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 
 	/* Update the counter_offset of chains behind this one */
 	j = replace->selected_chain;
-	while (1) {
-		j++;
-		entries = ebt_nr_to_chain(replace, j);
-		if (!entries) {
-			if (j < NF_BR_NUMHOOKS)
-				continue;
-			else
-				break;
-		} else 
-			entries->counter_offset -= nr_deletes;
+	for (j = replace->selected_chain+1; j < replace->num_chains; j++) {
+		if (!(entries = replace->chains[j]))
+			continue;
+		entries->counter_offset -= nr_deletes;
 	}
 }
 
@@ -915,9 +825,9 @@ void ebt_change_counters(struct ebt_u_replace *replace,
 		return;
 
 	for (i = 0; i < replace->selected_chain; i++) {
-		if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
+		if (!(replace->chains[i]))
 			continue;
-		j = ebt_nr_to_chain(replace, i)->nentries;
+		j = replace->chains[i]->nentries;
 		while (j) {
 			if (cc->type != CNT_DEL)
 				j--;
@@ -982,19 +892,9 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 				cc->type = CNT_ZERO;
 			cc = cc->next;
 		}
-		i = -1;
-		while (1) {
-			i++;
-			if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
+		for (i = 0; i < replace->num_chains; i++) {
+			if (!(entries = replace->chains[i]))
 				continue;
-			entries = ebt_nr_to_chain(replace, i);
-			if (!entries) {
-#ifdef EBT_DEBUG
-				if (i < NF_BR_NUMHOOKS)
-					ebt_print_bug("i < NF_BR_NUMHOOKS");
-#endif
-				break;
-			}
 			next = entries->entries;
 			while (next) {
 				next->cnt.bcnt = next->cnt.pcnt = 0;
@@ -1006,9 +906,9 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 			return;
 
 		for (i = 0; i < replace->selected_chain; i++) {
-			if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
+			if (!(replace->chains[i]))
 				continue;
-			j = ebt_nr_to_chain(replace, i)->nentries;
+			j = replace->chains[i]->nentries;
 			while (j) {
 				if (cc->type != CNT_DEL)
 					j--;
@@ -1035,7 +935,7 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 /* Add a new chain and specify its policy */
 void ebt_new_chain(struct ebt_u_replace *replace, const char *name, int policy)
 {
-	struct ebt_u_chain_list *cl, **cl2;
+	struct ebt_u_entries *new;
 
 	if (ebt_get_chainnr(replace, name) != -1) {
 		ebt_print_error("Chain %s already exists", optarg);
@@ -1048,60 +948,51 @@ void ebt_new_chain(struct ebt_u_replace *replace, const char *name, int policy)
 				EBT_CHAIN_MAXNAMELEN - 1);
 		return;
 	}
-	cl = (struct ebt_u_chain_list *)
-	     malloc(sizeof(struct ebt_u_chain_list));
-	if (!cl)
+	if (replace->num_chains == replace->max_chains)
+		ebt_double_chains(replace);
+	new = (struct ebt_u_entries *)malloc(sizeof(struct ebt_u_entries));
+	if (!new)
 		ebt_print_memory();
-	cl->next = NULL;
-	cl->udc = (struct ebt_u_entries *)malloc(sizeof(struct ebt_u_entries));
-	if (!cl->udc)
-		ebt_print_memory();
-	cl->udc->nentries = 0;
-	cl->udc->policy = policy;
-	cl->udc->counter_offset = replace->nentries;
-	cl->udc->hook_mask = 0;
-	strcpy(cl->udc->name, name);
-	cl->udc->entries = NULL;
-	cl->kernel_start = NULL;
-	/* Put the new chain at the end */
-	cl2 = &(replace->udc);
-	while (*cl2)
-		cl2 = &((*cl2)->next);
-	*cl2 = cl;
+	replace->chains[replace->num_chains++] = new;
+	new->nentries = 0;
+	new->policy = policy;
+	new->counter_offset = replace->nentries;
+	new->hook_mask = 0;
+	strcpy(new->name, name);
+	new->entries = NULL;
+	new->kernel_start = NULL;
+}
+
+static void ebt_delete_a_chain(struct ebt_u_replace *replace, int chain, int print_err)
+{
+	int tmp = replace->selected_chain;
+	/* If the chain is referenced, don't delete it,
+	 * also decrement jumps to a chain behind the
+	 * one we're deleting */
+	replace->selected_chain = chain;
+	if (ebt_check_for_references(replace, print_err))
+		return;
+	decrease_chain_jumps(replace);
+	ebt_flush_chains(replace);
+	replace->selected_chain = tmp;
+	free(replace->chains[chain]);
+	memmove(replace->chains+chain, replace->chains+chain+1, (replace->num_chains-chain-1)*sizeof(void *));
+	replace->num_chains--;
 }
 
 /* Selected_chain == -1: delete all non-referenced udc
  * selected_chain < NF_BR_NUMHOOKS is illegal */
 void ebt_delete_chain(struct ebt_u_replace *replace)
 {
-	int chain_nr = replace->selected_chain, print_error = 1;
+	int i;
 
-	if (chain_nr != -1 && chain_nr < NF_BR_NUMHOOKS)
+	if (replace->selected_chain != -1 && replace->selected_chain < NF_BR_NUMHOOKS)
 		ebt_print_bug("You can't remove a standard chain");
-	if (chain_nr == -1) {
-		print_error = 0;
-		replace->selected_chain = NF_BR_NUMHOOKS;
-	}
-	do {
-		if (ebt_to_chain(replace) == NULL) {
-			if (chain_nr == -1)
-				break;
-			ebt_print_bug("udc nr %d doesn't exist", chain_nr);
-		}
-		/* If the chain is referenced, don't delete it,
-		 * also decrement jumps to a chain behind the
-		 * one we're deleting */
-		if (ebt_check_for_references(replace, print_error)) {
-			if (chain_nr != -1) 
-				break;
-			replace->selected_chain++;
-			continue;
-		}
-		decrease_chain_jumps(replace);
-		ebt_flush_chains(replace);
-		remove_udc(replace);
-	} while (chain_nr == -1);
-	replace->selected_chain = chain_nr; /* Put back to -1 */
+	if (replace->selected_chain == -1)
+		for (i = NF_BR_NUMHOOKS; i < replace->num_chains; i++)
+			ebt_delete_a_chain(replace, i, 0);
+	else
+		ebt_delete_a_chain(replace, replace->selected_chain, 1);
 }
 
 /* Rename an existing chain. */
@@ -1123,6 +1014,19 @@ void ebt_rename_chain(struct ebt_u_replace *replace, const char *name)
 *************************
             */
 
+
+void ebt_double_chains(struct ebt_u_replace *replace)
+{
+	struct ebt_u_entries **new;
+
+	replace->max_chains *= 2;
+	new = (struct ebt_u_entries **)malloc(replace->max_chains*sizeof(void *));
+	if (!new)
+		ebt_print_memory();
+	memcpy(new, replace->chains, replace->max_chains/2*sizeof(void *));
+	free(replace->chains);
+	replace->chains = new;
+}
 
 /* Executes the final_check() function for all extensions used by the rule
  * ebt_check_for_loops should have been executed earlier, to make sure the
@@ -1206,28 +1110,22 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 	struct ebt_u_stack *stack = NULL;
 	struct ebt_u_entry *e;
 
-	i = -1;
 	/* Initialize hook_mask to 0 */
-	while (1) {
-		i++;
-		if (i < NF_BR_NUMHOOKS && !(replace->hook_entry[i]))
+	for (i = 0; i < replace->num_chains; i++) {
+		if (!(entries = replace->chains[i]))
 			continue;
-		entries = ebt_nr_to_chain(replace, i);
-		if (!entries)
-			break;
 		entries->hook_mask = 0;
 	}
-	if (i > NF_BR_NUMHOOKS) {
-		stack = (struct ebt_u_stack *)malloc((i - NF_BR_NUMHOOKS) * sizeof(struct ebt_u_stack));
-		if (!stack)
-			ebt_print_memory();
-	}
+	if (replace->num_chains == NF_BR_NUMHOOKS)
+		return;
+	stack = (struct ebt_u_stack *)malloc((replace->num_chains - NF_BR_NUMHOOKS) * sizeof(struct ebt_u_stack));
+	if (!stack)
+		ebt_print_memory();
 
 	/* Check for loops, starting from every base chain */
 	for (i = 0; i < NF_BR_NUMHOOKS; i++) {
-		if (!(replace->hook_entry[i]))
+		if (!(entries = replace->chains[i]))
 			continue;
-		entries = ebt_nr_to_chain(replace, i);
 		/* (1 << NF_BR_NUMHOOKS) implies it's a standard chain
 		 * (usefull in the final_check() funtions) */
 		entries->hook_mask = (1 << i) | (1 << NF_BR_NUMHOOKS);
@@ -1240,14 +1138,14 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 			verdict = ((struct ebt_standard_target *)(e->t))->verdict;
 			if (verdict < 0)
 				goto letscontinue;
-			entries2 = ebt_nr_to_chain(replace, verdict + NF_BR_NUMHOOKS);
+			entries2 = replace->chains[verdict + NF_BR_NUMHOOKS];
 			entries2->hook_mask |= entries->hook_mask;
 			/* Now see if we've been here before */
 			for (k = 0; k < sp; k++)
 				if (stack[k].chain_nr == verdict + NF_BR_NUMHOOKS) {
 					ebt_print_error("Loop from chain '%s' to chain '%s'",
-					   ebt_nr_to_chain(replace, chain_nr)->name,
-					   ebt_nr_to_chain(replace, stack[k].chain_nr)->name);
+					   replace->chains[chain_nr]->name,
+					   replace->chains[stack[k].chain_nr]->name);
 					goto free_stack;
 				}
 			/* Jump to the chain, make sure we know how to get back */
@@ -1332,21 +1230,15 @@ void ebt_add_watcher(struct ebt_u_entry *new_entry, struct ebt_u_watcher *w)
  * returns 0 otherwise */
 static int iterate_entries(struct ebt_u_replace *replace, int type)
 {
-	int i = -1, j, chain_nr = replace->selected_chain - NF_BR_NUMHOOKS;
+	int i, j, chain_nr = replace->selected_chain - NF_BR_NUMHOOKS;
 	struct ebt_u_entries *entries;
 	struct ebt_u_entry *e;
 
 	if (chain_nr < 0)
 		ebt_print_bug("iterate_entries: udc = %d < 0", chain_nr);
-	while (1) {
-		i++;
-		entries = ebt_nr_to_chain(replace, i);
-		if (!entries) {
-			if (i < NF_BR_NUMHOOKS)
-				continue;
-			else
-				break;
-		}
+	for (i = 0; i < replace->num_chains; i++) {
+		if (!(entries = replace->chains[i]))
+			continue;
 		e = entries->entries;
 		j = 0;
 		while (e) {
@@ -1366,7 +1258,7 @@ static int iterate_entries(struct ebt_u_replace *replace, int type)
 				if (type == 2)
 					return 1;
 				ebt_print_error("Can't delete the chain '%s', it's referenced in chain '%s', rule %d",
-				                ebt_nr_to_chain(replace, chain_nr + NF_BR_NUMHOOKS)->name, entries->name, j);
+				                replace->chains[chain_nr + NF_BR_NUMHOOKS]->name, entries->name, j);
 				return 1;
 			}
 			break;
@@ -1385,37 +1277,6 @@ static int iterate_entries(struct ebt_u_replace *replace, int type)
 static void decrease_chain_jumps(struct ebt_u_replace *replace)
 {
 	iterate_entries(replace, 0);
-}
-
-/* Selected_chain >= NF_BR_NUMHOOKS */
-static void remove_udc(struct ebt_u_replace *replace)
-{
-	struct ebt_u_chain_list *cl, **cl2;
-	struct ebt_u_entries *entries;
-	struct ebt_u_entry *u_e, *tmp;
-	int chain_nr = replace->selected_chain;
-
-	if (chain_nr < NF_BR_NUMHOOKS)
-		ebt_print_bug("remove_udc: chain_nr = %d < %d", chain_nr,
-			      NF_BR_NUMHOOKS);
-	/* First free the rules */
-	entries = ebt_nr_to_chain(replace, chain_nr);
-	u_e = entries->entries;
-	while (u_e) {
-		ebt_free_u_entry(u_e);
-		tmp = u_e->next;
-		free(u_e);
-		u_e = tmp;
-	}
-
-	/* next, remove the chain */
-	cl2 = &(replace->udc);
-	while ((*cl2)->udc != entries)
-		cl2 = &((*cl2)->next);
-	cl = (*cl2);
-	(*cl2) = (*cl2)->next;
-	free(cl->udc);
-	free(cl);
 }
 
 /* Used in initialization code of modules */

@@ -43,19 +43,11 @@ struct ebt_u_entries
 	unsigned int counter_offset;
 	/* used for udc */
 	unsigned int hook_mask;
+	char *kernel_start;
 	char name[EBT_CHAIN_MAXNAMELEN];
 	struct ebt_u_entry *entries;
 };
 
-struct ebt_u_chain_list
-{
-	struct ebt_u_entries *udc;
-	struct ebt_u_chain_list *next;
-	/* this is only used internally, in communication.c */
-	char *kernel_start;
-};
-
-struct ebt_cntchanges;
 struct ebt_cntchanges
 {
 	unsigned short type;
@@ -63,15 +55,16 @@ struct ebt_cntchanges
 	struct ebt_cntchanges *next;
 };
 
+#define EBT_ORI_MAX_CHAINS 10
 struct ebt_u_replace
 {
 	char name[EBT_TABLE_MAXNAMELEN];
 	unsigned int valid_hooks;
 	/* nr of rules in the table */
 	unsigned int nentries;
-	struct ebt_u_entries *hook_entry[NF_BR_NUMHOOKS];
-	/* user defined chains (udc) list */
-	struct ebt_u_chain_list *udc;
+	unsigned int num_chains;
+	unsigned int max_chains;
+	struct ebt_u_entries **chains;
 	/* nr of counters userspace expects back */
 	unsigned int num_counters;
 	/* where the kernel will put the old counters */
@@ -239,11 +232,10 @@ void ebt_list_extensions();
 void ebt_initialize_entry(struct ebt_u_entry *e);
 void ebt_cleanup_replace(struct ebt_u_replace *replace);
 void ebt_reinit_extensions();
+void ebt_double_chains(struct ebt_u_replace *replace);
 void ebt_free_u_entry(struct ebt_u_entry *e);
 struct ebt_u_entries *ebt_name_to_chain(const struct ebt_u_replace *replace,
 				    const char* arg);
-struct ebt_u_entries *ebt_nr_to_chain(const struct ebt_u_replace *replace,
-				       int nr);
 struct ebt_u_entries *ebt_to_chain(const struct ebt_u_replace *replace);
 struct ebt_u_entries *ebt_name_to_chain(const struct ebt_u_replace *replace,
 				    const char* arg);
@@ -302,6 +294,7 @@ int do_command(int argc, char *argv[], int exec_style,
 
 struct ethertypeent *parseethertypebynumber(int type);
 
+#define ebt_to_chain(repl) repl->chains[repl->selected_chain]
 #define ebt_print_bug(format, args...) \
    __ebt_print_bug(__FILE__, __LINE__, format, ##args)
 #define ebt_print_error(format,args...) __ebt_print_error(format, ##args);
