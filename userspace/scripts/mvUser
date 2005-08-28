@@ -8,7 +8,9 @@ regexp=$regexp"find . -name \"*.h\";find . -name \"Makefile\";"
 regexp=$regexp"find . -name \"ethertypes\";find . -name \"ChangeLog\";"
 regexp=$regexp"find . -name \"COPYING\";find . -name \"INSTALL\";"
 regexp=$regexp"find . -name \"THANKS\";find . -name \"perf_test\" -type f;"
-regexp=$regexp"find . -name \"*.8\";"
+regexp=$regexp"find . -name \"*.8\";find . -name \"ebtables-save\";"
+regexp=$regexp"find . -name \"ebtables-restore\";find . -name \"ebtables-restore\";"
+regexp=$regexp"find . -name \"*sysv\";"
 cd - > /dev/null
 mkdir -p $currdir/include
 mkdir -p $currdir/examples/perf_test

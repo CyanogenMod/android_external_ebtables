@@ -7,7 +7,9 @@ regexp=$regexp"find $currdir -name \"*.h\";find $currdir -name \"Makefile\";"
 regexp=$regexp"find $currdir -name \"ethertypes\";find $currdir -name \"ChangeLog\";"
 regexp=$regexp"find $currdir -name \"COPYING\";find $currdir -name \"INSTALL\";"
 regexp=$regexp"find $currdir -name \"THANKS\";find $currdir -name \"perf_test\" -type f;"
-regexp=$regexp"find $currdir -name \"*.8\";"
+regexp=$regexp"find $currdir -name \"*.8\";find $currdir -name \"ebtables-save\";"
+regexp=$regexp"find $currdir -name \"ebtables-restore\";find $currdir -name \"ebtables-restore\";"
+regexp=$regexp"find $currdir -name \"*sysv\";"
 for a in `eval $regexp`
 do
   diff -purN $olddir/$a $currdir/$a
