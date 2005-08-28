@@ -196,7 +196,7 @@ static void list_em(struct ebt_u_entries *entries)
 		ebt_printstyle_mac = 2;
 	else
 		ebt_printstyle_mac = 0;
-	hlp = entries->entries;
+	hlp = entries->entries->next;
 	if (replace->flags & LIST_X && entries->policy != EBT_ACCEPT) {
 		printf("ebtables -t %s -P %s %s\n", replace->name,
 		   entries->name, ebt_standard_targets[-entries->policy - 1]);
@@ -1173,8 +1173,8 @@ check_extension:
 				else
 					break;
 			}
-			e = entries->entries;
-			while (e) {
+			e = entries->entries->next;
+			while (e != entries->entries) {
 				/* Userspace extensions use host endian */
 				e->ethproto = ntohs(e->ethproto);
 				ebt_do_final_checks(replace, e, entries);
@@ -1207,7 +1207,7 @@ delete_the_rule:
 	if (exec_style == EXEC_STYLE_PRG) {/* Implies ebt_errormsg[0] == '\0' */
 		ebt_deliver_table(replace);
 
-		if (replace->cc)
+		if (replace->nentries)
 			ebt_deliver_counters(replace, EXEC_STYLE_PRG);
 	}
 	return 0;

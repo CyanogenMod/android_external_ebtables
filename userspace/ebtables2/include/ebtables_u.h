@@ -123,6 +123,7 @@ struct ebt_u_entry
 	struct ebt_u_match_list *m_list;
 	struct ebt_u_watcher_list *w_list;
 	struct ebt_entry_target *t;
+	struct ebt_u_entry *prev;
 	struct ebt_u_entry *next;
 	struct ebt_counter cnt;
 	struct ebt_counter cnt_surplus; /* for increasing/decreasing a counter and for option 'C' */
