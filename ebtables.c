@@ -182,7 +182,7 @@ static void print_iface(const char *iface)
 #define LIST_MAC2 0x20
 
 /* Helper function for list_rules() */
-static void list_em(struct ebt_u_entries *entries, struct ebt_cntchanges *cc)
+static void list_em(struct ebt_u_entries *entries)
 {
 	int i, j, space = 0, digits;
 	struct ebt_u_entry *hlp;
@@ -320,13 +320,6 @@ static void list_em(struct ebt_u_entries *entries, struct ebt_cntchanges *cc)
 			uint64_t pcnt = hlp->cnt.pcnt;
 			uint64_t bcnt = hlp->cnt.bcnt;
 
-#ifdef EBT_DEBUG
-			while (cc->type == CNT_DEL)
-				cc = cc->next;
-			if (cc->change != 0) /* In daemon mode, only change==0 is allowed */
-				ebt_print_bug("cc->change != 0");
-			cc = cc->next;
-#endif
 			if (replace->flags & LIST_X)
 				printf("-c %llu %llu", pcnt, bcnt);
 			else
@@ -406,12 +399,11 @@ ATOMIC_ENV_VARIABLE "          : if set <FILE> (see above) will equal its value"
 static void list_rules()
 {
 	int i;
-	struct ebt_cntchanges *cc = replace->counterchanges;
 
 	if (!(replace->flags & LIST_X))
 		printf("Bridge table: %s\n", table->name);
 	if (replace->selected_chain != -1)
-		list_em(ebt_to_chain(replace), cc);
+		list_em(ebt_to_chain(replace));
 	else {
 		/* Create new chains and rename standard chains when necessary */
 		if (replace->flags & LIST_X && replace->num_chains > NF_BR_NUMHOOKS) {
@@ -423,7 +415,7 @@ static void list_rules()
 		}
 		for (i = 0; i < replace->num_chains; i++)
 			if (replace->chains[i])
-				list_em(replace->chains[i], cc);
+				list_em(replace->chains[i]);
 	}
 }
 
@@ -1215,7 +1207,7 @@ delete_the_rule:
 	if (exec_style == EXEC_STYLE_PRG) {/* Implies ebt_errormsg[0] == '\0' */
 		ebt_deliver_table(replace);
 
-		if (replace->counterchanges)
+		if (replace->cc)
 			ebt_deliver_counters(replace, EXEC_STYLE_PRG);
 	}
 	return 0;

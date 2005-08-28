@@ -297,7 +297,7 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 	struct ebt_counter *old, *new, *newcounters;
 	socklen_t optlen;
 	struct ebt_replace repl;
-	struct ebt_cntchanges *cc = u_repl->counterchanges, *cc2, **cc3;
+	struct ebt_cntchanges *cc = u_repl->cc->next, *cc2;
 	struct ebt_u_entries *entries;
 	struct ebt_u_entry *next = NULL;
 	int i, chainnr = 0;
@@ -312,13 +312,11 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 	memset(newcounters, 0, u_repl->nentries * sizeof(struct ebt_counter));
 	old = u_repl->counters;
 	new = newcounters;
-	while (cc) {
+	while (cc != u_repl->cc) {
 		if (!next) {
-			while (!(entries = u_repl->chains[chainnr++]))
-				if (chainnr > NF_BR_NUMHOOKS)
-					goto letscontinue;/* Prevent infinite loop for -D x:-1 */
-			if (!(next = entries->entries))
-				continue;
+			while (chainnr < u_repl->num_chains && (!(entries = u_repl->chains[chainnr++]) || !(next = entries->entries)));
+			if (chainnr == u_repl->num_chains)
+				break;
 		}
 		if (cc->type == CNT_NORM) {
 			/* 'Normal' rule, meaning we didn't do anything to it
@@ -326,17 +324,13 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 			*new = *old;
 			next->cnt = *new;
 			next->cnt_surplus.pcnt = next->cnt_surplus.bcnt = 0;
-			/* We've used an old counter */
-			old++;
-			/* We've set a new counter */
-			new++;
+			old++; /* We've used an old counter */
+			new++; /* We've set a new counter */
 			next = next->next;
 		} else if (cc->type == CNT_DEL) {
-			/* Don't use this old counter */
-			old++;
+			old++; /* Don't use this old counter */
 		} else {
 			if (cc->type == CNT_CHANGE) {
-				new->pcnt = old->pcnt;
 				if (cc->change % 3 == 1)
 					new->pcnt = old->pcnt + next->cnt_surplus.pcnt;
 				else if (cc->change % 3 == 2)
@@ -363,11 +357,29 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 		}
 		cc = cc->next;
 	}
-letscontinue:
 
 	free(u_repl->counters);
 	u_repl->counters = newcounters;
 	u_repl->num_counters = u_repl->nentries;
+	/* Reset the counterchanges to CNT_NORM and delete the unused cc */
+	i = 0;
+	cc = u_repl->cc->next;
+	while (cc != u_repl->cc) {
+		if (cc->type == CNT_DEL) {
+			cc->prev->next = cc->next;
+			cc->next->prev = cc->prev;
+			cc2 = cc->next;
+			free(cc);
+			cc = cc2;
+		} else {
+			cc->type = CNT_NORM;
+			cc->change = 0;
+			i++;
+			cc = cc->next;
+		}
+	}
+	if (i != u_repl->nentries)
+		ebt_print_bug("i != u_repl->nentries");
 	if (u_repl->filename != NULL) {
 		store_counters_in_file(u_repl->filename, u_repl);
 		return;
@@ -386,20 +398,6 @@ letscontinue:
 
 	if (exec_style != EXEC_STYLE_DAEMON)
 		return;
-	/* Reset the counterchanges to CNT_NORM */
-	cc = u_repl->counterchanges;
-	for (i = 0; i < u_repl->nentries; i++) {
-		cc->type = CNT_NORM;
-		cc->change = 0;
-		cc3 = &cc->next;
-		cc = cc->next;
-	}
-	*cc3 = NULL;
-	while (cc) {
-		cc2 = cc->next;
-		free(cc);
-		cc = cc2;
-	}
 }
 
 static int
@@ -458,7 +456,7 @@ ebt_translate_watcher(struct ebt_entry_watcher *w,
 static int
 ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
    int *totalcnt, struct ebt_u_entry ***u_e, struct ebt_u_replace *u_repl,
-   unsigned int valid_hooks, char *base)
+   unsigned int valid_hooks, char *base, struct ebt_cntchanges **cc)
 {
 	/* An entry */
 	if (e->bitmask & EBT_ENTRY_OR_ENTRIES) {
@@ -490,6 +488,8 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 			ebt_print_bug("*totalcnt >= u_repl->nentries");
 		new->cnt = u_repl->counters[*totalcnt];
 		new->cnt_surplus.pcnt = new->cnt_surplus.bcnt = 0;
+		new->cc = *cc;
+		*cc = (*cc)->next;
 		new->m_list = NULL;
 		new->w_list = NULL;
 		new->next = NULL;
@@ -709,8 +709,7 @@ int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 	int i, j, k, hook;
 	struct ebt_replace repl;
 	struct ebt_u_entry **u_e;
-	struct ebt_cntchanges *new_cc;
-	struct ebt_cntchanges **prev_cc =  &(u_repl->counterchanges);
+	struct ebt_cntchanges *new_cc, *cc;
 
 	strcpy(repl.name, u_repl->name);
 	if (u_repl->filename != NULL) {
@@ -728,17 +727,24 @@ int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 	u_repl->nentries = repl.nentries;
 	u_repl->num_counters = repl.num_counters;
 	u_repl->counters = repl.counters;
-	u_repl->counterchanges = NULL;
+	u_repl->cc = (struct ebt_cntchanges *)malloc(sizeof(struct ebt_cntchanges));
+	if (!u_repl->cc)
+		ebt_print_memory();
+	u_repl->cc->next = u_repl->cc->prev = u_repl->cc;
+	cc = u_repl->cc;
 	for (i = 0; i < repl.nentries; i++) {
-		new_cc = (struct ebt_cntchanges *)
-			 malloc(sizeof(struct ebt_cntchanges));
+		new_cc = (struct ebt_cntchanges *)malloc(sizeof(struct ebt_cntchanges));
 		if (!new_cc)
 			ebt_print_memory();
 		new_cc->type = CNT_NORM;
 		new_cc->change = 0;
-		new_cc->next = NULL;
-		*prev_cc = new_cc;
-		prev_cc = &(new_cc->next);
+		new_cc->prev = cc;
+		cc->next = new_cc;
+		cc = new_cc;
+	}
+	if (repl.nentries) {
+		new_cc->next = u_repl->cc;
+		u_repl->cc->prev = new_cc;
 	}
 	u_repl->chains = (struct ebt_u_entries **)calloc(EBT_ORI_MAX_CHAINS, sizeof(void *));
 	u_repl->max_chains = EBT_ORI_MAX_CHAINS;
@@ -753,10 +759,11 @@ int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 	i = 0; /* Holds the expected nr. of entries for the chain */
 	j = 0; /* Holds the up to now counted entries for the chain */
 	k = 0; /* Holds the total nr. of entries, should equal u_repl->nentries afterwards */
+	cc = u_repl->cc->next;
 	hook = -1;
 	EBT_ENTRY_ITERATE((char *)repl.entries, repl.entries_size,
 	   ebt_translate_entry, &hook, &i, &j, &k, &u_e, u_repl,
-	   u_repl->valid_hooks, (char *)repl.entries);
+	   u_repl->valid_hooks, (char *)repl.entries, &cc);
 	if (k != u_repl->nentries)
 		ebt_print_bug("Wrong total nentries");
 	return 0;
