@@ -52,6 +52,7 @@ struct ebt_cntchanges
 {
 	unsigned short type;
 	unsigned short change; /* determines incremental/decremental/change */
+	struct ebt_cntchanges *prev;
 	struct ebt_cntchanges *next;
 };
 
@@ -82,8 +83,8 @@ struct ebt_u_replace
 	int selected_chain;
 	/* used for the atomic option */
 	char *filename;
-	/* tells what happened to the old rules */
-	struct ebt_cntchanges *counterchanges;
+	/* tells what happened to the old rules (counter changes) */
+	struct ebt_cntchanges *cc;
 };
 
 struct ebt_u_table
@@ -125,6 +126,7 @@ struct ebt_u_entry
 	struct ebt_u_entry *next;
 	struct ebt_counter cnt;
 	struct ebt_counter cnt_surplus; /* for increasing/decreasing a counter and for option 'C' */
+	struct ebt_cntchanges *cc;
 	/* the standard target needs this to know the name of a udc when
 	 * printing out rules. */
 	struct ebt_u_replace *replace;
@@ -236,7 +238,6 @@ void ebt_double_chains(struct ebt_u_replace *replace);
 void ebt_free_u_entry(struct ebt_u_entry *e);
 struct ebt_u_entries *ebt_name_to_chain(const struct ebt_u_replace *replace,
 				    const char* arg);
-struct ebt_u_entries *ebt_to_chain(const struct ebt_u_replace *replace);
 struct ebt_u_entries *ebt_name_to_chain(const struct ebt_u_replace *replace,
 				    const char* arg);
 int ebt_get_chainnr(const struct ebt_u_replace *replace, const char* arg);
@@ -294,7 +295,11 @@ int do_command(int argc, char *argv[], int exec_style,
 
 struct ethertypeent *parseethertypebynumber(int type);
 
-#define ebt_to_chain(repl) repl->chains[repl->selected_chain]
+#define ebt_to_chain(repl)				\
+({struct ebt_u_entries *_ch = NULL;			\
+if (repl->selected_chain != -1)					\
+	_ch = repl->chains[repl->selected_chain];	\
+_ch;})
 #define ebt_print_bug(format, args...) \
    __ebt_print_bug(__FILE__, __LINE__, format, ##args)
 #define ebt_print_error(format,args...) __ebt_print_error(format, ##args);
@@ -320,9 +325,7 @@ __ret;})
 #define CNT_NORM 	0
 #define CNT_DEL 	1
 #define CNT_ADD 	2
-#define CNT_OWRITE 	3
-#define CNT_ZERO 	4
-#define CNT_CHANGE 	5
+#define CNT_CHANGE 	3
 
 extern const char *ebt_hooknames[NF_BR_NUMHOOKS];
 extern const char *ebt_standard_targets[NUM_STANDARD_TARGETS];
