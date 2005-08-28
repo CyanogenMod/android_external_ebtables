@@ -73,8 +73,8 @@ static struct ebt_replace *translate_user2kernel(struct ebt_u_replace *u_repl)
 		chain_offsets[i] = entries_size;
 		entries_size += sizeof(struct ebt_entries);
 		j = 0;
-		e = entries->entries;
-		while (e) {
+		e = entries->entries->next;
+		while (e != entries->entries) {
 			j++;
 			entries_size += sizeof(struct ebt_entry);
 			m_l = e->m_list;
@@ -120,8 +120,8 @@ static struct ebt_replace *translate_user2kernel(struct ebt_u_replace *u_repl)
 		hlp->counter_offset = entries->counter_offset;
 		hlp->distinguisher = 0; /* Make the kernel see the light */
 		p += sizeof(struct ebt_entries);
-		e = entries->entries;
-		while (e) {
+		e = entries->entries->next;
+		while (e != entries->entries) {
 			struct ebt_entry *tmp = (struct ebt_entry *)p;
 
 			tmp->bitmask = e->bitmask | EBT_ENTRY_OR_ENTRIES;
@@ -313,8 +313,9 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 	old = u_repl->counters;
 	new = newcounters;
 	while (cc != u_repl->cc) {
-		if (!next) {
-			while (chainnr < u_repl->num_chains && (!(entries = u_repl->chains[chainnr++]) || !(next = entries->entries)));
+		if (!next || next == entries->entries) {
+			while (chainnr < u_repl->num_chains && (!(entries = u_repl->chains[chainnr++]) ||
+			       (next = entries->entries->next) == entries->entries));
 			if (chainnr == u_repl->num_chains)
 				break;
 		}
@@ -455,7 +456,7 @@ ebt_translate_watcher(struct ebt_entry_watcher *w,
 
 static int
 ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
-   int *totalcnt, struct ebt_u_entry ***u_e, struct ebt_u_replace *u_repl,
+   int *totalcnt, struct ebt_u_entry **u_e, struct ebt_u_replace *u_repl,
    unsigned int valid_hooks, char *base, struct ebt_cntchanges **cc)
 {
 	/* An entry */
@@ -492,7 +493,11 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 		*cc = (*cc)->next;
 		new->m_list = NULL;
 		new->w_list = NULL;
-		new->next = NULL;
+		new->next = (*u_e)->next;
+		new->next->prev = new;
+		(*u_e)->next = new;
+		new->prev = *u_e;
+		*u_e = new;
 		m_l = &new->m_list;
 		EBT_MATCH_ITERATE(e, ebt_translate_match, &m_l);
 		w_l = &new->w_list;
@@ -527,9 +532,6 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 			}
 		}
 
-		/* I love pointers */
-		**u_e = new;
-		*u_e = &new->next;
 		(*cnt)++;
 		(*totalcnt)++;
 		return 0;
@@ -545,7 +547,7 @@ ebt_translate_entry(struct ebt_entry *e, unsigned int *hook, int *n, int *cnt,
 			if (valid_hooks & (1 << i))
 				break;
 		*hook = i;
-		*u_e = &(u_repl->chains[*hook]->entries);
+		*u_e = u_repl->chains[*hook]->entries;
 		return 0;
 	}
 }
@@ -574,7 +576,10 @@ ebt_translate_chains(struct ebt_entry *e, unsigned int *hook,
 		*hook = i;
 		new->nentries = entries->nentries;
 		new->policy = entries->policy;
-		new->entries = NULL;
+		new->entries = (struct ebt_u_entry *)malloc(sizeof(struct ebt_u_entry));
+		if (!new->entries)
+			ebt_print_memory();
+		new->entries->next = new->entries->prev = new->entries;
 		new->counter_offset = entries->counter_offset;
 		strcpy(new->name, entries->name);
 	}
@@ -708,7 +713,7 @@ int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 {
 	int i, j, k, hook;
 	struct ebt_replace repl;
-	struct ebt_u_entry **u_e;
+	struct ebt_u_entry *u_e;
 	struct ebt_cntchanges *new_cc, *cc;
 
 	strcpy(repl.name, u_repl->name);

@@ -197,13 +197,14 @@ void ebt_cleanup_replace(struct ebt_u_replace *replace)
 	for (i = 0; i < replace->num_chains; i++) {
 		if (!(entries = replace->chains[i]))
 			continue;
-		u_e1 = entries->entries;
-		while (u_e1) {
+		u_e1 = entries->entries->next;
+		while (u_e1 != entries->entries) {
 			ebt_free_u_entry(u_e1);
 			u_e2 = u_e1->next;
 			free(u_e1);
 			u_e1 = u_e2;
 		}
+		free(entries->entries);
 		free(entries);
 		replace->chains[i] = NULL;
 	}
@@ -409,12 +410,25 @@ void ebt_delete_cc(struct ebt_cntchanges *cc)
 	cc->type = CNT_DEL;
 }
 
+void ebt_empty_chain(struct ebt_u_entries *entries)
+{
+	struct ebt_u_entry *u_e = entries->entries->next, *tmp;
+	while (u_e != entries->entries) {
+		ebt_delete_cc(u_e->cc);
+		ebt_free_u_entry(u_e);
+		tmp = u_e->next;
+		free(u_e);
+		u_e = tmp;
+	}
+	entries->entries->next = entries->entries->prev = entries->entries;
+	entries->nentries = 0;
+}
+
 /* Flush one chain or the complete table
  * If selected_chain == -1 then flush the complete table */
 void ebt_flush_chains(struct ebt_u_replace *replace)
 {
 	int i, numdel;
-	struct ebt_u_entry *u_e, *tmp;
 	struct ebt_u_entries *entries = ebt_to_chain(replace);
 
 	/* Flush whole table */
@@ -427,17 +441,8 @@ void ebt_flush_chains(struct ebt_u_replace *replace)
 		for (i = 0; i < replace->num_chains; i++) {
 			if (!(entries = replace->chains[i]))
 				continue;
-			entries->nentries = 0;
 			entries->counter_offset = 0;
-			u_e = entries->entries;
-			entries->entries = NULL;
-			while (u_e) {
-				ebt_delete_cc(u_e->cc);
-				ebt_free_u_entry(u_e);
-				tmp = u_e->next;
-				free(u_e);
-				u_e = tmp;
-			}
+			ebt_empty_chain(entries);
 		}
 		return;
 	}
@@ -455,16 +460,7 @@ void ebt_flush_chains(struct ebt_u_replace *replace)
 	}
 
 	entries = ebt_to_chain(replace);
-	entries->nentries = 0;
-	u_e = entries->entries;
-	while (u_e) {
-		ebt_delete_cc(u_e->cc);
-		ebt_free_u_entry(u_e);
-		tmp = u_e->next;
-		free(u_e);
-		u_e = tmp;
-	}
-	entries->entries = NULL;
+	ebt_empty_chain(entries);
 }
 
 #define OPT_COUNT	0x1000 /* This value is also defined in ebtables.c */
@@ -484,12 +480,10 @@ int ebt_check_rule_exists(struct ebt_u_replace *replace,
 	struct ebt_u_entries *entries = ebt_to_chain(replace);
 	int i, j, k;
 
-	u_e = entries->entries;
+	u_e = entries->entries->next;
 	/* Check for an existing rule (if there are duplicate rules,
 	 * take the first occurance) */
 	for (i = 0; i < entries->nentries; i++, u_e = u_e->next) {
-		if (!u_e)
-			ebt_print_bug("Hmm, trouble");
 		if (u_e->ethproto != new_entry->ethproto)
 			continue;
 		if (strcmp(u_e->in, new_entry->in))
@@ -582,7 +576,7 @@ letscontinue:;
 void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry, int rule_nr)
 {
 	int i;
-	struct ebt_u_entry **u_e;
+	struct ebt_u_entry *u_e;
 	struct ebt_u_match_list *m_l;
 	struct ebt_u_watcher_list *w_l;
 	struct ebt_u_entries *entries = ebt_to_chain(replace);
@@ -600,18 +594,24 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry, 
 	replace->nentries++;
 	entries->nentries++;
 	/* Go to the right position in the chain */
-	u_e = &entries->entries;
-	for (i = 0; i < rule_nr; i++)
-		u_e = &(*u_e)->next;
+	if (rule_nr == entries->nentries-1)
+		u_e = entries->entries;
+	else {
+		u_e = entries->entries->next;
+		for (i = 0; i < rule_nr; i++)
+			u_e = u_e->next;
+	}
 	/* Insert the rule */
-	new_entry->next = *u_e;
-	*u_e = new_entry;
+	new_entry->next = u_e;
+	new_entry->prev = u_e->prev;
+	u_e->prev->next = new_entry;
+	u_e->prev = new_entry;
 	new_cc = (struct ebt_cntchanges *)malloc(sizeof(struct ebt_cntchanges));
 	if (!new_cc)
 		ebt_print_memory();
 	new_cc->type = CNT_ADD;
 	new_cc->change = 0;
-	if (!new_entry->next) {
+	if (new_entry->next == entries->entries) {
 		for (i = replace->selected_chain+1; i < replace->num_chains; i++)
 			if (!replace->chains[i] || replace->chains[i]->nentries == 0)
 				continue;
@@ -694,7 +694,7 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 		     struct ebt_u_entry *new_entry, int begin, int end)
 {
 	int i,  nr_deletes;
-	struct ebt_u_entry **u_e, *u_e2;
+	struct ebt_u_entry *u_e, *u_e2;
 	struct ebt_u_entries *entries = ebt_to_chain(replace);
 
 	if (check_and_change_rule_number(replace, new_entry, &begin, &end))
@@ -704,14 +704,14 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 	replace->nentries -= nr_deletes;
 	entries->nentries -= nr_deletes;
 	/* Go to the right position in the chain */
-	u_e = &entries->entries;
+	u_e = entries->entries->next;
 	for (i = 0; i < begin; i++)
-		u_e = &(*u_e)->next;
+		u_e = u_e->next;
 	/* Remove the rules */
 	for (i = 0; i < nr_deletes; i++) {
-		u_e2 = *u_e;
+		u_e2 = u_e;
 		ebt_delete_cc(u_e2->cc);
-		*u_e = (*u_e)->next;
+		u_e = u_e->next;
 		/* Free everything */
 		ebt_free_u_entry(u_e2);
 		free(u_e2);
@@ -744,7 +744,7 @@ void ebt_change_counters(struct ebt_u_replace *replace,
 
 	if (check_and_change_rule_number(replace, new_entry, &begin, &end))
 		return;
-	u_e = entries->entries;
+	u_e = entries->entries->next;
 	for (i = 0; i < begin; i++)
 		u_e = u_e->next;
 	for (i = end-begin+1; i > 0; i--) {
@@ -788,8 +788,8 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 		for (i = 0; i < replace->num_chains; i++) {
 			if (!(entries = replace->chains[i]))
 				continue;
-			next = entries->entries;
-			while (next) {
+			next = entries->entries->next;
+			while (next != entries->entries) {
 				if (next->cc->type == CNT_NORM)
 					next->cc->type = CNT_CHANGE;
 				next->cnt.bcnt = next->cnt.pcnt = 0;
@@ -801,8 +801,8 @@ void ebt_zero_counters(struct ebt_u_replace *replace)
 		if (entries->nentries == 0)
 			return;
 
-		next = entries->entries;
-		while (next) {
+		next = entries->entries->next;
+		while (next != entries->entries) {
 			if (next->cc->type == CNT_NORM)
 				next->cc->type = CNT_CHANGE;
 			next->cnt.bcnt = next->cnt.pcnt = 0;
@@ -838,7 +838,10 @@ void ebt_new_chain(struct ebt_u_replace *replace, const char *name, int policy)
 	new->counter_offset = replace->nentries;
 	new->hook_mask = 0;
 	strcpy(new->name, name);
-	new->entries = NULL;
+	new->entries = (struct ebt_u_entry *)malloc(sizeof(struct ebt_u_entry));
+	if (!new->entries)
+		ebt_print_memory();
+	new->entries->next = new->entries->prev = new->entries;
 	new->kernel_start = NULL;
 }
 
@@ -854,6 +857,7 @@ static void ebt_delete_a_chain(struct ebt_u_replace *replace, int chain, int pri
 	decrease_chain_jumps(replace);
 	ebt_flush_chains(replace);
 	replace->selected_chain = tmp;
+	free(replace->chains[chain]->entries);
 	free(replace->chains[chain]);
 	memmove(replace->chains+chain, replace->chains+chain+1, (replace->num_chains-chain-1)*sizeof(void *));
 	replace->num_chains--;
@@ -1010,7 +1014,7 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 		entries->hook_mask = (1 << i) | (1 << NF_BR_NUMHOOKS);
 		chain_nr = i;
 
-		e = entries->entries;
+		e = entries->entries->next;
 		for (j = 0; j < entries->nentries; j++) {
 			if (strcmp(e->t->u.name, EBT_STANDARD_TARGET))
 				goto letscontinue;
@@ -1118,12 +1122,10 @@ static int iterate_entries(struct ebt_u_replace *replace, int type)
 	for (i = 0; i < replace->num_chains; i++) {
 		if (!(entries = replace->chains[i]))
 			continue;
-		e = entries->entries;
-		j = 0;
-		while (e) {
+		e = entries->entries->next;
+		for (j = 0; j < entries->nentries; j++) {
 			int chain_jmp;
 
-			j++;
 			if (strcmp(e->t->u.name, EBT_STANDARD_TARGET)) {
 				e = e->next;
 				continue;
