@@ -590,17 +590,17 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry, 
 		ebt_print_error("The specified rule number is incorrect");
 		return;
 	}
-	/* We're adding one rule */
-	replace->nentries++;
-	entries->nentries++;
 	/* Go to the right position in the chain */
-	if (rule_nr == entries->nentries-1)
+	if (rule_nr == entries->nentries)
 		u_e = entries->entries;
 	else {
 		u_e = entries->entries->next;
 		for (i = 0; i < rule_nr; i++)
 			u_e = u_e->next;
 	}
+	/* We're adding one rule */
+	replace->nentries++;
+	entries->nentries++;
 	/* Insert the rule */
 	new_entry->next = u_e;
 	new_entry->prev = u_e->prev;
@@ -620,7 +620,7 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry, 
 		if (i == replace->num_chains)
 			cc = replace->cc;
 		else
-			cc = replace->chains[i]->entries->cc;
+			cc = replace->chains[i]->entries->next->cc;
 	} else
 		cc = new_entry->next->cc;
 	new_cc->next = cc;
