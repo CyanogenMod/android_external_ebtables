@@ -627,6 +627,7 @@ void ebt_add_rule(struct ebt_u_replace *replace, struct ebt_u_entry *new_entry, 
 	new_cc->prev = cc->prev;
 	cc->prev->next = new_cc;
 	cc->prev = new_cc;
+	new_entry->cc = new_cc;
 
 	/* Put the ebt_{match, watcher, target} pointers in place */
 	m_l = new_entry->m_list;
