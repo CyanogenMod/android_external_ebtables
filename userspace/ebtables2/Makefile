@@ -112,13 +112,14 @@ daemon: ebtablesd ebtablesu
 
 tmp1:=$(shell printf $(BINDIR) | sed 's/\//\\\//g')
 tmp2:=$(shell printf $(SYSCONFIGDIR) | sed 's/\//\\\//g')
+tmp3:=$(shell printf $(PIPE) | sed 's/\//\\\//g')
 .PHONY: scripts
 scripts: ebtables-save ebtables-restore ebtables.sysv ebtables-config
 	cat ebtables-save | sed 's/__EXEC_PATH__/$(tmp1)/g' > ebtables-save_
 	install -m 0755 -o root -g root ebtables-save_ $(BINDIR)/ebtables-save
-	cat ebtables-restore | sed 's/__EXEC_PATH__/$(tmp1)/g' > ebtables-restore_
+	cat ebtables-restore | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__PIPE__/$(tmp3)/g' > ebtables-restore_
 	install -m 0755 -o root -g root ebtables-restore_ $(BINDIR)/ebtables-restore
-	cat ebtables.sysv | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__SYSCONFIG__/$(tmp2)/g'> ebtables.sysv_
+	cat ebtables.sysv | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__SYSCONFIG__/$(tmp2)/g' > ebtables.sysv_
 	install -m 0755 -o root -g root ebtables.sysv_ $(INITDIR)/ebtables
 	cat ebtables-config | sed 's/__SYSCONFIG__/$(tmp1)/g' > ebtables-config_
 	install -m 0600 -o root -g root ebtables-config_ $(SYSCONFIGDIR)/ebtables-config
