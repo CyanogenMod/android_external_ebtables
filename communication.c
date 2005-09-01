@@ -238,25 +238,30 @@ void ebt_deliver_table(struct ebt_u_replace *u_repl)
 	repl = translate_user2kernel(u_repl);
 	if (u_repl->filename != NULL) {
 		store_table_in_file(u_repl->filename, repl);
-		return;
+		goto free_repl;
 	}
 	/* Give the data to the kernel */
 	optlen = sizeof(struct ebt_replace) + repl->entries_size;
 	if (get_sockfd())
-		return;
+		goto free_repl;
 	if (!setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_ENTRIES, repl, optlen))
-		return;
+		goto free_repl;
 	if (u_repl->command == 8) { /* The ebtables module may not
 	                             * yet be loaded with --atomic-commit */
 		ebtables_insmod("ebtables");
 		if (!setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_ENTRIES,
 		    repl, optlen))
-			return;
+			goto free_repl;
 	}
 
 	ebt_print_error("The kernel doesn't support a certain ebtables"
 		    " extension, consider recompiling your kernel or insmod"
 		    " the extension");
+free_repl:
+	if (repl) {
+		free(repl->entries);
+		free(repl);
+	}
 }
 
 static int store_counters_in_file(char *filename, struct ebt_u_replace *repl)
@@ -396,9 +401,6 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
 		return;
 	if (setsockopt(sockfd, IPPROTO_IP, EBT_SO_SET_COUNTERS, &repl, optlen))
 		ebt_print_bug("Couldn't update kernel counters");
-
-	if (exec_style != EXEC_STYLE_DAEMON)
-		return;
 }
 
 static int
@@ -771,5 +773,6 @@ int ebt_get_table(struct ebt_u_replace *u_repl, int init)
 	   u_repl->valid_hooks, (char *)repl.entries, &cc);
 	if (k != u_repl->nentries)
 		ebt_print_bug("Wrong total nentries");
+	free(repl.entries);
 	return 0;
 }
