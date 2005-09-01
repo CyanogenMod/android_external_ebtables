@@ -52,7 +52,7 @@ int main(int argc_, char *argv_[])
 	char *argv[EBTD_ARGC_MAX], *args[4], name[] = "mkdir",
 	     mkdir_option[] = "-p", mkdir_dir[] = EBTD_PIPE_DIR,
 	     cmdline[EBTD_CMDLINE_MAXLN];
-	int readfd, stop = 0, base = 0, offset = 0, n = 0, ret = 0;
+	int readfd, base = 0, offset = 0, n = 0, ret = 0;
 
 	/* Make sure the pipe directory exists */
 	args[0] = name;
@@ -95,7 +95,7 @@ int main(int argc_, char *argv_[])
 	copy_table_names();
 	ebt_early_init_once();
 
-	while (!stop) {
+	while (1) {
 		int n2, i, argc, table_nr, ntot;
 
 		/* base == 0 */
@@ -343,8 +343,7 @@ continue_read:
 				                "not take any arguments");
 				goto write_msg;
 			}
-			stop = 1;
-			goto write_msg;
+			break;
 		}
 		if (!(replace[table_nr].flags & OPT_KERNELDATA)) {
 			ebt_print_error("ebtablesd: table %s has not been "
