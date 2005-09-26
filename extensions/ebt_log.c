@@ -116,6 +116,8 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 			ebt_print_error2("Unexpected `!' after --log-prefix");
 		if (strlen(optarg) > sizeof(loginfo->prefix) - 1)
 			ebt_print_error2("Prefix too long");
+		if (strchr(optarg, '\"'))
+			ebt_print_error2("Use of \\\" is not allowed in the prefix");
 		strcpy(loginfo->prefix, optarg);
 		break;
 
