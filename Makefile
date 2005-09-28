@@ -47,10 +47,6 @@ PIPE=$(PIPE_DIR)/ebtablesd_pipe
 EBTD_CMDLINE_MAXLN?=2048
 EBTD_ARGC_MAX?=50
 
-BINFILE_EBT:=$(BINDIR)/$(PROGNAME)
-BINFILE_EBTD:=$(BINDIR)/$(PROGNAME)d
-BINFILE_EBTU:=$(BINDIR)/$(PROGNAME)u
-
 PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DPROGNAME=\"$(PROGNAME)\" \
 	-DPROGDATE=\"$(PROGDATE)\" \
@@ -107,6 +103,13 @@ ebtablesd: $(OBJECTS) ebtablesd.o libebtc
 	$(CC) $(CFLAGS) -o $@ ebtablesd.o -I$(KERNEL_INCLUDES) -L. -Lextensions -lebtc $(EXT_LIBSI) \
 	-Wl,-rpath,$(LIBDIR)
 
+ebtables-restore.o: ebtables-restore.c include/ebtables_u.h
+	$(CC) $(CFLAGS) $(PROGSPECSD) -c $< -o $@  -I$(KERNEL_INCLUDES)
+
+ebtables-restore: $(OBJECTS) ebtables-restore.o libebtc
+	$(CC) $(CFLAGS) -o $@ ebtables-restore.o -I$(KERNEL_INCLUDES) -L. -Lextensions -lebtc $(EXT_LIBSI) \
+	-Wl,-rpath,$(LIBDIR)
+
 .PHONY: daemon
 daemon: ebtablesd ebtablesu
 
@@ -114,16 +117,14 @@ tmp1:=$(shell printf $(BINDIR) | sed 's/\//\\\//g')
 tmp2:=$(shell printf $(SYSCONFIGDIR) | sed 's/\//\\\//g')
 tmp3:=$(shell printf $(PIPE) | sed 's/\//\\\//g')
 .PHONY: scripts
-scripts: ebtables-save ebtables-restore ebtables.sysv ebtables-config
+scripts: ebtables-save ebtables.sysv ebtables-config
 	cat ebtables-save | sed 's/__EXEC_PATH__/$(tmp1)/g' > ebtables-save_
 	install -m 0755 -o root -g root ebtables-save_ $(BINDIR)/ebtables-save
-	cat ebtables-restore | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__PIPE__/$(tmp3)/g' > ebtables-restore_
-	install -m 0755 -o root -g root ebtables-restore_ $(BINDIR)/ebtables-restore
 	cat ebtables.sysv | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__SYSCONFIG__/$(tmp2)/g' > ebtables.sysv_
 	install -m 0755 -o root -g root ebtables.sysv_ $(INITDIR)/ebtables
 	cat ebtables-config | sed 's/__SYSCONFIG__/$(tmp1)/g' > ebtables-config_
 	install -m 0600 -o root -g root ebtables-config_ $(SYSCONFIGDIR)/ebtables-config
-	rm -f ebtables-save_ ebtables-restore_ ebtables.sysv_ ebtables-config_
+	rm -f ebtables-save_ ebtables.sysv_ ebtables-config_
 
 $(MANDIR)/man8/ebtables.8: ebtables.8
 	mkdir -p $(@D)
@@ -134,11 +135,10 @@ $(ETHERTYPESFILE): ethertypes
 	install -m 0644 -o root -g root $< $@
 
 .PHONY: exec
-exec: ebtables daemon
+exec: ebtables ebtables-restore
 	mkdir -p $(BINDIR)
-	install -m 0755 -o root -g root $(PROGNAME) $(BINFILE_EBT)
-	install -m 0755 -o root -g root $(PROGNAME)d  $(BINFILE_EBTD)
-	install -m 0755 -o root -g root $(PROGNAME)u $(BINFILE_EBTU)
+	install -m 0755 -o root -g root $(PROGNAME) $(BINDIR)/$(PROGNAME)
+	install -m 0755 -o root -g root ebtables-restore $(BINDIR)/ebtables-restore
 
 .PHONY: install
 install: $(MANDIR)/man8/ebtables.8 $(ETHERTYPESFILE) exec scripts
@@ -149,7 +149,7 @@ install: $(MANDIR)/man8/ebtables.8 $(ETHERTYPESFILE) exec scripts
 .PHONY: clean
 clean:
 	rm -f ebtables ebtablesd ebtablesu
-	rm -f *.o *.c~ *.so
+	rm -f *.o *~ *.so
 	rm -f extensions/*.o extensions/*.c~ extensions/*.so
 
 DIR:=$(PROGNAME)-v$(PROGVERSION)
