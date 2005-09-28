@@ -297,7 +297,7 @@ close_file:
 
 /* Gets executed after ebt_deliver_table. Delivers the counters to the kernel
  * and resets the counterchanges to CNT_NORM */
-void ebt_deliver_counters(struct ebt_u_replace *u_repl, int exec_style)
+void ebt_deliver_counters(struct ebt_u_replace *u_repl)
 {
 	struct ebt_counter *old, *new, *newcounters;
 	socklen_t optlen;

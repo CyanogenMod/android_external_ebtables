@@ -52,7 +52,7 @@ int main(int argc_, char *argv_[])
 	char *argv[EBTD_ARGC_MAX], *args[4], name[] = "mkdir",
 	     mkdir_option[] = "-p", mkdir_dir[] = EBTD_PIPE_DIR,
 	     cmdline[EBTD_CMDLINE_MAXLN];
-	int readfd, base = 0, offset = 0, n = 0, ret = 0;
+	int readfd, base = 0, offset = 0, n = 0, ret = 0, quotemode = 0;
 
 	/* Make sure the pipe directory exists */
 	args[0] = name;
@@ -104,15 +104,16 @@ int main(int argc_, char *argv_[])
 			continue;
 		ntot += offset;
 continue_read:
-		/* Change all ' ' into '\0'. This implies that the user is not
-		 * allowed to use spaces (that don't distinguish options or
-		 * commands) in her rules. This comes down to not allowing spaces
-		 * in options like the string of --ulog-prefix (use '_' instead).
-		 */
+		/* Put '\0' between arguments. */
 		for (; offset < ntot; n++, offset++) {
-			if (cmdline[offset] == ' ')
+			if (cmdline[offset] == '\"') {
+				quotemode ^= 1;
 				cmdline[offset] = '\0';
-			if (cmdline[offset] == '\n') {
+			} else if (!quotemode && cmdline[offset] == ' ') {
+				cmdline[offset] = '\0';
+			} else if (cmdline[offset] == '\n') {
+				if (quotemode)
+					ebt_print_error("ebtablesd: wrong number of \" delimiters");
 				cmdline[offset] = '\0';
 				break;
 			}
@@ -145,6 +146,10 @@ continue_read:
 		n2 = 0;
 		argc = 0;
 		while (n2 < n && argc < EBTD_ARGC_MAX) {
+			if (*(cmdline + base + n2) == '\0') {
+				n2++;
+				continue;
+			}
 			argv[argc++] = cmdline + base + n2;
 			n2 += strlen(cmdline + base + n2) + 1;
 		}
@@ -303,7 +308,7 @@ continue_read:
 				replace[i].num_counters = 0;
 			ebt_deliver_table(&replace[i]);
 			if (ebt_errormsg[0] == '\0' && open_method[i] == OPEN_METHOD_KERNEL)
-				ebt_deliver_counters(&replace[i], EXEC_STYLE_DAEMON);
+				ebt_deliver_counters(&replace[i]);
 			goto write_msg;
 		} else if (!strcmp(argv[1], "fcommit")) {
 			if (argc != 4) {
@@ -333,7 +338,7 @@ continue_read:
 			strcpy(replace[i].filename, argv[3]);
 			ebt_deliver_table(&replace[i]);
 			if (ebt_errormsg[0] == '\0' && open_method[i] == OPEN_METHOD_KERNEL)
-				ebt_deliver_counters(&replace[i], EXEC_STYLE_DAEMON);
+				ebt_deliver_counters(&replace[i]);
 			free(replace[i].filename);
 			replace[i].filename = NULL;
 			goto write_msg;

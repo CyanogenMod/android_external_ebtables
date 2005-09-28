@@ -276,7 +276,7 @@ void __ebt_print_error(char *format, ...);
 /* communication.c */
 
 int ebt_get_table(struct ebt_u_replace *repl, int init);
-void ebt_deliver_counters(struct ebt_u_replace *repl, int exec_style);
+void ebt_deliver_counters(struct ebt_u_replace *repl);
 void ebt_deliver_table(struct ebt_u_replace *repl);
 
 /* useful_functions.c */

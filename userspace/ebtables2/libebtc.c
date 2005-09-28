@@ -1272,8 +1272,8 @@ void __ebt_print_error(char *format, ...)
 		vsnprintf(ebt_errormsg, ERRORMSG_MAXLEN, format, l);
 		va_end(l);
 	} else {
-		vprintf(format, l);
-		printf(".\n");
+		vfprintf(stderr, format, l);
+		fprintf(stderr, ".\n");
 		va_end(l);
 		exit (-1);
 	}
