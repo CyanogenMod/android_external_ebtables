@@ -1008,13 +1008,10 @@ big_iface_length:
 			replace->flags |= OPT_COMMAND;
 			{
 				char *tmp = replace->filename;
-				int init = 1;
 
-				if (c == 10)
-					init = 0;
 				/* Get the kernel table */
 				replace->filename = NULL;
-				ebt_get_kernel_table(replace, init);
+				ebt_get_kernel_table(replace, c == 10 ? 0 : 1);
 				replace->filename = tmp;
 			}
 			break;
@@ -1208,7 +1205,7 @@ delete_the_rule:
 		ebt_deliver_table(replace);
 
 		if (replace->nentries)
-			ebt_deliver_counters(replace, EXEC_STYLE_PRG);
+			ebt_deliver_counters(replace);
 	}
 	return 0;
 }

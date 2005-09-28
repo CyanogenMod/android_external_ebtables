@@ -76,7 +76,8 @@ int main(int argc, char *argv[])
 	pos = arguments;
 	for (i = 0; i < argc; i++) {
 		strcpy(pos, argv[i]);
-		pos += strlen(argv[i]) + 1;
+		pos += strlen(argv[i]);
+		*(pos++) = ' ';
 	}
 
 	*(pos-1) = '\n';
