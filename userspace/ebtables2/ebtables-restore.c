@@ -36,12 +36,16 @@ static void copy_table_names()
 	strcpy(replace[2].name, "broute");
 }
 
+#define ebtrest_print_error(format, args...) {fprintf(stderr, "ebtables-restore: "\
+                                             "line %d: "format".\n", line, ##args); exit(-1);}
 int main(int argc_, char *argv_[])
 {
 	char *argv[EBTD_ARGC_MAX], cmdline[EBTD_CMDLINE_MAXLN];
 	int i, offset, quotemode = 0, argc, table_nr = -1, line = 0, whitespace;
 	char ebtables_str[] = "ebtables";
 
+	if (argc_ != 1)
+		ebtrest_print_error("options are not supported");
 	ebt_silent = 0;
 	copy_table_names();
 	ebt_early_init_once();
@@ -60,28 +64,22 @@ int main(int argc_, char *argv_[])
 			for (i = 0; i < 3; i++)
 				if (!strcmp(replace[i].name, cmdline+1))
 					break;
-			if (i == 3) {
-				fprintf(stderr, "ebtables-restore: line %d: table '%s' was not recognized\n", line, cmdline+1);
-				exit(-1);
-			}
+			if (i == 3)
+				ebtrest_print_error("table '%s' was not recognized", cmdline+1);
 			table_nr = i;
 			replace[table_nr].command = 11;
 			ebt_get_kernel_table(replace, 1);
 			replace[table_nr].command = 0;
 			replace[table_nr].flags = OPT_KERNELDATA; /* Prevent do_command from initialising replace */
 			continue;
-		} else if (table_nr == -1) {
-			fprintf(stderr, "ebtables-restore: line %d: no table specified\n", line);
-			exit(-1);
-		}
+		} else if (table_nr == -1)
+			ebtrest_print_error("no table specified\n");
 		if (*cmdline == ':') {
 			int policy;
 			char *ch;
 
-			if (!(ch = strchr(cmdline, ' '))) {
-				fprintf(stderr, "ebtables-restore: line %d: no policy specified\n", line);
-				exit(-1);
-			}
+			if (!(ch = strchr(cmdline, ' ')))
+				ebtrest_print_error("no policy specified");
 			*ch = '\0';
 			for (i = 0; i < NUM_STANDARD_TARGETS; i++)
 				if (!strcmp(ch+1, ebt_standard_targets[i])) {
@@ -90,10 +88,8 @@ int main(int argc_, char *argv_[])
 						i = NUM_STANDARD_TARGETS;
 					break;
 				}
-			if (i == NUM_STANDARD_TARGETS) {
-				fprintf(stderr, "ebtables-restore: line %d: invalid policy specified\n", line);
-				exit(-1);
-			}
+			if (i == NUM_STANDARD_TARGETS)
+				ebtrest_print_error("invalid policy specified");
 			if (ebt_get_chainnr(&replace[table_nr], cmdline+1) == -1) {
 				ebt_new_chain(&replace[table_nr], cmdline+1, policy);
 			}
@@ -118,10 +114,8 @@ int main(int argc_, char *argv_[])
 			}
 			offset++;
 		}
-		if (quotemode) {
-			fprintf(stderr, "ebtables-restore: line %d: wrong use of '\"'\n", line);
-			exit(-1);
-		}
+		if (quotemode)
+			ebtrest_print_error("wrong use of '\"'");
 		optind = 0; /* Setting optind = 1 causes serious annoyances */
 		do_command(argc, argv, EXEC_STYLE_DAEMON, &replace[table_nr]);
 		ebt_reinit_extensions();
