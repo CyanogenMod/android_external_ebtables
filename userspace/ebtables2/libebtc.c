@@ -817,17 +817,6 @@ void ebt_new_chain(struct ebt_u_replace *replace, const char *name, int policy)
 {
 	struct ebt_u_entries *new;
 
-	if (ebt_get_chainnr(replace, name) != -1) {
-		ebt_print_error("Chain %s already exists", optarg);
-		return;
-	} else if (ebt_find_target(name)) {
-		ebt_print_error("Target with name %s exists", optarg);
-		return;
-	} else if (strlen(optarg) >= EBT_CHAIN_MAXNAMELEN) {
-		ebt_print_error("Chain name length can't exceed %d",
-				EBT_CHAIN_MAXNAMELEN - 1);
-		return;
-	}
 	if (replace->num_chains == replace->max_chains)
 		ebt_double_chains(replace);
 	new = (struct ebt_u_entries *)malloc(sizeof(struct ebt_u_entries));

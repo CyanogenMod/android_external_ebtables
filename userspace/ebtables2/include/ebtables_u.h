@@ -298,14 +298,14 @@ struct ethertypeent *parseethertypebynumber(int type);
 
 #define ebt_to_chain(repl)				\
 ({struct ebt_u_entries *_ch = NULL;			\
-if (repl->selected_chain != -1)					\
+if (repl->selected_chain != -1)				\
 	_ch = repl->chains[repl->selected_chain];	\
 _ch;})
 #define ebt_print_bug(format, args...) \
    __ebt_print_bug(__FILE__, __LINE__, format, ##args)
 #define ebt_print_error(format,args...) __ebt_print_error(format, ##args);
-#define ebt_print_error2(format, args...) {__ebt_print_error(format, ##args); \
-   return -1;}
+#define ebt_print_error2(format, args...) do {__ebt_print_error(format, ##args); \
+   return -1;} while (0)
 #define ebt_check_option2(flags,mask)	\
 ({ebt_check_option(flags,mask);		\
  if (ebt_errormsg[0] != '\0')		\
