@@ -605,6 +605,13 @@ int do_command(int argc, char *argv[], int exec_style,
 			if (optarg && (optarg[0] == '-' || !strcmp(optarg, "!")))
 				ebt_print_error2("No chain name specified");
 			if (c == 'N') {
+				if (ebt_get_chainnr(replace, optarg) != -1)
+					ebt_print_error2("Chain %s already exists", optarg);
+				else if (ebt_find_target(optarg))
+					ebt_print_error2("Target with name %s exists", optarg);
+				else if (strlen(optarg) >= EBT_CHAIN_MAXNAMELEN)
+					ebt_print_error2("Chain name length can't exceed %d",
+							EBT_CHAIN_MAXNAMELEN - 1);
 				ebt_new_chain(replace, optarg, EBT_ACCEPT);
 				/* This is needed to get -N x -P y working */
 				replace->selected_chain = ebt_get_chainnr(replace, optarg);
@@ -895,10 +902,10 @@ big_iface_length:
 
 				new_entry->cnt.pcnt = strtoull(optarg, &buffer, 10);
 				if (*buffer != '\0')
-					ebt_print_error2("Packet counter '%s' invalid", optarg)
+					ebt_print_error2("Packet counter '%s' invalid", optarg);
 				new_entry->cnt.bcnt = strtoull(argv[optind], &buffer, 10);
 				if (*buffer != '\0')
-					ebt_print_error2("Packet counter '%s' invalid", argv[optind])
+					ebt_print_error2("Packet counter '%s' invalid", argv[optind]);
 				optind++;
 				break;
 			}
@@ -919,7 +926,7 @@ big_iface_length:
 				}
 				ent = getethertypebyname(optarg);
 				if (!ent)
-					ebt_print_error2("Problem with the specified Ethernet protocol '%s', perhaps "_PATH_ETHERTYPES " is missing", optarg)
+					ebt_print_error2("Problem with the specified Ethernet protocol '%s', perhaps "_PATH_ETHERTYPES " is missing", optarg);
 				new_entry->ethproto = ent->e_ethertype;
 			} else
 				new_entry->ethproto = i;

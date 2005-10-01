@@ -90,9 +90,8 @@ int main(int argc_, char *argv_[])
 				}
 			if (i == NUM_STANDARD_TARGETS)
 				ebtrest_print_error("invalid policy specified");
-			if (ebt_get_chainnr(&replace[table_nr], cmdline+1) == -1) {
+			if (ebt_get_chainnr(&replace[table_nr], cmdline+1) == -1)
 				ebt_new_chain(&replace[table_nr], cmdline+1, policy);
-			}
 			continue;
 		}
 		argv[1] = cmdline;
