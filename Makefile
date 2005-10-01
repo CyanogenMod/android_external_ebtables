@@ -50,7 +50,9 @@ EBTD_ARGC_MAX?=50
 PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DPROGNAME=\"$(PROGNAME)\" \
 	-DPROGDATE=\"$(PROGDATE)\" \
-	-D_PATH_ETHERTYPES=\"$(ETHERTYPESFILE)\"
+	-D_PATH_ETHERTYPES=\"$(ETHERTYPESFILE)\" \
+	-DEBTD_ARGC_MAX=$(EBTD_ARGC_MAX) \
+	-DEBTD_CMDLINE_MAXLN=$(EBTD_CMDLINE_MAXLN)
 
 PROGSPECSD:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DPROGNAME=\"$(PROGNAME)\" \
@@ -104,7 +106,7 @@ ebtablesd: $(OBJECTS) ebtablesd.o libebtc
 	-Wl,-rpath,$(LIBDIR)
 
 ebtables-restore.o: ebtables-restore.c include/ebtables_u.h
-	$(CC) $(CFLAGS) $(PROGSPECSD) -c $< -o $@  -I$(KERNEL_INCLUDES)
+	$(CC) $(CFLAGS) $(PROGSPECS) -c $< -o $@  -I$(KERNEL_INCLUDES)
 
 ebtables-restore: $(OBJECTS) ebtables-restore.o libebtc
 	$(CC) $(CFLAGS) -o $@ ebtables-restore.o -I$(KERNEL_INCLUDES) -L. -Lextensions -lebtc $(EXT_LIBSI) \
