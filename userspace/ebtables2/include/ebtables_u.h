@@ -319,8 +319,8 @@ if (!optarg) {								\
 	return -1;							\
 }									\
 __ret;})
-#define ebt_print_memory() {printf("Ebtables: " __FILE__ \
-   " %s %d :Out of memory.\n", __FUNCTION__, __LINE__); exit(-1);}
+#define ebt_print_memory() do {printf("Ebtables: " __FILE__ \
+   " %s %d :Out of memory.\n", __FUNCTION__, __LINE__); exit(-1);} while (0)
 
 /* used for keeping the rule counters right during rule adds or deletes */
 #define CNT_NORM 	0
