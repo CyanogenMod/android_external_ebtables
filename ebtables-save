@@ -37,6 +37,8 @@ sub process_table {
         }
         if ($cnt eq "--Lc") {
             $line =~ s/, pcnt = (.*) -- bcnt = (.*)/-c $1 $2/;
+        } else {
+            $line =~ s/ $//;
         }
         $rules = $rules . "-A $chain $line\n";
     }
