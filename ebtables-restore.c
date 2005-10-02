@@ -36,8 +36,8 @@ static void copy_table_names()
 	strcpy(replace[2].name, "broute");
 }
 
-#define ebtrest_print_error(format, args...) {fprintf(stderr, "ebtables-restore: "\
-                                             "line %d: "format".\n", line, ##args); exit(-1);}
+#define ebtrest_print_error(format, args...) do {fprintf(stderr, "ebtables-restore: "\
+                                             "line %d: "format".\n", line, ##args); exit(-1);} while (0)
 int main(int argc_, char *argv_[])
 {
 	char *argv[EBTD_ARGC_MAX], cmdline[EBTD_CMDLINE_MAXLN];
@@ -73,7 +73,7 @@ int main(int argc_, char *argv_[])
 			replace[table_nr].flags = OPT_KERNELDATA; /* Prevent do_command from initialising replace */
 			continue;
 		} else if (table_nr == -1)
-			ebtrest_print_error("no table specified\n");
+			ebtrest_print_error("no table specified");
 		if (*cmdline == ':') {
 			int policy;
 			char *ch;
@@ -90,6 +90,9 @@ int main(int argc_, char *argv_[])
 				}
 			if (i == NUM_STANDARD_TARGETS)
 				ebtrest_print_error("invalid policy specified");
+			/* No need to check chain name for consistency, since
+			 * we're supposed to be reading an automatically generated
+			 * file. */
 			if (ebt_get_chainnr(&replace[table_nr], cmdline+1) == -1)
 				ebt_new_chain(&replace[table_nr], cmdline+1, policy);
 			continue;
@@ -103,6 +106,8 @@ int main(int argc_, char *argv_[])
 				quotemode ^= 1;
 				if (quotemode)
 					argv[argc++] = &cmdline[offset+1];
+				else if (cmdline[offset+1] != ' ' && cmdline[offset+1] != '\0')
+					ebtrest_print_error("syntax error at \"");
 				cmdline[offset] = '\0';
 			} else if (!quotemode && cmdline[offset] == ' ') {
 				whitespace = 1;
