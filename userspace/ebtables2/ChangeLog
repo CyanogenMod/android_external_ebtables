@@ -1,3 +1,13 @@
+20052010
+	Since last entry:
+	* ebtables modules are now located in /usr/lib/ebtables/
+	* added '/sbin/service ebtables' support
+	* added ebtables-save and ebtables-restore (the first one
+	  a perl script, the second one written in c (fast)
+	* optimized the code for the '-A' command, making ebtables-restore
+	  very fast.
+	* ebtablesd/ebtablesu is deprecated and not compiled by default
+	  the ebtables-save/ebtables-restore scheme is much better
 20051701
 	Since last entry:
 	* added ulog watcher
