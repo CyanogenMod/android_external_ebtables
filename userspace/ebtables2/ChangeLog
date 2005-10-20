@@ -1,4 +1,4 @@
-20052010
+20051020
 	Since last entry:
 	* ebtables modules are now located in /usr/lib/ebtables/
 	* added '/sbin/service ebtables' support
@@ -8,7 +8,7 @@
 	  very fast.
 	* ebtablesd/ebtablesu is deprecated and not compiled by default
 	  the ebtables-save/ebtables-restore scheme is much better
-20051701
+20050117
 	Since last entry:
 	* added ulog watcher
 	* made the ebtables code modular (make library functions).
