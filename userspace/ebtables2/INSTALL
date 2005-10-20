@@ -1,7 +1,9 @@
 FOLLOW THESE SIMPLE GUIDELINES:
 -------------------------------
 
-Compiling the source code and putting the files in the right directories:
+Compiling the source code:
+%make
+Put the files in the right directories:
 %make install
 
 If you are using the CVS code or need your own kernel includes, do this
@@ -17,15 +19,18 @@ WHAT GETS INSTALLED?
   The Makefile will append /man8/ebtables.8.
 - ethertypes is by default placed in /etc/, if you
   want to change this, include ETHERTYPESPATH=<<path>>.
-- The pipe used for communication by ebtablesd and ebtablesu is by
-  default the file /etc/ebtables-v$(PROGVERSION)/ebtablesd_pipe. To
-  change the directory, include PIPE_DIR=<<dir>>. There is no option
-  to change the name of the pipe.
-- the userspace programs ebtables ebtablesu and ebtablesd are compiled and
-  the executables are copied by default to /usr/local/sbin/ebtables. If you want
-  to put the executables somewhere else, include BINPATH=<<path>>.
+- The userspace programs ebtables ebtables-save and ebtables-restore are
+  are copied by default to /usr/local/sbin/ebtables. If you want to put
+  the executables somewhere else, include BINPATH=<<path>>.
+- The ebtables initialisation file (enabling use of 'service ebtables') is
+  copied to /etc/rc.d/init.d (change with option INITDIR)
+- The ebtables configuration file (ebtables-config) is copied to /etc/sysconfig
 
 That's all
+
+You can also use a base directory different from the root directory (/),
+using the DESTDIR option. See the Makefile for more details.
+
 
 ADDITIONAL PROGRAM(S):
 ----------------------
@@ -44,4 +49,5 @@ Usage:
 -- examples/perf_test/perf_test --
 
 A test script to compare the performance for the different ways to
-construct an ebtables table.
+construct an ebtables table. This is deprecated and should probably
+be ignored.
