@@ -1,5 +1,10 @@
 #!/bin/bash
 #
+# The ebtablesu/ebtablesd programs are deprecated,
+# they're mostly useful for debugging ebtables in daemon
+# mode. For fast population of tables, use ebtables-restore.
+# You should probably just ignore this script.
+#
 # This script can be used to compare the speed of
 # the different methods for adding rules in ebtables
 # chains.
