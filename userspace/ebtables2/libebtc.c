@@ -695,7 +695,7 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 		     struct ebt_u_entry *new_entry, int begin, int end)
 {
 	int i,  nr_deletes;
-	struct ebt_u_entry *u_e, *u_e2;
+	struct ebt_u_entry *u_e, *u_e2, *u_e3;
 	struct ebt_u_entries *entries = ebt_to_chain(replace);
 
 	if (check_and_change_rule_number(replace, new_entry, &begin, &end))
@@ -708,6 +708,7 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 	u_e = entries->entries->next;
 	for (i = 0; i < begin; i++)
 		u_e = u_e->next;
+	u_e3 = u_e->prev;
 	/* Remove the rules */
 	for (i = 0; i < nr_deletes; i++) {
 		u_e2 = u_e;
@@ -717,6 +718,8 @@ void ebt_delete_rule(struct ebt_u_replace *replace,
 		ebt_free_u_entry(u_e2);
 		free(u_e2);
 	}
+	u_e3->next = u_e;
+	u_e->prev = u_e3;
 	/* Update the counter_offset of chains behind this one */
 	for (i = replace->selected_chain+1; i < replace->num_chains; i++) {
 		if (!(entries = replace->chains[i]))
