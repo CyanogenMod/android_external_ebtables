@@ -70,7 +70,7 @@ stop() {
 
 	if [ $RETVAL -eq 0 ]; then
 		success "$prog shutdown"
-		rm -f %{_localstatedir}/lock/subsys/$prog
+		rm -f /var/lock/subsys/$prog
 	else
 		failure "$prog shutdown"
 	fi
