@@ -41,7 +41,7 @@ start() {
 	echo -n $"Starting $desc ($prog): "
 	if [ "$EBTABLES_BINARY_FORMAT" = "yes" ]; then
 		for table in $(ls __SYSCONFIG__/ebtables.* | sed s/*ebtables.//); do
-			__EXEC_PATH__/ebtables -t $table --atomic-file __SYSCONFIG__/ebtables.filter --atomic-commit || RETVAL=1
+			__EXEC_PATH__/ebtables -t $table --atomic-file __SYSCONFIG__/ebtables.$table --atomic-commit || RETVAL=1
 		done
 	else
 		__EXEC_PATH__/ebtables-restore < /etc/sysconfig/ebtables || RETVAL=1
@@ -62,7 +62,7 @@ stop() {
 		__EXEC_PATH__/ebtables -t $table --init-table || RETVAL=1
 	done
 
-	if [ "$EBTABLES_MODULE_UNLOAD" = "yes" ]; then
+	if [ "$EBTABLES_MODULES_UNLOAD" = "yes" ]; then
 		for mod in $(grep -E '^(ebt|ebtable)_' /proc/modules | cut -f1 -d' ') ebtables; do
 			rmmod $mod || RETVAL=1
 		done
@@ -88,10 +88,10 @@ save() {
 		__EXEC_PATH__/ebtables-save > /etc/sysconfig/ebtables || RETVAL=1
 	fi
 	if [ "$EBTABLES_BINARY_FORMAT" = "yes" ]; then
-		for mod in $(grep -E '^ebtable_' /proc/modules | cut -f1 -d' ' | sed s/ebtable_//); do
-			__EXEC_PATH__/ebtables -t $mod --atomic-file __SYSCONFIG__/ebtables.$mod --atomic-save || RETVAL=1
+		for table in $(grep -E '^ebtable_' /proc/modules | cut -f1 -d' ' | sed s/ebtable_//); do
+			__EXEC_PATH__/ebtables -t $table --atomic-file __SYSCONFIG__/ebtables.$table --atomic-save || RETVAL=1
 			if [ "$EBTABLES_SAVE_COUNTER" = "no" ]; then
-				__EXEC_PATH__/ebtables -t $mod --atomic-file __SYSCONFIG__/ebtables.$mod -Z || RETVAL=1
+				__EXEC_PATH__/ebtables -t $table --atomic-file __SYSCONFIG__/ebtables.$table -Z || RETVAL=1
 			fi
 		done
 	fi
