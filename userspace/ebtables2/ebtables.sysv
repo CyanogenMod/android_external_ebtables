@@ -40,7 +40,7 @@ config=__SYSCONFIG__/$prog-config
 start() {
 	echo -n $"Starting $desc ($prog): "
 	if [ "$EBTABLES_BINARY_FORMAT" = "yes" ]; then
-		for table in $(ls __SYSCONFIG__/ebtables.* | sed s/*ebtables.//); do
+		for table in $(ls __SYSCONFIG__/ebtables.* | sed s/.*ebtables.//); do
 			__EXEC_PATH__/ebtables -t $table --atomic-file __SYSCONFIG__/ebtables.$table --atomic-commit || RETVAL=1
 		done
 	else
@@ -64,7 +64,7 @@ stop() {
 
 	if [ "$EBTABLES_MODULES_UNLOAD" = "yes" ]; then
 		for mod in $(grep -E '^(ebt|ebtable)_' /proc/modules | cut -f1 -d' ') ebtables; do
-			rmmod $mod || RETVAL=1
+			rmmod $mod 2> /dev/null
 		done
 	fi
 
