@@ -88,6 +88,7 @@ save() {
 		__EXEC_PATH__/ebtables-save > /etc/sysconfig/ebtables || RETVAL=1
 	fi
 	if [ "$EBTABLES_BINARY_FORMAT" = "yes" ]; then
+		rm __SYSCONFIG__/ebtables.*
 		for table in $(grep -E '^ebtable_' /proc/modules | cut -f1 -d' ' | sed s/ebtable_//); do
 			__EXEC_PATH__/ebtables -t $table --atomic-file __SYSCONFIG__/ebtables.$table --atomic-save || RETVAL=1
 			if [ "$EBTABLES_SAVE_COUNTER" = "no" ]; then
