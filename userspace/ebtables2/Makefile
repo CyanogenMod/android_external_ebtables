@@ -1,8 +1,8 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGVERSION:=2.0.7
-PROGDATE:=September\ 2005
+PROGVERSION:=2.0.8-rc1
+PROGDATE:=October\ 2005
 
 # default paths
 LIBDIR:=/usr/lib
@@ -54,6 +54,7 @@ PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DEBTD_ARGC_MAX=$(EBTD_ARGC_MAX) \
 	-DEBTD_CMDLINE_MAXLN=$(EBTD_CMDLINE_MAXLN)
 
+# You can probably ignore this, ebtables{u,d} are normally not used
 PROGSPECSD:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DPROGNAME=\"$(PROGNAME)\" \
 	-DPROGDATE=\"$(PROGDATE)\" \
@@ -66,8 +67,9 @@ PROGSPECSD:=-DPROGVERSION=\"$(PROGVERSION)\" \
 # Uncomment for debugging (slower)
 #PROGSPECS+=-DEBT_DEBUG
 #PROGSPECSD+=-DEBT_DEBUG
+#CFLAGS+=-ggdb
 
-all: ebtables daemon
+all: ebtables ebtables-restore
 
 communication.o: communication.c include/ebtables_u.h
 	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
@@ -150,9 +152,9 @@ install: $(MANDIR)/man8/ebtables.8 $(ETHERTYPESFILE) exec scripts
 
 .PHONY: clean
 clean:
-	rm -f ebtables ebtablesd ebtablesu
+	rm -f ebtables ebtables-restore ebtablesd ebtablesu
 	rm -f *.o *~ *.so
-	rm -f extensions/*.o extensions/*.c~ extensions/*.so
+	rm -f extensions/*.o extensions/*.c~ extensions/*.so include/*~
 
 DIR:=$(PROGNAME)-v$(PROGVERSION)
 # This is used to make a new userspace release
