@@ -126,7 +126,7 @@ scripts: ebtables-save ebtables.sysv ebtables-config
 	install -m 0755 -o root -g root ebtables-save_ $(BINDIR)/ebtables-save
 	cat ebtables.sysv | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__SYSCONFIG__/$(tmp2)/g' > ebtables.sysv_
 	install -m 0755 -o root -g root ebtables.sysv_ $(INITDIR)/ebtables
-	cat ebtables-config | sed 's/__SYSCONFIG__/$(tmp1)/g' > ebtables-config_
+	cat ebtables-config | sed 's/__SYSCONFIG__/$(tmp2)/g' > ebtables-config_
 	install -m 0600 -o root -g root ebtables-config_ $(SYSCONFIGDIR)/ebtables-config
 	rm -f ebtables-save_ ebtables.sysv_ ebtables-config_
 
