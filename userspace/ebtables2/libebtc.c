@@ -1241,9 +1241,9 @@ void __ebt_print_bug(char *file, int line, char *format, ...)
 	va_list l;
 
 	va_start(l, format);
-	printf(PROGNAME" v"PROGVERSION":%s:%d:--BUG--: \n", file, line);
-	vprintf(format, l);
-	printf("\n");
+	fprintf(stderr, PROGNAME" v"PROGVERSION":%s:%d:--BUG--: \n", file, line);
+	vfprintf(stderr, format, l);
+	fprintf(stderr, "\n");
 	va_end(l);
 	exit (-1);
 }
