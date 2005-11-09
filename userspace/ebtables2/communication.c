@@ -9,8 +9,7 @@
  * All the userspace/kernel communication is in this file.
  * The other code should not have to know anything about the way the
  * kernel likes the structure of the table data.
- * The other code works with linked lists, lots of linked lists.
- * So, the translation is done here.
+ * The other code works with linked lists. So, the translation is done here.
  */
 
 #include <getopt.h>
@@ -18,6 +17,8 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include "include/ebtables_u.h"
 
@@ -184,25 +185,14 @@ static struct ebt_replace *translate_user2kernel(struct ebt_u_replace *u_repl)
 
 static void store_table_in_file(char *filename, struct ebt_replace *repl)
 {
-	char *command, *data;
+	char *data;
 	int size;
-	FILE *file;
+	int fd;
 
 	/* Start from an empty file with right priviliges */
-	command = (char *)malloc(strlen(filename) + 15);
-	if (!command)
-		ebt_print_memory();
-	strcpy(command, "cat /dev/null>");
-	strcpy(command + 14, filename);
-	if (system(command)) {
+	if (!(fd = creat(filename, 0600))) {
 		ebt_print_error("Couldn't create file %s", filename);
-		goto free_command;
-	}
-	strcpy(command, "chmod 600 ");
-	strcpy(command + 10, filename);
-	if (system(command)) {
-		ebt_print_error("Couldn't chmod file %s", filename);
-		goto free_command;
+		return;
 	}
 
 	size = sizeof(struct ebt_replace) + repl->entries_size +
@@ -216,17 +206,11 @@ static void store_table_in_file(char *filename, struct ebt_replace *repl)
 	/* Initialize counters to zero, deliver_counters() can update them */
 	memset(data + sizeof(struct ebt_replace) + repl->entries_size,
 	   0, repl->nentries * sizeof(struct ebt_counter));
-	if (!(file = fopen(filename, "wb"))) {
-		ebt_print_error("Couldn't open file %s", filename);
-		goto free_data;
-	} else if (fwrite(data, sizeof(char), size, file) != size)
+	if (write(fd, data, size) != size)
 		ebt_print_error("Couldn't write everything to file %s",
 				filename);
-	fclose(file);
-free_data:
+	close(fd);
 	free(data);
-free_command:
-	free(command);
 }
 
 void ebt_deliver_table(struct ebt_u_replace *u_repl)
