@@ -612,6 +612,8 @@ int do_command(int argc, char *argv[], int exec_style,
 				else if (strlen(optarg) >= EBT_CHAIN_MAXNAMELEN)
 					ebt_print_error2("Chain name length can't exceed %d",
 							EBT_CHAIN_MAXNAMELEN - 1);
+				else if (strchr(optarg, ' ') != NULL)
+					ebt_print_error2("Use of ' ' not allowed in chain names");
 				ebt_new_chain(replace, optarg, EBT_ACCEPT);
 				/* This is needed to get -N x -P y working */
 				replace->selected_chain = ebt_get_chainnr(replace, optarg);
@@ -640,14 +642,16 @@ int do_command(int argc, char *argv[], int exec_style,
 			if (c == 'E') {
 				if (optind >= argc)
 					ebt_print_error2("No new chain name specified");
-				if (optind < argc - 1)
+				else if (optind < argc - 1)
 					ebt_print_error2("No extra options allowed with -E");
-				if (strlen(argv[optind]) >= EBT_CHAIN_MAXNAMELEN)
+				else if (strlen(argv[optind]) >= EBT_CHAIN_MAXNAMELEN)
 					ebt_print_error2("Chain name length can't exceed %d characters", EBT_CHAIN_MAXNAMELEN - 1);
-				if (ebt_get_chainnr(replace, argv[optind]) != -1)
+				else if (ebt_get_chainnr(replace, argv[optind]) != -1)
 					ebt_print_error2("Chain '%s' already exists", argv[optind]);
-				if (ebt_find_target(argv[optind]))
+				else if (ebt_find_target(argv[optind]))
 					ebt_print_error2("Target with name '%s' exists", argv[optind]);
+				else if (strchr(argv[optind], ' ') != NULL)
+					ebt_print_error2("Use of ' ' not allowed in chain names");
 				ebt_rename_chain(replace, argv[optind]);
 				optind++;
 				break;
