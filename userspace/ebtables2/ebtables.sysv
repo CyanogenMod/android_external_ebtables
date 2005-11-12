@@ -25,6 +25,7 @@ source /etc/sysconfig/network
 RETVAL=0
 prog="ebtables"
 desc="Ethernet bridge filtering"
+umask 0077
 
 #default configuration
 EBTABLES_TEXT_FORMAT="yes"
@@ -85,10 +86,20 @@ restart() {
 save() {
 	echo -n $"Saving $desc ($prog): "
 	if [ "$EBTABLES_TEXT_FORMAT" = "yes" ]; then
-		__EXEC_PATH__/ebtables-save > /etc/sysconfig/ebtables || RETVAL=1
+		if [ -e __SYSCONFIG__/ebtables ]; then
+			chmod 0600 __SYSCONFIG__/ebtables
+			mv -f __SYSCONFIG__/ebtables __SYSCONFIG__/ebtables.save
+		fi
+		__EXEC_PATH__/ebtables-save > __SYSCONFIG__/ebtables || RETVAL=1
 	fi
 	if [ "$EBTABLES_BINARY_FORMAT" = "yes" ]; then
-		rm __SYSCONFIG__/ebtables.*
+		rm -f __SYSCONFIG__/ebtables.*.save
+		for oldtable in $(ls __SYSCONFIG__/ebtables.*); do
+			if [ "$oldtable" !=  __SYSCONFIG__/ebtables.save ]; then
+				chmod 0600 $oldtable
+				mv -f $oldtable $oldtable.save
+			fi
+		done
 		for table in $(grep -E '^ebtable_' /proc/modules | cut -f1 -d' ' | sed s/ebtable_//); do
 			__EXEC_PATH__/ebtables -t $table --atomic-file __SYSCONFIG__/ebtables.$table --atomic-save || RETVAL=1
 			if [ "$EBTABLES_SAVE_COUNTER" = "no" ]; then
