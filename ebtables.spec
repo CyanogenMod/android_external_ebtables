@@ -76,7 +76,6 @@ fi
 %{_sbindir}/ebtables
 %{_sbindir}/ebtables-save
 %{_sbindir}/ebtables-restore
-%{_libdir}/ebtables/*
 %{_libdir}/ebtables/
 
 %changelog
