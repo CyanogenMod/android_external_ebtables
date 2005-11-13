@@ -2,7 +2,7 @@
 
 PROGNAME:=ebtables
 PROGVERSION:=2.0.8-rc1
-PROGDATE:=October\ 2005
+PROGDATE:=November\ 2005
 
 # default paths
 LIBDIR:=/usr/lib
@@ -178,7 +178,15 @@ release:
 	touch include/*
 	touch include/linux/*
 	touch include/linux/netfilter_bridge/*
-	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz
+	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz; cd -
+	rm -rf include/linux
+
+# This will make the rpm and put it in /usr/src/redhat/RPMS
+# (do this as root after make release)
+.PHONY: rpmbuild
+rpmbuild:
+	cp ../$(DIR).tar.gz /usr/src/redhat/SOURCES/
+	rpmbuild --buildroot $(shell mktemp -d $(DIR)-XXXXX) -bb ebtables.spec
 
 .PHONY: test_ulog
 test_ulog: examples/ulog/test_ulog.c getethertype.o
