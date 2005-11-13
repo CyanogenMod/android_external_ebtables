@@ -186,7 +186,7 @@ release:
 .PHONY: rpmbuild
 rpmbuild:
 	cp ../$(DIR).tar.gz /usr/src/redhat/SOURCES/
-	rpmbuild --buildroot $(shell mktemp -d $(DIR)-XXXXX) -bb ebtables.spec
+	rpmbuild --buildroot $(shell mktemp -td $(DIR)-XXXXX) -bb ebtables.spec
 
 .PHONY: test_ulog
 test_ulog: examples/ulog/test_ulog.c getethertype.o
