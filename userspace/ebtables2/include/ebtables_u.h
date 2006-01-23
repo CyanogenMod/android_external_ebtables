@@ -26,6 +26,13 @@
 #include <netinet/in.h>
 #include <linux/netfilter_bridge/ebtables.h>
 
+#ifndef IPPROTO_SCTP
+#define IPPROTO_SCTP		132
+#endif
+#ifndef IPPROTO_DCCP
+#define IPPROTO_DCCP		33
+#endif
+
 #define EXEC_STYLE_PRG		0
 #define EXEC_STYLE_DAEMON	1
 
