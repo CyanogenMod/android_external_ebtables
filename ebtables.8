@@ -852,8 +852,7 @@ userspace before the queue is full, this happens when the ulog
 kernel timer goes off (the frequency of this timer depends on
 .BR flushtimeout ).
 .SS TARGET EXTENSIONS
-.SS
-.B arpreply
+.SS arpreply
 The
 .B arpreply
 target can be used in the
@@ -877,8 +876,7 @@ Specifies the standard target. After sending the ARP reply, the rule still
 has to give a standard target so ebtables knows what to do with the ARP request.
 The default target
 .BR "" "is " DROP .
-.SS
-.B dnat
+.SS dnat
 The
 .B dnat
 target can only be used in the
@@ -907,8 +905,7 @@ multiple target extensions on the same frame. Making it
 sense in the
 .BR BROUTING " chain but using the " redirect " target is more logical there. " RETURN " is also allowed. Note that using " RETURN
 in a base chain is not allowed (for obvious reasons).
-.SS
-.B mark
+.SS mark
 .BR "" "The " mark " target can be used in every chain of every table. It is possible"
 to use the marking of a frame/packet in both ebtables and iptables,
 if the bridge-nf code is compiled into the kernel. Both put the marking at the
@@ -926,8 +923,7 @@ still has to give a standard target so ebtables knows what to do.
 The default target is
 .BR ACCEPT ". Making it " CONTINUE " can let you do other"
 things with the frame in subsequent rules of the chain.
-.SS
-.B redirect
+.SS redirect
 The
 .B redirect
 target will change the MAC target address to that of the bridge device the
@@ -947,8 +943,7 @@ The default target is
 multiple target extensions on the same frame. Making it
 .BR DROP " in the " BROUTING " chain will let the frames be routed. " RETURN " is also allowed. Note"
 .BR "" "that using " RETURN " in a base chain is not allowed."
-.SS
-.B snat
+.SS snat
 The
 .B snat
 target can only be used in the
