@@ -86,7 +86,10 @@ an 'extension' (see below) or a jump to a user-defined chain.
 .B ACCEPT
 means to let the frame through.
 .B DROP
-means the frame has to be dropped.
+means the frame has to be dropped. In the
+.BR BROUTING " chain however, the " ACCEPT " and " DROP " target have different"
+meanings (see the info provided for the
+.BR -t " option)."
 .B CONTINUE
 means the next rule has to be checked. This can be handy, f.e., to know how many
 frames pass a certain point in the chain, to log those frames or to apply multiple
@@ -615,11 +618,11 @@ The flag
 is an alias for this option.
 .TP
 .BR "--ip-source-port " "[!] \fIport1\fP[:\fIport2\fP]"
-The source port or port range for the IP protocols 6 (TCP) and 17
-(UDP). The
+The source port or port range for the IP protocols 6 (TCP), 17
+(UDP), 33 (DCCP) or 132 (SCTP). The
 .B --ip-protocol
 option must be specified as
-.IR TCP " or " UDP .
+.IR TCP ", " UDP ", " DCCP " or " SCTP .
 If
 .IR port1 " is omitted, " 0:port2 " is used; if " port2 " is omitted but a colon is specified, " port1:65535 " is used."
 The flag
@@ -627,11 +630,11 @@ The flag
 is an alias for this option.
 .TP
 .BR "--ip-destination-port " "[!] \fIport1\fP[:\fIport2\fP]"
-The destination port or port range for ip protocols 6 (TCP) and
-17 (UDP). The
+The destination port or port range for ip protocols 6 (TCP), 17
+(UDP), 33 (DCCP) or 132 (SCTP). The
 .B --ip-protocol
 option must be specified as
-.IR TCP " or " UDP .
+.IR TCP ", " UDP ", " DCCP " or " SCTP .
 If
 .IR port1 " is omitted, " 0:port2 " is used; if " port2 " is omitted but a colon is specified, " port1:65535 " is used."
 The flag
