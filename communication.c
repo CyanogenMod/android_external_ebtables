@@ -514,7 +514,7 @@ ebt_translate_entry(struct ebt_entry *e, int *hook, int *n, int *cnt,
 						break;
 				if (i == u_repl->num_chains)
 					ebt_print_bug("Can't find udc for jump");
-				((struct ebt_standard_target *)new->t)->verdict = i;
+				((struct ebt_standard_target *)new->t)->verdict = i-NF_BR_NUMHOOKS;
 			}
 		}
 
