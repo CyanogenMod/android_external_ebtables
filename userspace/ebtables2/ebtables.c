@@ -1073,8 +1073,14 @@ big_iface_length:
 				if (w->parse(c - w->option_offset, argv, argc, new_entry, &w->flags, &w->w))
 					break;
 
-			if (w == NULL)
-				ebt_print_error2("Unknown argument: '%s', %c, '%c'", argv[optind - 1], (char)optopt, (char)c);
+			if (w == NULL && c == '?')
+				ebt_print_error2("Unknown argument: '%s'", argv[optind - 1], (char)optopt, (char)c);
+			else if (w == NULL) {
+				if (!strcmp(t->name, "standard"))
+					ebt_print_error2("Unknown argument: don't forget the -t option");
+				else
+					ebt_print_error2("Target-specific option does not correspond with specified target");
+			}
 			if (ebt_errormsg[0] != '\0')
 				return -1;
 			if (w->used == 0) {
