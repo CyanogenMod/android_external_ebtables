@@ -1,8 +1,8 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGVERSION:=2.0.8-rc1
-PROGDATE:=November\ 2005
+PROGVERSION:=2.0.8-rc2
+PROGDATE:=March\ 2006
 
 # default paths
 LIBDIR:=/usr/lib
