@@ -1033,7 +1033,7 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 			stack[sp].e = e;
 			sp++;
 			j = -1;
-			e = entries2->entries;
+			e = entries2->entries->next;
 			chain_nr = verdict + NF_BR_NUMHOOKS;
 			entries = entries2;
 			continue;
