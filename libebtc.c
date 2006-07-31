@@ -838,7 +838,8 @@ void ebt_new_chain(struct ebt_u_replace *replace, const char *name, int policy)
 	new->kernel_start = NULL;
 }
 
-static void ebt_delete_a_chain(struct ebt_u_replace *replace, int chain, int print_err)
+/* returns -1 if the chain is referenced, 0 on success */
+static int ebt_delete_a_chain(struct ebt_u_replace *replace, int chain, int print_err)
 {
 	int tmp = replace->selected_chain;
 	/* If the chain is referenced, don't delete it,
@@ -846,7 +847,7 @@ static void ebt_delete_a_chain(struct ebt_u_replace *replace, int chain, int pri
 	 * one we're deleting */
 	replace->selected_chain = chain;
 	if (ebt_check_for_references(replace, print_err))
-		return;
+		return -1;
 	decrease_chain_jumps(replace);
 	ebt_flush_chains(replace);
 	replace->selected_chain = tmp;
@@ -854,20 +855,22 @@ static void ebt_delete_a_chain(struct ebt_u_replace *replace, int chain, int pri
 	free(replace->chains[chain]);
 	memmove(replace->chains+chain, replace->chains+chain+1, (replace->num_chains-chain-1)*sizeof(void *));
 	replace->num_chains--;
+	return 0;
 }
 
 /* Selected_chain == -1: delete all non-referenced udc
  * selected_chain < NF_BR_NUMHOOKS is illegal */
 void ebt_delete_chain(struct ebt_u_replace *replace)
 {
-	int i;
-
 	if (replace->selected_chain != -1 && replace->selected_chain < NF_BR_NUMHOOKS)
 		ebt_print_bug("You can't remove a standard chain");
-	if (replace->selected_chain == -1)
-		for (i = NF_BR_NUMHOOKS; i < replace->num_chains; i++)
-			ebt_delete_a_chain(replace, i, 0);
-	else
+	if (replace->selected_chain == -1) {
+		int i = NF_BR_NUMHOOKS;
+
+		while (i < replace->num_chains)
+			if (ebt_delete_a_chain(replace, i, 0))
+				i++;
+	} else
 		ebt_delete_a_chain(replace, replace->selected_chain, 1);
 }
 
