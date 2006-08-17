@@ -559,6 +559,14 @@ Compare the MAC source to the given list. If the Ethernet frame has type
 .IR IPv4 " or " ARP ,
 then comparison with MAC/IP source address pairs from the list
 is possible.
+.TP
+.BR "--among-dst-file " "[!] \fIfile\fP"
+Same as
+.BR --among-dst " but the list is read in from the specified file."
+.TP
+.BR "--among-src-file " "[!] \fIfile\fP"
+Same as
+.BR --among-src " but the list is read in from the specified file."
 .SS arp
 Specify (R)ARP fields. The protocol must be specified as
 .IR ARP " or " RARP .
