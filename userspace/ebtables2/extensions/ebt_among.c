@@ -16,13 +16,20 @@
 #include "../include/ethernetdb.h"
 #include <linux/if_ether.h>
 #include <linux/netfilter_bridge/ebt_among.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define AMONG_DST '1'
 #define AMONG_SRC '2'
+#define AMONG_DST_F '3'
+#define AMONG_SRC_F '4'
 
 static struct option opts[] = {
 	{"among-dst", required_argument, 0, AMONG_DST},
 	{"among-src", required_argument, 0, AMONG_SRC},
+	{"among-dst-file", required_argument, 0, AMONG_DST_F},
+	{"among-src-file", required_argument, 0, AMONG_SRC_F},
 	{0}
 };
 
@@ -47,8 +54,10 @@ static void print_help()
 {
 	printf(
 "`among' options:\n"
-"--among-dst [!] list           : matches if ether dst is in list\n"
-"--among-src [!] list           : matches if ether src is in list\n"
+"--among-dst      [!] list      : matches if ether dst is in list\n"
+"--among-src      [!] list      : matches if ether src is in list\n"
+"--among-dst-file [!] file      : obtain dst list from file\n"
+"--among-src-file [!] file      : obtain src list from file\n"
 "list has form:\n"
 " xx:xx:xx:xx:xx:xx[=ip.ip.ip.ip],yy:yy:yy:yy:yy:yy[=ip.ip.ip.ip]"
 ",...,zz:zz:zz:zz:zz:zz[=ip.ip.ip.ip][,]\n"
@@ -299,20 +308,46 @@ static int parse(int c, char **argv, int argc,
 	struct ebt_mac_wormhash *wh;
 	struct ebt_entry_match *h;
 	int new_size, old_size;
+	long flen;
+	int fd;
 
 	switch (c) {
+	case AMONG_DST_F:
+	case AMONG_SRC_F:
 	case AMONG_DST:
 	case AMONG_SRC:
-		if (c == AMONG_DST) {
+		if (c == AMONG_DST || c == AMONG_DST_F) {
 			ebt_check_option2(flags, OPT_DST);
 		} else {
 			ebt_check_option2(flags, OPT_SRC);
 		}
 		if (ebt_check_inverse2(optarg)) {
-			if (c == AMONG_DST)
+			if (c == AMONG_DST || c == AMONG_DST_F)
 				info->bitmask |= EBT_AMONG_DST_NEG;
 			else
 				info->bitmask |= EBT_AMONG_SRC_NEG;
+		}
+		if (c == AMONG_DST_F || c == AMONG_SRC_F) {
+			struct stat stats;
+
+			if ((fd = open(optarg, O_RDONLY)) == -1)
+				ebt_print_error("Couldn't open file '%s'", optarg);
+			fstat(fd, &stats);
+			flen = stats.st_size;
+			/* use mmap because the file will probably be big */
+			optarg = mmap(0, flen, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
+			if (optarg == MAP_FAILED)
+				ebt_print_error("Couldn't map file to memory");
+			if (optarg[flen-1] != '\n')
+				ebt_print_error("File should end with a newline");
+			if (strchr(optarg, '\n') != optarg+flen-1)
+				ebt_print_error("File should only contain one line");
+			optarg[flen-1] = '\0';
+			if (ebt_errormsg[0] != '\0') {
+				munmap(argv, flen);
+				close(fd);
+				exit(-1);
+			}
 		}
 		wh = create_wormhash(optarg);
 		if (ebt_errormsg[0] != '\0')
@@ -336,6 +371,10 @@ static int parse(int c, char **argv, int argc,
 		free(*match);
 		*match = h;
 		free(wh);
+		if (c == AMONG_DST_F || c == AMONG_SRC_F) {
+			munmap(argv, flen);
+			close(fd);
+		}
 		break;
 	default:
 		return 0;
