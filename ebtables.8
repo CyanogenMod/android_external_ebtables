@@ -1,4 +1,4 @@
-.TH EBTABLES 8  "November 13, 2005"
+.TH EBTABLES 8  "September 04, 2006"
 .\"
 .\" Man page written by Bart De Schuymer <bdschuym@pandora.be>
 .\" It is based on the iptables man page.
@@ -24,7 +24,7 @@
 .\"     
 .\"
 .SH NAME
-ebtables (v.2.0.8-rc1) \- Ethernet bridge frame table administration
+ebtables (v.2.0.8-rc3) \- Ethernet bridge frame table administration
 .SH SYNOPSIS
 .BR "ebtables " [ -t " table ] " - [ ACDI "] chain rule specification [match extensions] [watcher extensions] target"
 .br
@@ -922,6 +922,21 @@ same place. This allows for a form of communication between ebtables and iptable
 .BR "--mark-set " "\fIvalue\fP"
 .br
 Mark the frame with the specified non-negative
+.IR value .
+.TP
+.BR "--mark-or " "\fIvalue\fP"
+.br
+Or the frame with the specified non-negative
+.IR value .
+.TP
+.BR "--mark-and " "\fIvalue\fP"
+.br
+And the frame with the specified non-negative
+.IR value .
+.TP
+.BR "--mark-xor " "\fIvalue\fP"
+.br
+Xor the frame with the specified non-negative
 .IR value .
 .TP
 .BR "--mark-target " "\fItarget\fP"
