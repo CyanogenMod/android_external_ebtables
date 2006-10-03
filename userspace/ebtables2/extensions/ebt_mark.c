@@ -3,7 +3,7 @@
  * Authors:
  * Bart De Schuymer <bdschuym@pandora.be>
  *
- * July, 2002
+ * July, 2002, September 2006
  */
 
 #include <stdio.h>
@@ -17,6 +17,9 @@ static int mark_supplied;
 
 #define MARK_TARGET  '1'
 #define MARK_SETMARK '2'
+#define MARK_ORMARK  '3'
+#define MARK_ANDMARK '4'
+#define MARK_XORMARK '5'
 static struct option opts[] =
 {
 	{ "mark-target" , required_argument, 0, MARK_TARGET },
@@ -24,6 +27,9 @@ static struct option opts[] =
 	 * <extension-name>-<option> */
 	{ "set-mark"    , required_argument, 0, MARK_SETMARK },
 	{ "mark-set"    , required_argument, 0, MARK_SETMARK },
+	{ "mark-or"     , required_argument, 0, MARK_ORMARK  },
+	{ "mark-and"    , required_argument, 0, MARK_ANDMARK },
+	{ "mark-xor"    , required_argument, 0, MARK_XORMARK },
 	{ 0 }
 };
 
@@ -32,6 +38,9 @@ static void print_help()
 	printf(
 	"mark target options:\n"
 	" --mark-set value     : Set nfmark value\n"
+	" --mark-or  value     : Or nfmark with value (nfmark |= value)\n"
+	" --mark-and value     : And nfmark with value (nfmark &= value)\n"
+	" --mark-xor value     : Xor nfmark with value (nfmark ^= value)\n"
 	" --mark-target target : ACCEPT, DROP, RETURN or CONTINUE\n");
 }
 
@@ -47,6 +56,9 @@ static void init(struct ebt_entry_target *target)
 
 #define OPT_MARK_TARGET   0x01
 #define OPT_MARK_SETMARK  0x02
+#define OPT_MARK_ORMARK   0x04
+#define OPT_MARK_ANDMARK  0x08
+#define OPT_MARK_XORMARK  0x10
 static int parse(int c, char **argv, int argc,
    const struct ebt_u_entry *entry, unsigned int *flags,
    struct ebt_entry_target **target)
@@ -57,20 +69,45 @@ static int parse(int c, char **argv, int argc,
 
 	switch (c) {
 	case MARK_TARGET:
+		{ int tmp;
 		ebt_check_option2(flags, OPT_MARK_TARGET);
-		if (FILL_TARGET(optarg, markinfo->target))
+		if (FILL_TARGET(optarg, tmp))
 			ebt_print_error2("Illegal --mark-target target");
-		break;
+		/* the 4 lsb are left to designate the target */
+		markinfo->target = (markinfo->target & -16) | (tmp & ~-16);
+		}
+		return 1;
 	case MARK_SETMARK:
 		ebt_check_option2(flags, OPT_MARK_SETMARK);
-		markinfo->mark = strtoul(optarg, &end, 0);
-		if (*end != '\0' || end == optarg)
-			ebt_print_error2("Bad MARK value '%s'", optarg);
-		mark_supplied = 1;
+		if (*flags & (OPT_MARK_ORMARK|OPT_MARK_ANDMARK|OPT_MARK_XORMARK))
+			ebt_print_error2("--mark-set cannot be used together with specific --mark option");
+                break;
+	case MARK_ORMARK:
+		ebt_check_option2(flags, OPT_MARK_ORMARK);
+		if (*flags & (OPT_MARK_SETMARK|OPT_MARK_ANDMARK|OPT_MARK_XORMARK))
+			ebt_print_error2("--mark-or cannot be used together with specific --mark option");
+		markinfo->target = (markinfo->target & ~-16) | MARK_OR_VALUE;
+                break;
+	case MARK_ANDMARK:
+		ebt_check_option2(flags, OPT_MARK_ANDMARK);
+		if (*flags & (OPT_MARK_SETMARK|OPT_MARK_ORMARK|OPT_MARK_XORMARK))
+			ebt_print_error2("--mark-and cannot be used together with specific --mark option");
+		markinfo->target = (markinfo->target & ~-16) | MARK_AND_VALUE;
+                break;
+	case MARK_XORMARK:
+		ebt_check_option2(flags, OPT_MARK_XORMARK);
+		if (*flags & (OPT_MARK_SETMARK|OPT_MARK_ANDMARK|OPT_MARK_ORMARK))
+			ebt_print_error2("--mark-xor cannot be used together with specific --mark option");
+		markinfo->target = (markinfo->target & ~-16) | MARK_XOR_VALUE;
                 break;
 	 default:
 		return 0;
 	}
+	/* mutual code */
+	markinfo->mark = strtoul(optarg, &end, 0);
+	if (*end != '\0' || end == optarg)
+		ebt_print_error2("Bad MARK value '%s'", optarg);
+	mark_supplied = 1;
 	return 1;
 }
 
@@ -83,7 +120,7 @@ static void final_check(const struct ebt_u_entry *entry,
 
 	if (time == 0 && mark_supplied == 0) {
 		ebt_print_error("No mark value supplied");
-	} else if (BASE_CHAIN && markinfo->target == EBT_RETURN)
+	} else if (BASE_CHAIN && (markinfo->target|-16) == EBT_RETURN)
 		ebt_print_error("--mark-target RETURN not allowed on base chain");
 }
 
@@ -92,11 +129,24 @@ static void print(const struct ebt_u_entry *entry,
 {
 	struct ebt_mark_t_info *markinfo =
 	   (struct ebt_mark_t_info *)target->data;
+	int tmp;
 
-	printf("--mark-set 0x%lx", markinfo->mark);
-	if (markinfo->target == EBT_ACCEPT)
+	tmp = markinfo->target & -16;
+	if (tmp == MARK_SET_VALUE)
+		printf("--mark-set");
+	else if (tmp == MARK_OR_VALUE)
+		printf("--mark-or");
+	else if (tmp == MARK_XOR_VALUE)
+		printf("--mark-xor");
+	else if (tmp == MARK_AND_VALUE)
+		printf("--mark-and");
+	else
+		ebt_print_error("oops, unknown mark action, try a later version of ebtables");
+	printf(" 0x%lx", markinfo->mark);
+	tmp = markinfo->target | -16;
+	if (tmp == EBT_ACCEPT)
 		return;
-	printf(" --mark-target %s", TARGET_NAME(markinfo->target));
+	printf(" --mark-target %s", TARGET_NAME(tmp));
 }
 
 static int compare(const struct ebt_entry_target *t1,
