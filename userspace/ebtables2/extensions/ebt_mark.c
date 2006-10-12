@@ -144,8 +144,6 @@ static void print(const struct ebt_u_entry *entry,
 		ebt_print_error("oops, unknown mark action, try a later version of ebtables");
 	printf(" 0x%lx", markinfo->mark);
 	tmp = markinfo->target | -16;
-	if (tmp == EBT_ACCEPT)
-		return;
 	printf(" --mark-target %s", TARGET_NAME(tmp));
 }
 
