@@ -1176,16 +1176,15 @@ check_extension:
 		/* Do the final_check(), for all entries.
 		 * This is needed when adding a rule that has a chain target */
 		i = -1;
-		while (1) {
+		while (++i != replace->num_chains) {
 			struct ebt_u_entry *e;
 
-			i++;
 			entries = replace->chains[i];
 			if (!entries) {
 				if (i < NF_BR_NUMHOOKS)
 					continue;
 				else
-					break;
+					ebt_print_bug("whoops\n");
 			}
 			e = entries->entries->next;
 			while (e != entries->entries) {
