@@ -23,6 +23,7 @@ override SYSCONFIGDIR:=$(DESTDIR)$(SYSCONFIGDIR)
 
 
 CFLAGS:=-Wall -Wunused
+CFLAGS_SH_LIB:=-fPIC
 CC:=gcc
 LD:=ld
 
@@ -72,16 +73,16 @@ PROGSPECSD:=-DPROGVERSION=\"$(PROGVERSION)\" \
 all: ebtables ebtables-restore
 
 communication.o: communication.c include/ebtables_u.h
-	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
+	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
 
 libebtc.o: libebtc.c include/ebtables_u.h
-	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
+	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
 
 useful_functions.o: useful_functions.c include/ebtables_u.h
-	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
+	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
 
 getethertype.o: getethertype.c include/ethernetdb.h
-	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -Iinclude/
+	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) $(PROGSPECS) -c -o $@ $< -Iinclude/
 
 ebtables.o: ebtables.c include/ebtables_u.h
 	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
