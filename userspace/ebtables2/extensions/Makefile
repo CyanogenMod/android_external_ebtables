@@ -23,8 +23,8 @@ extensions/libebtable_%.so: extensions/ebtable_%.so
 	mv $< $@
 
 extensions/ebt_%.o: extensions/ebt_%.c include/ebtables_u.h
-	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
+	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
 
 extensions/ebtable_%.o: extensions/ebtable_%.c
-	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
+	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
 
