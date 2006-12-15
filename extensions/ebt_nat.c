@@ -20,11 +20,13 @@ static int to_source_supplied, to_dest_supplied;
 #define NAT_D '1'
 #define NAT_S_TARGET '2'
 #define NAT_D_TARGET '2'
+#define NAT_S_ARP '3'
 static struct option opts_s[] =
 {
 	{ "to-source"     , required_argument, 0, NAT_S },
 	{ "to-src"        , required_argument, 0, NAT_S },
 	{ "snat-target"   , required_argument, 0, NAT_S_TARGET },
+	{ "snat-arp"      ,       no_argument, 0, NAT_S_ARP },
 	{ 0 }
 };
 
@@ -41,7 +43,8 @@ static void print_help_s()
 	printf(
 	"snat options:\n"
 	" --to-src address       : MAC address to map source to\n"
-	" --snat-target target   : ACCEPT, DROP, RETURN or CONTINUE\n");
+	" --snat-target target   : ACCEPT, DROP, RETURN or CONTINUE\n"
+	" --snat-arp             : also change src address in arp msg\n");
 }
 
 static void print_help_d()
@@ -72,6 +75,7 @@ static void init_d(struct ebt_entry_target *target)
 
 #define OPT_SNAT         0x01
 #define OPT_SNAT_TARGET  0x02
+#define OPT_SNAT_ARP     0x04
 static int parse_s(int c, char **argv, int argc,
    const struct ebt_u_entry *entry, unsigned int *flags,
    struct ebt_entry_target **target)
@@ -88,9 +92,16 @@ static int parse_s(int c, char **argv, int argc,
 		memcpy(natinfo->mac, addr, ETH_ALEN);
 		break;
 	case NAT_S_TARGET:
+		{ int tmp;
 		ebt_check_option2(flags, OPT_SNAT_TARGET);
-		if (FILL_TARGET(optarg, natinfo->target))
+		if (FILL_TARGET(optarg, tmp))
 			ebt_print_error2("Illegal --snat-target target");
+		natinfo->target = (natinfo->target & ~EBT_VERDICT_BITS) | (tmp & EBT_VERDICT_BITS);
+		}
+		break;
+	case NAT_S_ARP:
+		ebt_check_option2(flags, OPT_SNAT_ARP);
+		natinfo->target ^= NAT_ARP_BIT;
 		break;
 	default:
 		return 0;
@@ -132,7 +143,7 @@ static void final_check_s(const struct ebt_u_entry *entry,
 {
 	struct ebt_nat_info *natinfo = (struct ebt_nat_info *)target->data;
 
-	if (BASE_CHAIN && natinfo->target == EBT_RETURN) {
+	if (BASE_CHAIN && (natinfo->target | ~EBT_VERDICT_BITS) == EBT_RETURN) {
 		ebt_print_error("--snat-target RETURN not allowed on base chain");
 		return;
 	}
@@ -158,7 +169,7 @@ static void final_check_d(const struct ebt_u_entry *entry,
 	   || strcmp(name, "nat")) &&
 	   ((hookmask & ~(1 << NF_BR_BROUTING)) || strcmp(name, "broute"))) {
 		ebt_print_error("Wrong chain for dnat");
-	} if (time == 0 && to_dest_supplied == 0)
+	} else if (time == 0 && to_dest_supplied == 0)
 		ebt_print_error("No dnat address supplied");
 }
 
@@ -169,7 +180,9 @@ static void print_s(const struct ebt_u_entry *entry,
 
 	printf("--to-src ");
 	ebt_print_mac(natinfo->mac);
-	printf(" --snat-target %s", TARGET_NAME(natinfo->target));
+	if (!(natinfo->target&NAT_ARP_BIT))
+		printf(" --snat-arp");
+	printf(" --snat-target %s", TARGET_NAME((natinfo->target|~EBT_VERDICT_BITS)));
 }
 
 static void print_d(const struct ebt_u_entry *entry,
