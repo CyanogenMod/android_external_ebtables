@@ -1,8 +1,14 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGVERSION:=2.0.8-rc2
-PROGDATE:=March\ 2006
+PROGRELEASE:=rc3
+PROGVERSION_:=2.0.8
+ifneq (PROGRELEASE,)
+PROGVERSION:=$(PROGVERSION_)-$(PROGRELEASE)
+else
+PROGVERSION:=$(PROGVERSION_)
+endif
+PROGDATE:=December\ 2006
 
 # default paths
 LIBDIR:=/usr/lib
@@ -170,7 +176,9 @@ scripts: ebtables-save ebtables.sysv ebtables-config
 
 $(MANDIR)/man8/ebtables.8: ebtables.8
 	mkdir -p $(@D)
-	install -m 0644 -o root -g root $< $@
+	sed 's/$$(VERSION)/$(PROGVERSION)/' ebtables.8 | sed 's/$$(PROGDATE)/$(PROGDATE)/' > ebtables.8_
+	install -m 0644 -o root -g root ebtables.8_ $@
+	rm -f ebtables.8_
 
 $(ETHERTYPESFILE): ethertypes
 	mkdir -p $(@D)
@@ -195,7 +203,8 @@ clean:
 	rm -f extensions/*.o extensions/*.c~ extensions/*.so include/*~
 
 DIR:=$(PROGNAME)-v$(PROGVERSION)
-# This is used to make a new userspace release
+# This is used to make a new userspace release, some files are altered so
+# do this on a temporary version
 .PHONY: release
 release:
 	mkdir -p include/linux/netfilter_bridge
@@ -216,6 +225,10 @@ release:
 	touch include/*
 	touch include/linux/*
 	touch include/linux/netfilter_bridge/*
+	sed -i 's/$$(VERSION)/$(PROGVERSION)/' ebtables.8
+	sed -i 's/$$(DATE)/$(PROGDATE)/' ebtables.8
+	sed -i 's/$$(VERSION)/$(PROGVERSION_)/' ebtables.spec
+	sed -i 's/$$(RELEASE)/$(PROGRELEASE)/' ebtables.spec
 	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz; cd -
 	rm -rf include/linux
 
