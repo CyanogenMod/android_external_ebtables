@@ -1,4 +1,4 @@
-.TH EBTABLES 8  "September 04, 2006"
+.TH EBTABLES 8  "$(DATE)"
 .\"
 .\" Man page written by Bart De Schuymer <bdschuym@pandora.be>
 .\" It is based on the iptables man page.
@@ -24,7 +24,7 @@
 .\"     
 .\"
 .SH NAME
-ebtables (v.2.0.8-rc3) \- Ethernet bridge frame table administration
+ebtables (v$(VERSION)) \- Ethernet bridge frame table administration
 .SH SYNOPSIS
 .BR "ebtables " [ -t " table ] " - [ ACDI "] chain rule specification [match extensions] [watcher extensions] target"
 .br
@@ -988,6 +988,12 @@ to give a standard target so ebtables knows what to do.
 .BR "" "multiple target extensions on the same frame. Making it " DROP " doesn't"
 .BR "" "make sense, but you could do that too. " RETURN " is also allowed. Note"
 .BR "" "that using " RETURN " in a base chain is not allowed."
+.br
+.TP
+.BR "--snat-arp "
+.br
+Also change the hardware source address inside the arp header if the packet is an
+arp message and the hardware address length in the arp header is 6 bytes.
 .br
 .SH FILES
 .I /etc/ethertypes
