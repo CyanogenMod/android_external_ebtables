@@ -215,6 +215,8 @@ release:
 	install -m 0644 -o root -g root \
 		$(KERNEL_INCLUDES)/linux/if_ether.h include/linux/
 	install -m 0644 -o root -g root \
+		$(KERNEL_INCLUDES)/linux/types.h include/linux/
+	install -m 0644 -o root -g root \
 		$(KERNEL_INCLUDES)/linux/netfilter_bridge/*.h \
 		include/linux/netfilter_bridge/
 	install -m 0644 -o root -g root \
