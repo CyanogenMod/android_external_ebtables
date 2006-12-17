@@ -1,10 +1,19 @@
+20061217
+	Since last entry:
+	* fixed a few reported bugs
+	* ebt_among --among-dst-file and --among-src-file: allow
+	  the list to be given in a file (circumvents command line max.
+	  line length
+	* ebt_nat --snat-arp: if it's an arp packet, also change the source
+	  address in the arp header
+	* ebt_mark --mark-or, --mark-xor, --mark-and
 20051020
 	Since last entry:
 	* ebtables modules are now located in /usr/lib/ebtables/
 	* added '/sbin/service ebtables' support
 	* added ebtables-save (thanks to Rok Papez <rok.papez@arnes.si>)
 	  and ebtables-restore (the first one a perl script, the second
-	  one written in c (fast)
+	  one written in c (fast))
 	* optimized the code for the '-A' command, making ebtables-restore
 	  very fast.
 	* ebtablesd/ebtablesu is deprecated and not compiled by default
