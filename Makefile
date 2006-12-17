@@ -176,7 +176,7 @@ scripts: ebtables-save ebtables.sysv ebtables-config
 
 $(MANDIR)/man8/ebtables.8: ebtables.8
 	mkdir -p $(@D)
-	sed 's/$$(VERSION)/$(PROGVERSION)/' ebtables.8 | sed 's/$$(PROGDATE)/$(PROGDATE)/' > ebtables.8_
+	sed 's/$$(VERSION)/$(PROGVERSION)/' ebtables.8 | sed 's/$$(DATE)/$(PROGDATE)/' > ebtables.8_
 	install -m 0644 -o root -g root ebtables.8_ $@
 	rm -f ebtables.8_
 
