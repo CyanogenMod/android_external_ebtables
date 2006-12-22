@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <ctype.h>
+#include <unistd.h>
 #include <netinet/ether.h>
 #include "../include/ebtables_u.h"
 #include "../include/ethernetdb.h"
