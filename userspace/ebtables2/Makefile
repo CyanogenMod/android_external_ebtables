@@ -101,7 +101,7 @@ libebtc: $(OBJECTS2)
 	$(LD) -shared -soname libebtc.so -o libebtc.so -lc $(OBJECTS2)
 
 ebtables: $(OBJECTS) ebtables-standalone.o libebtc
-	$(CC) $(CFLAGS) -o $@ ebtables-standalone.o -I$(KERNEL_INCLUDES) -L. -Lextensions -lebtc $(EXT_LIBSI) \
+	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) -o $@ ebtables-standalone.o -I$(KERNEL_INCLUDES) -L. -Lextensions -lebtc $(EXT_LIBSI) \
 	-Wl,-rpath,$(LIBDIR)
 
 ebtablesu: ebtablesu.c
