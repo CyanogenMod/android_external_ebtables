@@ -25,6 +25,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include "include/ebtables_u.h"
 #include "include/ethernetdb.h"
 
@@ -323,7 +324,7 @@ static void list_em(struct ebt_u_entries *entries)
 			if (replace->flags & LIST_X)
 				printf("-c %llu %llu", pcnt, bcnt);
 			else
-				printf(", pcnt = %llu -- bcnt = %llu", pcnt, bcnt);
+				printf(", pcnt = %"PRIu64" -- bcnt = %"PRIu64, pcnt, bcnt);
 		}
 		printf("\n");
 		hlp = hlp->next;
