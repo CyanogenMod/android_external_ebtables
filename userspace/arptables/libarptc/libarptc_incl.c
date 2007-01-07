@@ -1,4 +1,4 @@
-/* Library which manipulates firewall rules.  Version $Revision: 1.5 $ */
+/* Library which manipulates firewall rules.  Version $Revision: 1.6 $ */
 
 /* Architecture of firewall rules is as follows:
  *
@@ -221,8 +221,7 @@ TC_INIT(const char *tablename)
 	TC_HANDLE_T h;
 	STRUCT_GETINFO info;
 	unsigned int i;
-	int tmp;
-	socklen_t s;
+	socklen_t s, tmp;
 
 	arptc_fn = TC_INIT;
 
