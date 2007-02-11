@@ -1019,8 +1019,6 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 			verdict = ((struct ebt_standard_target *)(e->t))->verdict;
 			if (verdict < 0)
 				goto letscontinue;
-			entries2 = replace->chains[verdict + NF_BR_NUMHOOKS];
-			entries2->hook_mask |= entries->hook_mask;
 			/* Now see if we've been here before */
 			for (k = 0; k < sp; k++)
 				if (stack[k].chain_nr == verdict + NF_BR_NUMHOOKS) {
@@ -1029,6 +1027,11 @@ void ebt_check_for_loops(struct ebt_u_replace *replace)
 					   replace->chains[stack[k].chain_nr]->name);
 					goto free_stack;
 				}
+			entries2 = replace->chains[verdict + NF_BR_NUMHOOKS];
+			/* check if we've dealt with this chain already */
+			if (entries2->hook_mask & (1<<i))
+				goto letscontinue;
+			entries2->hook_mask |= entries->hook_mask;
 			/* Jump to the chain, make sure we know how to get back */
 			stack[sp].chain_nr = chain_nr;
 			stack[sp].n = j;
