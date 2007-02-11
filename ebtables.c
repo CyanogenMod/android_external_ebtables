@@ -1170,9 +1170,14 @@ check_extension:
 			rule_nr--;
 		rule_nr_end = rule_nr;
 
-		ebt_check_for_loops(replace);
-		if (ebt_errormsg[0] != '\0')
-			goto delete_the_rule;
+		/* a jump to a udc requires checking for loops */
+		if (!strcmp(new_entry->t->u.name, EBT_STANDARD_TARGET) &&
+		((struct ebt_standard_target *)(new_entry->t))->verdict >= 0) {
+			/* FIXME: this can be done faster */
+			ebt_check_for_loops(replace);
+			if (ebt_errormsg[0] != '\0')
+				goto delete_the_rule;
+		}
 
 		/* Do the final_check(), for all entries.
 		 * This is needed when adding a rule that has a chain target */
