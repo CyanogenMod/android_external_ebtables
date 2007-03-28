@@ -23,6 +23,7 @@
 #define ARP_IP_D   '5'
 #define ARP_MAC_S  '6'
 #define ARP_MAC_D  '7'
+#define ARP_GRAT   '8'
 static struct option opts[] =
 {
 	{ "arp-opcode"    , required_argument, 0, ARP_OPCODE },
@@ -33,6 +34,7 @@ static struct option opts[] =
 	{ "arp-ip-dst"    , required_argument, 0, ARP_IP_D   },
 	{ "arp-mac-src"   , required_argument, 0, ARP_MAC_S  },
 	{ "arp-mac-dst"   , required_argument, 0, ARP_MAC_D  },
+	{ "arp-gratuitous",       no_argument, 0, ARP_GRAT   },
 	{ 0 }
 };
 
@@ -57,13 +59,14 @@ static void print_help()
 
 	printf(
 "arp options:\n"
-"--arp-opcode opcode             : ARP opcode (integer or string)\n"
-"--arp-htype type                : ARP hardware type (integer or string)\n"
-"--arp-ptype type                : ARP protocol type (hexadecimal or string)\n"
+"--arp-opcode  [!] opcode        : ARP opcode (integer or string)\n"
+"--arp-htype   [!] type          : ARP hardware type (integer or string)\n"
+"--arp-ptype   [!] type          : ARP protocol type (hexadecimal or string)\n"
 "--arp-ip-src  [!] address[/mask]: ARP IP source specification\n"
 "--arp-ip-dst  [!] address[/mask]: ARP IP target specification\n"
 "--arp-mac-src [!] address[/mask]: ARP MAC source specification\n"
 "--arp-mac-dst [!] address[/mask]: ARP MAC target specification\n"
+"[!] --arp-gratuitous            : ARP gratuitous packet\n"
 " opcode strings: \n");
 	for (i = 0; i < NUMOPCODES; i++)
 		printf(" %d = %s\n", i + 1, opcodes[i]);
@@ -88,6 +91,7 @@ static void init(struct ebt_entry_match *match)
 #define OPT_IP_D   0x10
 #define OPT_MAC_S  0x20
 #define OPT_MAC_D  0x40
+#define OPT_GRAT   0x80
 static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
    unsigned int *flags, struct ebt_entry_match **match)
 {
@@ -201,6 +205,12 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		if (ebt_get_mac_and_mask(optarg, maddr, mmask))
 			ebt_print_error2("Problem with ARP MAC address argument");
 		break;
+	case ARP_GRAT:
+		ebt_check_option2(flags, OPT_GRAT);
+		arpinfo->bitmask |= EBT_ARP_GRAT;
+		if (ebt_invert)
+			arpinfo->invflags |= EBT_ARP_GRAT;
+		break;
 
 	default:
 		return 0;
@@ -282,6 +292,11 @@ static void print(const struct ebt_u_entry *entry,
 			printf("! ");
 		ebt_print_mac_and_mask(arpinfo->dmaddr, arpinfo->dmmsk);
 		printf(" ");
+	}
+	if (arpinfo->bitmask & EBT_ARP_GRAT) {
+		if (arpinfo->invflags & EBT_ARP_GRAT)
+			printf("! ");
+		printf("--arp-gratuitous ");
 	}
 }
 

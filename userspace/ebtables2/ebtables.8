@@ -599,6 +599,10 @@ The (R)ARP MAC source address specification.
 .TP
 .BR "--arp-mac-dst " "[!] \fIaddress\fP[/\fImask\fP]"
 The (R)ARP MAC destination address specification.
+.TP
+.BR "" "[!]" " --arp-gratuitous"
+Checks for ARP gratuitous packets: checks equality of IPv4 source
+address and IPv4 destination address inside the ARP header.
 .SS ip
 Specify IPv4 fields. The protocol must be specified as
 .IR IPv4 .
