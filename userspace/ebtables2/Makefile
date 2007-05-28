@@ -1,14 +1,14 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGRELEASE:=rc3
+PROGRELEASE:=
 PROGVERSION_:=2.0.8
-ifneq (PROGRELEASE,)
+ifneq ($(PROGRELEASE),)
 PROGVERSION:=$(PROGVERSION_)-$(PROGRELEASE)
 else
 PROGVERSION:=$(PROGVERSION_)
 endif
-PROGDATE:=December\ 2006
+PROGDATE:=May\ 2007
 
 # default paths
 LIBDIR:=/usr/lib
@@ -229,7 +229,7 @@ release:
 	touch include/linux/netfilter_bridge/*
 	sed -i 's/$$(VERSION)/$(PROGVERSION)/' ebtables.8
 	sed -i 's/$$(DATE)/$(PROGDATE)/' ebtables.8
-	sed -i 's/$$(VERSION)/$(PROGVERSION_)/' ebtables.spec
+	sed -i 's/$$(VERSION)/$(PROGVERSION)/' ebtables.spec
 	sed -i 's/$$(RELEASE)/$(PROGRELEASE)/' ebtables.spec
 	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz; cd -
 	rm -rf include/linux
