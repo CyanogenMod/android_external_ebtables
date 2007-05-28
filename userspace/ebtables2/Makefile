@@ -1,13 +1,9 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGRELEASE:=
+PROGRELEASE:=1
 PROGVERSION_:=2.0.8
-ifneq ($(PROGRELEASE),)
 PROGVERSION:=$(PROGVERSION_)-$(PROGRELEASE)
-else
-PROGVERSION:=$(PROGVERSION_)
-endif
 PROGDATE:=May\ 2007
 
 # default paths
@@ -203,10 +199,14 @@ clean:
 	rm -f extensions/*.o extensions/*.c~ extensions/*.so include/*~
 
 DIR:=$(PROGNAME)-v$(PROGVERSION)
+CVSDIRS:=CVS extensions/CVS examples/CVS examples/perf_test/CVS \
+examples/ulog/CVS include/CVS
 # This is used to make a new userspace release, some files are altered so
 # do this on a temporary version
 .PHONY: release
 release:
+	rm -f extensions/ebt_inat.c
+	rm -rf $(CVSDIRS)
 	mkdir -p include/linux/netfilter_bridge
 	install -m 0644 -o root -g root \
 		$(KERNEL_INCLUDES)/linux/netfilter_bridge.h include/linux/
@@ -229,7 +229,7 @@ release:
 	touch include/linux/netfilter_bridge/*
 	sed -i 's/$$(VERSION)/$(PROGVERSION)/' ebtables.8
 	sed -i 's/$$(DATE)/$(PROGDATE)/' ebtables.8
-	sed -i 's/$$(VERSION)/$(PROGVERSION)/' ebtables.spec
+	sed -i 's/$$(VERSION)/$(PROGVERSION_)/' ebtables.spec
 	sed -i 's/$$(RELEASE)/$(PROGRELEASE)/' ebtables.spec
 	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz; cd -
 	rm -rf include/linux
