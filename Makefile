@@ -87,10 +87,10 @@ getethertype.o: getethertype.c include/ethernetdb.h
 	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) $(PROGSPECS) -c -o $@ $< -Iinclude/
 
 ebtables.o: ebtables.c include/ebtables_u.h
-	$(CC) $(CFLAGS) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
+	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) $(PROGSPECS) -c -o $@ $< -I$(KERNEL_INCLUDES)
 
 ebtables-standalone.o: ebtables-standalone.c include/ebtables_u.h
-	$(CC) $(CFLAGS) $(PROGSPECS) -c $< -o $@ -I$(KERNEL_INCLUDES)
+	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) $(PROGSPECS) -c $< -o $@ -I$(KERNEL_INCLUDES)
 
 .PHONY: libebtc
 libebtc: $(OBJECTS2)
