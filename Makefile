@@ -15,15 +15,6 @@ INITDIR:=/etc/rc.d/init.d
 SYSCONFIGDIR:=/etc/sysconfig
 DESTDIR:=
 
-# include DESTDIR param
-override LIBDIR:=$(DESTDIR)$(LIBDIR)/$(PROGNAME)
-override MANDIR:=$(DESTDIR)$(MANDIR)
-override BINDIR:=$(DESTDIR)$(BINDIR)
-override ETCDIR:=$(DESTDIR)$(ETCDIR)
-override INITDIR:=$(DESTDIR)$(INITDIR)
-override SYSCONFIGDIR:=$(DESTDIR)$(SYSCONFIGDIR)
-
-
 CFLAGS:=-Wall -Wunused
 CFLAGS_SH_LIB:=-fPIC
 CC:=gcc
@@ -45,7 +36,7 @@ KERNEL_INCLUDES?=include/
 ETHERTYPESPATH?=$(ETCDIR)
 ETHERTYPESFILE:=$(ETHERTYPESPATH)/ethertypes
 
-PIPE_DIR?=$(DESTDIR)/tmp/$(PROGNAME)-v$(PROGVERSION)
+PIPE_DIR?=/tmp/$(PROGNAME)-v$(PROGVERSION)
 PIPE=$(PIPE_DIR)/ebtablesd_pipe
 EBTD_CMDLINE_MAXLN?=2048
 EBTD_ARGC_MAX?=50
@@ -163,34 +154,34 @@ tmp3:=$(shell printf $(PIPE) | sed 's/\//\\\//g')
 .PHONY: scripts
 scripts: ebtables-save ebtables.sysv ebtables-config
 	cat ebtables-save | sed 's/__EXEC_PATH__/$(tmp1)/g' > ebtables-save_
-	install -m 0755 -o root -g root ebtables-save_ $(BINDIR)/ebtables-save
+	install -m 0755 -o root -g root ebtables-save_ $(DESTDIR)$(BINDIR)/ebtables-save
 	cat ebtables.sysv | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__SYSCONFIG__/$(tmp2)/g' > ebtables.sysv_
-	install -m 0755 -o root -g root ebtables.sysv_ $(INITDIR)/ebtables
+	install -m 0755 -o root -g root ebtables.sysv_ $(DESTDIR)$(INITDIR)/ebtables
 	cat ebtables-config | sed 's/__SYSCONFIG__/$(tmp2)/g' > ebtables-config_
-	install -m 0600 -o root -g root ebtables-config_ $(SYSCONFIGDIR)/ebtables-config
+	install -m 0600 -o root -g root ebtables-config_ $(DESTDIR)$(SYSCONFIGDIR)/ebtables-config
 	rm -f ebtables-save_ ebtables.sysv_ ebtables-config_
 
 $(MANDIR)/man8/ebtables.8: ebtables.8
-	mkdir -p $(@D)
+	mkdir -p $(DESTDIR)$(@D)
 	sed 's/$$(VERSION)/$(PROGVERSION)/' ebtables.8 | sed 's/$$(DATE)/$(PROGDATE)/' > ebtables.8_
-	install -m 0644 -o root -g root ebtables.8_ $@
+	install -m 0644 -o root -g root ebtables.8_ $(DESTDIR)$@
 	rm -f ebtables.8_
 
 $(ETHERTYPESFILE): ethertypes
-	mkdir -p $(@D)
-	install -m 0644 -o root -g root $< $@
+	mkdir -p $(DESTDIR)$(@D)
+	install -m 0644 -o root -g root $< $(DESTDIR)$@
 
 .PHONY: exec
 exec: ebtables ebtables-restore
-	mkdir -p $(BINDIR)
-	install -m 0755 -o root -g root $(PROGNAME) $(BINDIR)/$(PROGNAME)
-	install -m 0755 -o root -g root ebtables-restore $(BINDIR)/ebtables-restore
+	mkdir -p $(DESTDIR)$(BINDIR)
+	install -m 0755 -o root -g root $(PROGNAME) $(DESTDIR)$(BINDIR)/$(PROGNAME)
+	install -m 0755 -o root -g root ebtables-restore $(DESTDIR)$(BINDIR)/ebtables-restore
 
 .PHONY: install
 install: $(MANDIR)/man8/ebtables.8 $(ETHERTYPESFILE) exec scripts
-	mkdir -p $(LIBDIR)
-	install -m 0755 extensions/*.so $(LIBDIR)
-	install -m 0755 *.so $(LIBDIR)
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	install -m 0755 extensions/*.so $(DESTDIR)$(LIBDIR)
+	install -m 0755 *.so $(DESTDIR)$(LIBDIR)
 
 .PHONY: clean
 clean:
