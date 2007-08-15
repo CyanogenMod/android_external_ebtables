@@ -1,6 +1,7 @@
-.TH ARPTABLES 8  "25 July 2003"
+.TH ARPTABLES 8  "August 2007"
 .\"
-.\" Man page written by Jochen Friedrich <jochen@scram.de>
+.\" Man page originally written by Jochen Friedrich <jochen@scram.de>,
+.\" maintained by Bart De Schuymer.
 .\" It is based on the iptables man page.
 .\"
 .\" Iptables page by Herve Eychenne March 2000.
@@ -18,10 +19,10 @@
 .\"     You should have received a copy of the GNU General Public License
 .\"     along with this program; if not, write to the Free Software
 .\"     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-.\"     
+.\"
 .\"
 .SH NAME
-arptables (v.0.0) \- ARP table administration
+arptables (v.0.0.3-3) \- ARP table administration
 .SH SYNOPSIS
 .BR "arptables " [ "-t table" ] " -" [ AD ] " chain rule-specification " [ options ]
 .br
@@ -222,10 +223,10 @@ inverts the test for that specification. Apart from these standard rule
 specifications there are some other command line arguments of interest.
 .TP
 .BR "-s, --source-ip " "[!] \fIaddress\fP[/\fImask]\fP"
-The Source IP specification
+The Source IP specification.
 .TP 
 .BR "-d, --destination-ip " "[!] \fIaddress\fP[/\fImask]\fP"
-The Destination IP specification
+The Destination IP specification.
 .TP 
 .BR "--source-mac " "[!] \fIaddress\fP[/\fImask\fP]"
 The source mac address. Both mask and address are written as 6 hexadecimal
@@ -249,7 +250,7 @@ chains). The flag
 .B --out-if
 is an alias for this option.
 .TP
-.BR "--h-length " "\fIlength\fP[/\fImask\fP]"
+.BR "-l, --h-length " "\fIlength\fP[/\fImask\fP]"
 The hardware length (nr of bytes)
 .TP
 .BR "--opcode " "\fIcode\fP[/\fImask\fP]
@@ -262,15 +263,15 @@ The operation code (2 bytes). Available values are:
 .BR 6 = DRARP_Reply
 .BR 7 = DRARP_Error
 .BR 8 = InARP_Request
-.BR 9 = ARP_NAK
+.BR 9 = ARP_NAK .
 .TP
 .BR "--h-type " "\fItype\fP[/\fImask\fP]"
 The hardware type (2 bytes, hexadecimal). Available values are:
-.BR 1 = Ethernet
+.BR 1 = Ethernet .
 .TP
 .BR "--proto-type " "\fItype\fP[/\fImask\fP]"
 The protocol type (2 bytes). Available values are:
-.BR 0x800 = IPv4
+.BR 0x800 = IPv4 .
 
 .SS TARGET-EXTENSIONS
 .B arptables
@@ -279,6 +280,7 @@ to explicitly load them with a -m option like in
 .BR iptables .
 However, these
 extensions deal with functionality supported by supplemental kernel modules.
+.SS mangle
 .TP
 .BR "--mangle-ip-s IP address"
 Mangles Source IP Address to given value.
@@ -292,14 +294,13 @@ Mangles Source MAC Address to given value.
 .BR "--mangle-mac-d MAC address"
 Mangles Destination MAC Address to given value.
 .TP
-.BR "--mangle-target target " "(\fIDROP\fP, \fICONTINUE\fP or \fIACCEPT\fP -- default is \fIACCEPT\fP)"
-Target of ARP mangle operation.
-
+.BR "--mangle-target target "
+Target of ARP mangle operation
+.BR "" ( DROP ", " CONTINUE " or " ACCEPT " -- default is " ACCEPT ).
 
 .SH MAILINGLISTS
 .I ebtables-user@lists.sourceforge.net
 .br
 .I ebtables-devel@lists.sourceforge.net
 .SH SEE ALSO
-.BR iptables "(8), " arp "(8), " rarp "(8), " ifconfig "(8), " route (8)
-
+.BR iptables "(8), " ebtables "(8), " arp "(8), " rarp "(8), " ifconfig "(8), " route (8)
