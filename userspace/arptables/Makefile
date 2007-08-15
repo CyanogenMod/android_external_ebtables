@@ -14,22 +14,12 @@ BINDIR:=$(PREFIX)/sbin
 MANDIR:=$(PREFIX)/man
 DESTDIR:=
 
-# include DESTDIR param
-override LIBDIR:=$(DESTDIR)$(LIBDIR)
-override MANDIR:=$(DESTDIR)$(MANDIR)
-override BINDIR:=$(DESTDIR)$(BINDIR)
-
-
-BINFILE:=$(BINDIR)/arptables
 
 # directory for new arptables releases
 RELEASE_DIR:=/tmp
 
 COPT_FLAGS:=-O2
 CFLAGS:=$(COPT_FLAGS) -Wall -Wunused -I$(KERNEL_DIR)/include/ -Iinclude/ -DARPTABLES_VERSION=\"$(ARPTABLES_VERSION)\" #-g -DDEBUG #-pg # -DARPTC_DEBUG
-
-EXTRAS+=iptables iptables.o
-EXTRA_INSTALLS+=$(BINDIR)/iptables $(MANDIR)/man8/iptables.8
 
 ifndef ARPT_LIBDIR
 ARPT_LIBDIR:=$(LIBDIR)/arptables
@@ -40,29 +30,25 @@ include extensions/Makefile
 all: arptables
 
 arptables.o: arptables.c
-	$(CC) $(CFLAGS) -DIPT_LIB_DIR=\"$(IPT_LIBDIR)\" -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 arptables-standalone.o: arptables-standalone.c
-	$(CC) $(CFLAGS) -DIPT_LIB_DIR=\"$(IPT_LIBDIR)\" -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 libarptc/libarptc.o: libarptc/libarptc.c libarptc/libarptc_incl.c
-	$(CC) $(CFLAGS) -DIPT_LIB_DIR=\"$(IPT_LIBDIR)\" -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 arptables: arptables-standalone.o arptables.o libarptc/libarptc.o $(EXT_OBJS)
-	$(CC) $(CFLAGS)  -o $@ $^
-
-$(BINDIR)/arptables: arptables
-	mkdir -p $(BINDIR)
-	cp $< $@
+	$(CC) $(CFLAGS) -o $@ $^
 
 $(MANDIR)/man8/arptables.8: arptables.8
-	mkdir -p $(@D)
-	install -m 0644 -o root -g root $< $@
+	mkdir -p $(DESTDIR)$(@D)
+	install -m 0644 -o root -g root $< $(DESTDIR)$@
 
 .PHONY: exec
 exec: arptables
-	mkdir -p $(BINDIR)
-	install -m 0755 -o root -g root $< $(BINFILE)
+	mkdir -p $(DESTDIR)$(BINDIR)
+	install -m 0755 -o root -g root $< $(DESTDIR)$(BINDIR)/arptables
 
 .PHONY: install
 install: $(MANDIR)/man8/arptables.8 exec
