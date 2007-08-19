@@ -3,12 +3,10 @@
 #
 # A script that generates text output of the arptables rules.
 # Similar to iptables-save.
-#
-# It can be used to store active configuration to /etc/sysconfig/arptables
 
 use strict;
 my $table;
-my $tool = "/sbin/arptables";
+my $tool = "__EXEC_PATH__/arptables";
 
 # ========================================================
 # Process filter table

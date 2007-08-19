@@ -6,6 +6,8 @@ PREFIX:=/usr/local
 LIBDIR:=$(PREFIX)/lib
 BINDIR:=$(PREFIX)/sbin
 MANDIR:=$(PREFIX)/man
+INITDIR:=/etc/rc.d/init.d
+SYSCONFIGDIR:=/etc/sysconfig
 DESTDIR:=
 
 COPT_FLAGS:=-O2
@@ -39,8 +41,20 @@ $(DESTDIR)$(BINDIR)/arptables: arptables
 	mkdir -p $(DESTDIR)$(BINDIR)
 	install -m 0755 -o root -g root $< $@
 
+tmp1:=$(shell printf $(BINDIR) | sed 's/\//\\\//g')
+tmp2:=$(shell printf $(SYSCONFIGDIR) | sed 's/\//\\\//g')
+.PHONY: scripts
+scripts: arptables-save arptables-restore arptables.sysv
+	cat arptables-save | sed 's/__EXEC_PATH__/$(tmp1)/g' > arptables-save_
+	install -m 0755 -o root -g root arptables-save_ $(DESTDIR)$(BINDIR)/arptables-save
+	cat arptables-restore | sed 's/__EXEC_PATH__/$(tmp1)/g' > arptables-restore_
+	install -m 0755 -o root -g root arptables-restore_ $(DESTDIR)$(BINDIR)/arptables-restore
+	cat arptables.sysv | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__SYSCONFIG__/$(tmp2)/g' > arptables.sysv_
+	install -m 0755 -o root -g root arptables.sysv_ $(DESTDIR)$(INITDIR)/arptables
+	rm -f arptables-save_ arptables-restore_ arptables.sysv_
+
 .PHONY: install
-install: $(DESTDIR)$(MANDIR)/man8/arptables.8 $(DESTDIR)$(BINDIR)/arptables
+install: $(DESTDIR)$(MANDIR)/man8/arptables.8 $(DESTDIR)$(BINDIR)/arptables scripts
 
 .PHONY: clean
 clean:

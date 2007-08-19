@@ -1,12 +1,8 @@
 #!/usr/bin/perl -w
-#
-#
-# A script that imports text ebtables rules. Similar to iptables-restore.
-# It can be used to restore configuration from /etc/sysconfig/ebtables.
-#
+# A script that imports text arptables rules. Similar to iptables-restore.
 
 use strict;
-my $tool = "/sbin/arptables";
+my $tool = "__EXEC_PATH__/arptables";
 my $table;
 my $rc;
 my $line;

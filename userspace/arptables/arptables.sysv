@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# init script for the arptables
+# init script for arptables
 #
 # Original by Dag Wieers <dag@wieers.com>.
 # Modified/changed to arptables by
@@ -9,7 +9,7 @@
 # chkconfig: - 16 84
 # description: Arp filtering tables
 #
-# config: /etc/sysconfig/arptables
+# config: __SYSCONFIG__/arptables
 
 source /etc/init.d/functions
 source /etc/sysconfig/network
@@ -17,11 +17,11 @@ source /etc/sysconfig/network
 # Check that networking is up.
 [ ${NETWORKING} = "no" ] && exit 0
 
-[ -x /sbin/arptables ] || exit 1
-[ -x /sbin/arptables-save ] || exit 1
-[ -x /sbin/arptables-restore ] || exit 1
+[ -x __EXEC_PATH__/arptables ] || exit 1
+[ -x __EXEC_PATH__/arptables-save ] || exit 1
+[ -x __EXEC_PATH__/arptables-restore ] || exit 1
 
-[ "$1" == "save" -o -r /etc/sysconfig/arptables ] || exit 1
+[ "$1" != "save" -o -r __SYSCONFIG__/arptables ] || exit 1
 
 RETVAL=0
 prog="arptables"
@@ -29,7 +29,7 @@ desc="Arp filtering"
 
 start() {
 	echo -n $"Starting $desc ($prog): "
-	/sbin/arptables-restore < /etc/sysconfig/arptables || RETVAL=1
+	__EXEC_PATH__/arptables-restore < __SYSCONFIG__/arptables || RETVAL=1
 
 	if [ $RETVAL -eq 0 ]; then
 		success "$prog startup"
@@ -44,7 +44,7 @@ start() {
 
 stop() {
 	echo -n $"Stopping $desc ($prog): "
-	/sbin/arptables-restore < /dev/null || RETVAL=1
+	__EXEC_PATH__/arptables-restore < /dev/null || RETVAL=1
 
 	if [ $RETVAL -eq 0 ]; then
 		success "$prog shutdown"
@@ -64,7 +64,7 @@ restart() {
 
 save() {
 	echo -n $"Saving $desc ($prog): "
-	/sbin/arptables-save > /etc/sysconfig/arptables || RETVAL=1
+	__EXEC_PATH__/arptables-save > __SYSCONFIG__/arptables || RETVAL=1
 
 	if [ $RETVAL -eq 0 ]; then
 		success "$prog saved"
@@ -92,7 +92,7 @@ case "$1" in
 	save
 	;;
   status)
-	/sbin/arptables-save
+	__EXEC_PATH__/arptables-save
 	RETVAL=$?
 	;;
   *)
