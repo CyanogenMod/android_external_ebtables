@@ -605,7 +605,7 @@ cmd2char(int option)
 }
 
 static void
-add_command(int *cmd, const int newcmd, const int othercmds, int invert)
+add_command(unsigned int *cmd, const int newcmd, const unsigned int othercmds, int invert)
 {
 	if (invert)
 		exit_error(PARAMETER_PROBLEM, "unexpected ! flag");
@@ -1281,8 +1281,8 @@ print_firewall(const struct arpt_entry *fw,
 	printf("%s", fw->arp.invflags & ARPT_INV_SRCDEVADDR
 		? "! " : "");
 	printf("--src-mac ");
-	print_mac_and_mask(fw->arp.src_devaddr.addr,
-		fw->arp.src_devaddr.mask, ETH_ALEN);
+	print_mac_and_mask((unsigned char *)fw->arp.src_devaddr.addr,
+		(unsigned char *)fw->arp.src_devaddr.mask, ETH_ALEN);
 	printf(" ");
 after_devsrc:
 
@@ -1305,8 +1305,8 @@ after_devsrc:
 	printf("%s",fw->arp.invflags & ARPT_INV_TGTDEVADDR
 		? "! " : "");
 	printf("--dst-mac ");
-	print_mac_and_mask(fw->arp.tgt_devaddr.addr,
-		fw->arp.tgt_devaddr.mask, ETH_ALEN);
+	print_mac_and_mask((unsigned char *)fw->arp.tgt_devaddr.addr,
+		(unsigned char *)fw->arp.tgt_devaddr.mask, ETH_ALEN);
 	printf(" ");
 after_devdst:
 

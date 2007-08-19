@@ -50,6 +50,7 @@ parse(int c, char **argv, int invert, unsigned int *flags,
 	struct arpt_mangle *mangle = (struct arpt_mangle *)(*t)->data;
 	struct in_addr *ipaddr;
 	struct ether_addr *macaddr;
+	int ret = 1;
 
 	switch (c) {
 	case MANGLE_IPS:
@@ -135,8 +136,12 @@ parse(int c, char **argv, int invert, unsigned int *flags,
 		else
 			exit_error(PARAMETER_PROBLEM, "bad target for "
 						      "--mangle-target");
+		break;
+	default:
+		ret = 0;
 	}
-	return 0;
+
+	return ret;
 }
 
 static void final_check(unsigned int flags)
@@ -158,7 +163,7 @@ static void print(const struct arpt_arp *ip,
 	}
 	if (m->flags & ARPT_MANGLE_SDEV) {
 		printf("--mangle-mac-s ");
-		print_mac(m->src_devaddr, 6);
+		print_mac((unsigned char *)m->src_devaddr, 6);
 		printf(" ");
 	}
 	if (m->flags & ARPT_MANGLE_TIP) {
@@ -170,7 +175,7 @@ static void print(const struct arpt_arp *ip,
 	}
 	if (m->flags & ARPT_MANGLE_TDEV) {
 		printf("--mangle-mac-d ");
-		print_mac(m->tgt_devaddr, 6);
+		print_mac((unsigned char *)m->tgt_devaddr, 6);
 		printf(" ");
 	}
 	if (m->target != NF_ACCEPT) {
