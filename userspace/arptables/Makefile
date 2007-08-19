@@ -1,22 +1,12 @@
-# Standard part of Makefile for topdir.
-TOPLEVEL_INCLUDED=YES
+ARPTABLES_VERSION:=0.0.3-3
 
-ifndef KERNEL_DIR
-KERNEL_DIR=include/linux
-endif
-ARPTABLES_VERSION:=0.0.3
-OLD_ARPTABLES_VERSION:=0.0.2
-
+KERNEL_DIR:=./
 # default paths
 PREFIX:=/usr/local
 LIBDIR:=$(PREFIX)/lib
 BINDIR:=$(PREFIX)/sbin
 MANDIR:=$(PREFIX)/man
 DESTDIR:=
-
-
-# directory for new arptables releases
-RELEASE_DIR:=/tmp
 
 COPT_FLAGS:=-O2
 CFLAGS:=$(COPT_FLAGS) -Wall -Wunused -I$(KERNEL_DIR)/include/ -Iinclude/ -DARPTABLES_VERSION=\"$(ARPTABLES_VERSION)\" #-g -DDEBUG #-pg # -DARPTC_DEBUG
@@ -41,29 +31,31 @@ libarptc/libarptc.o: libarptc/libarptc.c libarptc/libarptc_incl.c
 arptables: arptables-standalone.o arptables.o libarptc/libarptc.o $(EXT_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(MANDIR)/man8/arptables.8: arptables.8
-	mkdir -p $(DESTDIR)$(@D)
-	install -m 0644 -o root -g root $< $(DESTDIR)$@
+$(DESTDIR)$(MANDIR)/man8/arptables.8: arptables.8
+	mkdir -p $(@D)
+	install -m 0644 -o root -g root $< $@
 
-.PHONY: exec
-exec: arptables
+$(DESTDIR)$(BINDIR)/arptables: arptables
 	mkdir -p $(DESTDIR)$(BINDIR)
-	install -m 0755 -o root -g root $< $(DESTDIR)$(BINDIR)/arptables
+	install -m 0755 -o root -g root $< $@
 
 .PHONY: install
-install: $(MANDIR)/man8/arptables.8 exec
+install: $(DESTDIR)$(MANDIR)/man8/arptables.8 $(DESTDIR)$(BINDIR)/arptables
 
 .PHONY: clean
 clean:
 	rm -f arptables
-	rm -f *.o *.c~
-	rm -f extensions/*.o extensions/*.c~
-	rm -f libarptc/*.o libarptc/*.c~
+	rm -f *.o *~
+	rm -f extensions/*.o extensions/*~
+	rm -f libarptc/*.o libarptc/*~
+	rm -f include/*~ include/libarptc/*~
 
 DIR:=arptables-v$(ARPTABLES_VERSION)
+CVSDIRS:=CVS extensions/CVS libarptc/CVS include/CVS include/libarptc/CVS
 # This is used to make a new userspace release
 .PHONY: release
 release:
+	rm -rf $(CVSDIRS)
 	mkdir -p include/linux/netfilter_arp
 	install -m 0644 -o root -g root \
 		$(KERNEL_DIR)/include/linux/netfilter_arp.h include/linux/
