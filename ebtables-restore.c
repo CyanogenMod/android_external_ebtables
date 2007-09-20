@@ -68,7 +68,7 @@ int main(int argc_, char *argv_[])
 				ebtrest_print_error("table '%s' was not recognized", cmdline+1);
 			table_nr = i;
 			replace[table_nr].command = 11;
-			ebt_get_kernel_table(replace, 1);
+			ebt_get_kernel_table(&replace[table_nr], 1);
 			replace[table_nr].command = 0;
 			replace[table_nr].flags = OPT_KERNELDATA; /* Prevent do_command from initialising replace */
 			continue;
