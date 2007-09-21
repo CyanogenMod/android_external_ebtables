@@ -75,7 +75,7 @@ int main(int argc_, char *argv_[])
 		} else if (table_nr == -1)
 			ebtrest_print_error("no table specified");
 		if (*cmdline == ':') {
-			int policy;
+			int policy, chain_nr;
 			char *ch;
 
 			if (!(ch = strchr(cmdline, ' ')))
@@ -93,8 +93,10 @@ int main(int argc_, char *argv_[])
 			/* No need to check chain name for consistency, since
 			 * we're supposed to be reading an automatically generated
 			 * file. */
-			if (ebt_get_chainnr(&replace[table_nr], cmdline+1) == -1)
+			if ((chain_nr = ebt_get_chainnr(&replace[table_nr], cmdline+1)) == -1)
 				ebt_new_chain(&replace[table_nr], cmdline+1, policy);
+			else
+				replace[table_nr].chains[chain_nr]->policy = policy;
 			continue;
 		}
 		argv[1] = cmdline;
