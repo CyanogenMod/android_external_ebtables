@@ -97,7 +97,7 @@ static int compare(const struct ebt_entry_target *t1,
 
 static struct ebt_u_target redirect_target =
 {
-	.name		= EBT_REDIRECT_TARGET,
+	.name		= "redirect",
 	.size		= sizeof(struct ebt_redirect_info),
 	.help		= print_help,
 	.init		= init,

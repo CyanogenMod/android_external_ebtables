@@ -122,7 +122,7 @@ static int compare(const struct ebt_entry_target *t1,
 
 static struct ebt_u_target arpreply_target =
 {
-	.name		= EBT_ARPREPLY_TARGET,
+	.name		= "arpreply",
 	.size		= sizeof(struct ebt_arpreply_info),
 	.help		= print_help,
 	.init		= init,

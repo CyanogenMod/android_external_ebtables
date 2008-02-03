@@ -327,7 +327,7 @@ static int compare(const struct ebt_entry_match *m1,
 
 static struct ebt_u_match ip_match =
 {
-	.name		= EBT_IP_MATCH,
+	.name		= "ip",
 	.size		= sizeof(struct ebt_ip_info),
 	.help		= print_help,
 	.init		= init,

@@ -169,7 +169,7 @@ static int compare(const struct ebt_entry_watcher *w1,
 
 static struct ebt_u_watcher ulog_watcher =
 {
-	.name		= EBT_ULOG_WATCHER,
+	.name		= "ulog",
 	.size		= sizeof(struct ebt_ulog_info),
 	.help		= print_help,
 	.init		= init,

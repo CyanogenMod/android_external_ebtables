@@ -201,7 +201,7 @@ static int compare(const struct ebt_entry_match* m1,
 
 static struct ebt_u_match limit_match =
 {
-	.name		= EBT_LIMIT_MATCH,
+	.name		= "limit",
 	.size		= sizeof(struct ebt_limit_info),
 	.help		= print_help,
 	.init		= init,
