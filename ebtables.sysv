@@ -41,7 +41,7 @@ config=__SYSCONFIG__/$prog-config
 start() {
 	echo -n $"Starting $desc ($prog): "
 	if [ "$EBTABLES_BINARY_FORMAT" = "yes" ]; then
-		for table in $(ls __SYSCONFIG__/ebtables.* | sed s/.*ebtables.//); do
+		for table in $(ls __SYSCONFIG__/ebtables.* 2>/dev/null | sed -e 's/.*ebtables\.//' -e '/save/d' ); do
 			__EXEC_PATH__/ebtables -t $table --atomic-file __SYSCONFIG__/ebtables.$table --atomic-commit || RETVAL=1
 		done
 	else
@@ -59,7 +59,7 @@ start() {
 
 stop() {
 	echo -n $"Stopping $desc ($prog): "
-	for table in $(grep -E '^ebtable_' /proc/modules | cut -f1 -d' ' | sed s/ebtable_//); do
+	for table in $(grep '^ebtable_' /proc/modules | sed -e 's/ebtable_\([^ ]*\).*/\1/'); do
 		__EXEC_PATH__/ebtables -t $table --init-table || RETVAL=1
 	done
 
@@ -94,13 +94,11 @@ save() {
 	fi
 	if [ "$EBTABLES_BINARY_FORMAT" = "yes" ]; then
 		rm -f __SYSCONFIG__/ebtables.*.save
-		for oldtable in $(ls __SYSCONFIG__/ebtables.*); do
-			if [ "$oldtable" !=  __SYSCONFIG__/ebtables.save ]; then
-				chmod 0600 $oldtable
-				mv -f $oldtable $oldtable.save
-			fi
+		for oldtable in $(ls __SYSCONFIG__/ebtables.* 2>/dev/null | grep -vF 'ebtables.save'); do
+			chmod 0600 $oldtable
+			mv -f $oldtable $oldtable.save
 		done
-		for table in $(grep -E '^ebtable_' /proc/modules | cut -f1 -d' ' | sed s/ebtable_//); do
+		for table in $(grep '^ebtable_' /proc/modules | sed -e 's/ebtable_\([^ ]*\).*/\1/'); do
 			__EXEC_PATH__/ebtables -t $table --atomic-file __SYSCONFIG__/ebtables.$table --atomic-save || RETVAL=1
 			if [ "$EBTABLES_SAVE_COUNTER" = "no" ]; then
 				__EXEC_PATH__/ebtables -t $table --atomic-file __SYSCONFIG__/ebtables.$table -Z || RETVAL=1
@@ -121,11 +119,11 @@ case "$1" in
 	start
 	;;
   stop)
-	[ "$IPTABLES_SAVE_ON_STOP" = "yes" ] && save
+	[ "$EBTABLES_SAVE_ON_STOP" = "yes" ] && save
 	stop
 	;;
   restart|reload)
-	[ "$IPTABLES_SAVE_ON_RESTART" = "yes" ] && save
+	[ "$EBTABLES_SAVE_ON_RESTART" = "yes" ] && save
 	restart
 	;;
   condrestart)
