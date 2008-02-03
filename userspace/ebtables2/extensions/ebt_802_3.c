@@ -130,7 +130,7 @@ static int compare(const struct ebt_entry_match *m1,
 
 static struct ebt_u_match _802_3_match = 
 {
-	.name		= EBT_802_3_MATCH,
+	.name		= "802_3",
 	.size		= sizeof(struct ebt_802_3_info),
 	.help		= print_help,
 	.init		= init,

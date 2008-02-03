@@ -114,7 +114,7 @@ static int compare(const struct ebt_entry_match *m1,
 
 static struct ebt_u_match pkttype_match =
 {
-	.name		= EBT_PKTTYPE_MATCH,
+	.name		= "pkttype",
 	.size		= sizeof(struct ebt_pkttype_info),
 	.help		= print_help,
 	.init		= init,

@@ -72,7 +72,7 @@ static int compare(const struct ebt_entry_target *t1,
 
 static struct ebt_u_target standard =
 {
-	.name		= EBT_STANDARD_TARGET,
+	.name		= "standard",
 	.size		= sizeof(struct ebt_standard_target) -
 			  sizeof(struct ebt_entry_target),
 	.help		= print_help,

@@ -351,7 +351,7 @@ static int compare(const struct ebt_entry_match *m1,
 
 static struct ebt_u_match arp_match =
 {
-	.name		= EBT_ARP_MATCH,
+	.name		= "arp",
 	.size		= sizeof(struct ebt_arp_info),
 	.help		= print_help,
 	.init		= init,

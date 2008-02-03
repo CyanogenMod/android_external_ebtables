@@ -193,7 +193,7 @@ static int compare(const struct ebt_entry_watcher *w1,
 
 static struct ebt_u_watcher log_watcher =
 {
-	.name		= EBT_LOG_WATCHER,
+	.name		= "log",
 	.size		= sizeof(struct ebt_log_info),
 	.help		= print_help,
 	.init		= init,

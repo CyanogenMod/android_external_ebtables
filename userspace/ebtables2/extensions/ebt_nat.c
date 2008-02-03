@@ -207,7 +207,7 @@ static int compare(const struct ebt_entry_target *t1,
 
 static struct ebt_u_target snat_target =
 {
-	.name		= EBT_SNAT_TARGET,
+	.name		= "snat",
 	.size		= sizeof(struct ebt_nat_info),
 	.help		= print_help_s,
 	.init		= init_s,
@@ -220,7 +220,7 @@ static struct ebt_u_target snat_target =
 
 static struct ebt_u_target dnat_target =
 {
-	.name		= EBT_DNAT_TARGET,
+	.name		= "dnat",
 	.size		= sizeof(struct ebt_nat_info),
 	.help		= print_help_d,
 	.init		= init_d,
