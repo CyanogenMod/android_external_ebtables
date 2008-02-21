@@ -297,6 +297,10 @@ void ebt_print_mac_and_mask(const unsigned char *mac, const unsigned char *mask)
 int ebt_get_mac_and_mask(const char *from, unsigned char *to, unsigned char *mask);
 void ebt_parse_ip_address(char *address, uint32_t *addr, uint32_t *msk);
 char *ebt_mask_to_dotted(uint32_t mask);
+void ebt_parse_ip6_address(char *address, struct in6_addr *addr, 
+						   struct in6_addr *msk);
+char *ebt_ip6_to_numeric(const struct in6_addr *addrp);
+
 
 int do_command(int argc, char *argv[], int exec_style,
                struct ebt_u_replace *replace_);

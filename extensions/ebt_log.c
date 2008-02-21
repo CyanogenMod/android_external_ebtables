@@ -60,6 +60,7 @@ static int name_to_loglevel(char* arg)
 #define LOG_ARP    '3'
 #define LOG_IP     '4'
 #define LOG_LOG    '5'
+#define LOG_IP6    '6'
 static struct option opts[] =
 {
 	{ "log-prefix", required_argument, 0, LOG_PREFIX },
@@ -67,6 +68,7 @@ static struct option opts[] =
 	{ "log-arp"   , no_argument      , 0, LOG_ARP    },
 	{ "log-ip"    , no_argument      , 0, LOG_IP     },
 	{ "log"       , no_argument      , 0, LOG_LOG    },
+	{ "log-ip6"   , no_argument      , 0, LOG_IP6    },
 	{ 0 }
 };
 
@@ -81,6 +83,7 @@ static void print_help()
 "--log-prefix prefix : max. %d chars.\n"
 "--log-ip            : put ip info. in the log for ip packets\n"
 "--log-arp           : put (r)arp info. in the log for (r)arp packets\n"
+"--log-ip6           : put ip6 info. in the log for ip6 packets\n"
 	, EBT_LOG_PREFIX_SIZE - 1);
 	printf("levels:\n");
 	for (i = 0; i < 8; i++)
@@ -102,6 +105,7 @@ static void init(struct ebt_entry_watcher *watcher)
 #define OPT_ARP    0x04
 #define OPT_IP     0x08
 #define OPT_LOG    0x10
+#define OPT_IP6    0x20
 static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
    unsigned int *flags, struct ebt_entry_watcher **watcher)
 {
@@ -151,6 +155,13 @@ static int parse(int c, char **argv, int argc, const struct ebt_u_entry *entry,
 		if (ebt_check_inverse(optarg))
 			ebt_print_error2("Unexpected `!' after --log");
 		break;
+
+	case LOG_IP6:
+		ebt_check_option2(flags, OPT_IP6);
+		if (ebt_check_inverse(optarg))
+			ebt_print_error2("Unexpected `!' after --log-ip6");
+		loginfo->bitmask |= EBT_LOG_IP6;
+		break;
 	default:
 		return 0;
 	}
@@ -175,6 +186,8 @@ static void print(const struct ebt_u_entry *entry,
 		printf(" --log-ip");
 	if (loginfo->bitmask & EBT_LOG_ARP)
 		printf(" --log-arp");
+	if (loginfo->bitmask & EBT_LOG_IP6)
+		printf(" --log-ip6");
 	printf(" ");
 }
 

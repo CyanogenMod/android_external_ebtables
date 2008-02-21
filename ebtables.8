@@ -652,6 +652,54 @@ If
 The flag
 .B --ip-dport
 is an alias for this option.
+.SS ip6
+Specify IPv6 fields. The protocol must be specified as
+.IR IPv6 .
+.TP
+.BR "--ip6-source " "[!] \fIaddress\fP[/\fImask\fP]"
+The source IPv6 address.
+The flag
+.B --ip6-src
+is an alias for this option.
+.TP
+.BR "--ip6-destination " "[!] \fIaddress\fP[/\fImask\fP]"
+The destination IPv6 address.
+The flag
+.B --ip6-dst
+is an alias for this option.
+.TP
+.BR "--ip6-tclass " "[!] \fItclass\fP"
+The IPv6 traffic class, in hexadecimal numbers.
+.TP
+.BR "--ip6-protocol " "[!] \fIprotocol\fP"
+The IP protocol.
+The flag
+.B --ip6-proto
+is an alias for this option.
+.TP
+.BR "--ip6-source-port " "[!] \fIport1\fP[:\fIport2\fP]"
+The source port or port range for the IPv6 protocols 6 (TCP), 17
+(UDP), 33 (DCCP) or 132 (SCTP). The
+.B --ip6-protocol
+option must be specified as
+.IR TCP ", " UDP ", " DCCP " or " SCTP .
+If
+.IR port1 " is omitted, " 0:port2 " is used; if " port2 " is omitted but a colon is specified, " port1:65535 " is used."
+The flag
+.B --ip6-sport
+is an alias for this option.
+.TP
+.BR "--ip6-destination-port " "[!] \fIport1\fP[:\fIport2\fP]"
+The destination port or port range for IPv6 protocols 6 (TCP), 17
+(UDP), 33 (DCCP) or 132 (SCTP). The
+.B --ip6-protocol
+option must be specified as
+.IR TCP ", " UDP ", " DCCP " or " SCTP .
+If
+.IR port1 " is omitted, " 0:port2 " is used; if " port2 " is omitted but a colon is specified, " port1:65535 " is used."
+The flag
+.B --ip6-dport
+is an alias for this option.
 .SS limit
 This module matches at a limited rate using a token bucket filter.
 A rule using this extension will match until this limit is reached.
@@ -799,6 +847,11 @@ to be printed at the beginning of the line with the logging information.
 .br
 Will log the ip information when a frame made by the ip protocol matches 
 the rule. The default is no ip information logging.
+.TP
+.B --log-ip6 
+.br
+Will log the ipv6 information when a frame made by the ipv6 protocol matches 
+the rule. The default is no ipv6 information logging.
 .TP
 .B --log-arp
 .br
