@@ -857,6 +857,41 @@ the rule. The default is no ipv6 information logging.
 .br
 Will log the (r)arp information when a frame made by the (r)arp protocols
 matches the rule. The default is no (r)arp information logging.
+.SS nflog
+The nflog watcher passes the packet to the loaded logging backend
+in order to log the packet. This is usually used in combination with
+nfnetlink_log as logging backend, which will multicast the packet
+through a
+.IR netlink
+socket to the specified multicast group. One or more userspace processes
+may subscribe to the group to receive the packets.
+.TP
+.B "--nflog"
+.br
+Log with the default logging options
+.TP
+.B --nflog-group "\fInlgroup\fP"
+.br
+The netlink group (1 - 2^32-1) to which packets are (only applicable for
+nfnetlink_log). The default value is 1.
+.TP
+.B --nflog-prefix "\fIprefix\fP"
+.br
+A prefix string to include in the log message, up to 30 characters
+long, useful for distinguishing messages in the logs.
+.TP
+.B --nflog-range "\fIsize\fP"
+.br
+The number of bytes to be copied to userspace (only applicable for
+nfnetlink_log). nfnetlink_log instances may specify their own
+range, this option overrides it.
+.TP
+.B --nflog-threshold "\fIsize\fP"
+.br
+Number of packets to queue inside the kernel before sending them
+to userspace (only applicable for nfnetlink_log). Higher values
+result in less overhead per packet, but increase delay until the
+packets reach userspace. The default value is 1.
 .SS ulog
 The ulog watcher passes the packet to a userspace
 logging daemon using netlink multicast sockets. This differs
