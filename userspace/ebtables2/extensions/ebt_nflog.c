@@ -45,7 +45,7 @@ static void nflog_help()
 	       "in-kernel queue\n");
 }
 
-static void nflog_init(struct ebt_entry_watcher *watcher)
+static void init(struct ebt_entry_watcher *watcher)
 {
 	struct ebt_nflog_info *info = (struct ebt_nflog_info *)watcher->data;
 
@@ -165,7 +165,7 @@ static struct ebt_u_watcher nflog_watcher = {
 	.name = "nflog",
 	.size = sizeof(struct ebt_nflog_info),
 	.help = nflog_help,
-	.init = nflog_init,
+	.init = init,
 	.parse = nflog_parse,
 	.final_check = nflog_final_check,
 	.print = nflog_print,
