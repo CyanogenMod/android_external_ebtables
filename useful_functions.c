@@ -286,129 +286,128 @@ char *ebt_mask_to_dotted(uint32_t mask)
 static void
 in6addrcpy(struct in6_addr *dst, struct in6_addr *src)
 {
-    memcpy(dst, src, sizeof(struct in6_addr));
+	memcpy(dst, src, sizeof(struct in6_addr));
 }
 
 int string_to_number_ll(const char *s, unsigned long long min,
             unsigned long long max, unsigned long long *ret)
 {
-    unsigned long long number;
-    char *end;
+	unsigned long long number;
+	char *end;
 
-    /* Handle hex, octal, etc. */
-    errno = 0;
-    number = strtoull(s, &end, 0);
-    if (*end == '\0' && end != s) {
-        /* we parsed a number, let's see if we want this */
-        if (errno != ERANGE && min <= number && (!max || number <= max)) {
-            *ret = number;
-            return 0;
-        }
-    }
-    return -1;
+	/* Handle hex, octal, etc. */
+	errno = 0;
+	number = strtoull(s, &end, 0);
+	if (*end == '\0' && end != s) {
+		/* we parsed a number, let's see if we want this */
+		if (errno != ERANGE && min <= number && (!max || number <= max)) {
+			*ret = number;
+			return 0;
+		}
+	}
+	return -1;
 }
 
 int string_to_number_l(const char *s, unsigned long min, unsigned long max,
-               unsigned long *ret)
+                       unsigned long *ret)
 {
-    int result;
-    unsigned long long number;
+	int result;
+	unsigned long long number;
 
-    result = string_to_number_ll(s, min, max, &number);
-    *ret = (unsigned long)number;
+	result = string_to_number_ll(s, min, max, &number);
+	*ret = (unsigned long)number;
 
-    return result;
+	return result;
 }
 
 int string_to_number(const char *s, unsigned int min, unsigned int max,
-        unsigned int *ret)
+                     unsigned int *ret)
 {
-    int result;
-    unsigned long number;
+	int result;
+	unsigned long number;
 
-    result = string_to_number_l(s, min, max, &number);
-    *ret = (unsigned int)number;
+	result = string_to_number_l(s, min, max, &number);
+	*ret = (unsigned int)number;
 
-    return result;
+	return result;
 }
 
-static struct in6_addr *
-numeric_to_addr(const char *num)
+static struct in6_addr *numeric_to_addr(const char *num)
 {
-    static struct in6_addr ap;
-    int err;
-    if ((err=inet_pton(AF_INET6, num, &ap)) == 1)
-        return &ap;
-    return (struct in6_addr *)NULL;
+	static struct in6_addr ap;
+	int err;
+
+	if ((err=inet_pton(AF_INET6, num, &ap)) == 1)
+		return &ap;
+	return (struct in6_addr *)NULL;
 }
 
-static struct in6_addr *
-parse_ip6_mask(char *mask)
+static struct in6_addr *parse_ip6_mask(char *mask)
 {
-    static struct in6_addr maskaddr;
-    struct in6_addr *addrp;
-    unsigned int bits;
+	static struct in6_addr maskaddr;
+	struct in6_addr *addrp;
+	unsigned int bits;
 
-    if (mask == NULL) {
-        /* no mask at all defaults to 128 bits */
-        memset(&maskaddr, 0xff, sizeof maskaddr);
-        return &maskaddr;
-    }
-    if ((addrp = numeric_to_addr(mask)) != NULL)
-        return addrp;
-    if (string_to_number(mask, 0, 128, &bits) == -1)
+	if (mask == NULL) {
+		/* no mask at all defaults to 128 bits */
+		memset(&maskaddr, 0xff, sizeof maskaddr);
+		return &maskaddr;
+	}
+	if ((addrp = numeric_to_addr(mask)) != NULL)
+		return addrp;
+	if (string_to_number(mask, 0, 128, &bits) == -1)
 		ebt_print_error("Invalid IPv6 Mask '%s' specified", mask);
-    if (bits != 0) {
-        char *p = (char *)&maskaddr;
-        memset(p, 0xff, bits / 8);
-        memset(p + (bits / 8) + 1, 0, (128 - bits) / 8);
-        p[bits / 8] = 0xff << (8 - (bits & 7));
-        return &maskaddr;
-    }
+	if (bits != 0) {
+		char *p = (char *)&maskaddr;
+		memset(p, 0xff, bits / 8);
+		memset(p + (bits / 8) + 1, 0, (128 - bits) / 8);
+		p[bits / 8] = 0xff << (8 - (bits & 7));
+		return &maskaddr;
+	}
 
-    memset(&maskaddr, 0, sizeof maskaddr);
-    return &maskaddr;
+	memset(&maskaddr, 0, sizeof maskaddr);
+	return &maskaddr;
 }
 
 /* Set the ipv6 mask and address. Callers should check ebt_errormsg[0].
  * The string pointed to by address can be altered. */
 void ebt_parse_ip6_address(char *address, struct in6_addr *addr, 
-						   struct in6_addr *msk)
+                           struct in6_addr *msk)
 {
-    struct in6_addr *tmp_addr;
-    char buf[256];
-    char *p;
-    int i;
-    int err;
+	struct in6_addr *tmp_addr;
+	char buf[256];
+	char *p;
+	int i;
+	int err;
 
-    strncpy(buf, address, sizeof(buf) - 1);
+	strncpy(buf, address, sizeof(buf) - 1);
 	/* first the mask */
-    buf[sizeof(buf) - 1] = '\0';
-    if ((p = strrchr(buf, '/')) != NULL) {
-        *p = '\0';
-        tmp_addr = parse_ip6_mask(p + 1);
-    } else
-        tmp_addr = parse_ip6_mask(NULL);
-    in6addrcpy(msk, tmp_addr);
+	buf[sizeof(buf) - 1] = '\0';
+	if ((p = strrchr(buf, '/')) != NULL) {
+		*p = '\0';
+		tmp_addr = parse_ip6_mask(p + 1);
+	} else
+		tmp_addr = parse_ip6_mask(NULL);
+	in6addrcpy(msk, tmp_addr);
 
-    /* if a null mask is given, the name is ignored, like in "any/0" */
-    if (!memcmp(msk, &in6addr_any, sizeof(in6addr_any)))
-        strcpy(buf, "::");
+	/* if a null mask is given, the name is ignored, like in "any/0" */
+	if (!memcmp(msk, &in6addr_any, sizeof(in6addr_any)))
+		strcpy(buf, "::");
 
-    if ((err=inet_pton(AF_INET6, buf, addr)) < 1) {
+	if ((err=inet_pton(AF_INET6, buf, addr)) < 1) {
 		ebt_print_error("Invalid IPv6 Address '%s' specified", buf);
 		return;
 	}
 
- 	for (i = 0; i < 4; i++)
-    	addr->in6_u.u6_addr32[i] &= msk->in6_u.u6_addr32[i];
+	for (i = 0; i < 4; i++)
+	addr->in6_u.u6_addr32[i] &= msk->in6_u.u6_addr32[i];
 }
 
 /* Transform the ip6 addr into a string ready for output. */
 char *ebt_ip6_to_numeric(const struct in6_addr *addrp)
 {
-    /* 0000:0000:0000:0000:0000:000.000.000.000
-     * 0000:0000:0000:0000:0000:0000:0000:0000 */
-    static char buf[50+1];
-    return (char *)inet_ntop(AF_INET6, addrp, buf, sizeof(buf));
+	/* 0000:0000:0000:0000:0000:000.000.000.000
+	 * 0000:0000:0000:0000:0000:0000:0000:0000 */
+	static char buf[50+1];
+	return (char *)inet_ntop(AF_INET6, addrp, buf, sizeof(buf));
 }
