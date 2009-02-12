@@ -371,7 +371,7 @@ static struct in6_addr *parse_ip6_mask(char *mask)
 
 /* Set the ipv6 mask and address. Callers should check ebt_errormsg[0].
  * The string pointed to by address can be altered. */
-void ebt_parse_ip6_address(char *address, struct in6_addr *addr, 
+void ebt_parse_ip6_address(char *address, struct in6_addr *addr,
                            struct in6_addr *msk)
 {
 	struct in6_addr *tmp_addr;
@@ -400,7 +400,7 @@ void ebt_parse_ip6_address(char *address, struct in6_addr *addr,
 	}
 
 	for (i = 0; i < 4; i++)
-	addr->in6_u.u6_addr32[i] &= msk->in6_u.u6_addr32[i];
+		addr->s6_addr32[i] &= msk->s6_addr32[i];
 }
 
 /* Transform the ip6 addr into a string ready for output. */
