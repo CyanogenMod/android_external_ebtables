@@ -19,7 +19,7 @@
 #define EBT_LIMIT_AVG	"3/hour"
 #define EBT_LIMIT_BURST	5
 
-int string_to_number(const char *s, unsigned int min, unsigned int max,
+static int string_to_number(const char *s, unsigned int min, unsigned int max,
    unsigned int *ret)
 {
 	long number;
