@@ -1,3 +1,12 @@
+20090621
+	Changelog for v2.0.9 vs v2.0.8-2
+	* added ip6 module for filtering IPv6 traffic (Kuo-Lang Tseng,
+	  Manohar Castelino)
+	* added --log-ip6 option for logging IPv6 traffic (Kuo-Lang Tseng,
+	  Manohar Castelino)
+	* added nflog watcher for logging packets to userspace (Peter Warasin)
+	* bugfix in ebtables.sysv (Michal Soltys)
+	* bugfix for among match on x86-64 (reported by Pavel Emelyanov)
 20061217
 	Since last entry:
 	* fixed a few reported bugs
