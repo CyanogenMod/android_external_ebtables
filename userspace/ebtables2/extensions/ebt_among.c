@@ -478,7 +478,7 @@ static int compare(const struct ebt_entry_match *m1,
 }
 
 static struct ebt_u_match among_match = {
-	.name 		= EBT_AMONG_MATCH,
+	.name 		= "among",
 	.size 		= sizeof(struct ebt_among_info),
 	.help 		= print_help,
 	.init 		= init,
