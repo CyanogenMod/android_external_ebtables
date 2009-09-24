@@ -85,7 +85,7 @@ ebtables-standalone.o: ebtables-standalone.c include/ebtables_u.h
 
 .PHONY: libebtc
 libebtc: $(OBJECTS2)
-	$(LD) -shared -soname libebtc.so -o libebtc.so -lc $(OBJECTS2)
+	$(CC) -shared -Wl,-soname,libebtc.so -o libebtc.so -lc $(OBJECTS2)
 
 ebtables: $(OBJECTS) ebtables-standalone.o libebtc
 	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) -o $@ ebtables-standalone.o -I$(KERNEL_INCLUDES) -L. -Lextensions -lebtc $(EXT_LIBSI) \
