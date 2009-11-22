@@ -45,7 +45,7 @@ Contains an example to receive and parse netlink messages containing
 packets seen by the ebtables ulog watcher.
 
 Compile with:
-%make test_ulog.c KERNEL_INCLUDES=/usr/src/linux/include
+%make test_ulog KERNEL_INCLUDES=/usr/src/linux/include
 
 Usage:
 %examples/ulog/test_ulog NETLINK_GROUP
