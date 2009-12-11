@@ -189,8 +189,8 @@ static void store_table_in_file(char *filename, struct ebt_replace *repl)
 	int size;
 	int fd;
 
-	/* Start from an empty file with right priviliges */
-	if (!(fd = creat(filename, 0600))) {
+	/* Start from an empty file with the correct priviliges */
+	if ((fd = creat(filename, 0600)) == -1) {
 		ebt_print_error("Couldn't create file %s", filename);
 		return;
 	}
