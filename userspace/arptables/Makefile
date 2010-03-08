@@ -1,4 +1,4 @@
-ARPTABLES_VERSION:=0.0.3-3
+ARPTABLES_VERSION:=0.0.3-4
 
 KERNEL_DIR:=./
 # default paths
@@ -50,7 +50,7 @@ scripts: arptables-save arptables-restore arptables.sysv
 	cat arptables-restore | sed 's/__EXEC_PATH__/$(tmp1)/g' > arptables-restore_
 	install -m 0755 -o root -g root arptables-restore_ $(DESTDIR)$(BINDIR)/arptables-restore
 	cat arptables.sysv | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__SYSCONFIG__/$(tmp2)/g' > arptables.sysv_
-	install -m 0755 -o root -g root arptables.sysv_ $(DESTDIR)$(INITDIR)/arptables
+	if test -d $(DESTDIR)$(INITDIR); then install -m 0755 -o root -g root arptables.sysv_ $(DESTDIR)$(INITDIR)/arptables; fi
 	rm -f arptables-save_ arptables-restore_ arptables.sysv_
 
 .PHONY: install
@@ -65,18 +65,10 @@ clean:
 	rm -f include/*~ include/libarptc/*~
 
 DIR:=arptables-v$(ARPTABLES_VERSION)
-CVSDIRS:=CVS extensions/CVS libarptc/CVS include/CVS include/libarptc/CVS
+CVSDIRS:=CVS extensions/CVS libarptc/CVS include/CVS include/libarptc/CVS include/linux/CVS include/linux/netfilter_arp/CVS
 # This is used to make a new userspace release
 .PHONY: release
 release:
 	rm -rf $(CVSDIRS)
-	mkdir -p include/linux/netfilter_arp
-	install -m 0644 -o root -g root \
-		$(KERNEL_DIR)/include/linux/netfilter_arp.h include/linux/
-	install -m 0644 -o root -g root \
-		$(KERNEL_DIR)/include/linux/netfilter_arp/*.h \
-		include/linux/netfilter_arp/
-	install -m 0644 -o root -g root \
-		include/arp_tables.h include/linux/netfilter_arp/arp_tables.h
 	make clean
 	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz
