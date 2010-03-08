@@ -71,4 +71,5 @@ CVSDIRS:=CVS extensions/CVS libarptc/CVS include/CVS include/libarptc/CVS includ
 release:
 	rm -rf $(CVSDIRS)
 	make clean
-	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz
+	cd ..;find $(DIR) -exec touch {} \;;find $(DIR) -exec chmod o-r,g-r,o-w,g-w,o-x,g-x {} \;;tar -pc $(DIR) | gzip >$(DIR).tar.gz
+
