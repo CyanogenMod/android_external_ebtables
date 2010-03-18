@@ -35,22 +35,22 @@ arptables: arptables-standalone.o arptables.o libarptc/libarptc.o $(EXT_OBJS)
 
 $(DESTDIR)$(MANDIR)/man8/arptables.8: arptables.8
 	mkdir -p $(@D)
-	install -m 0644 -o root -g root $< $@
+	install -m 0644 $< $@
 
 $(DESTDIR)$(BINDIR)/arptables: arptables
 	mkdir -p $(DESTDIR)$(BINDIR)
-	install -m 0755 -o root -g root $< $@
+	install -m 0755 $< $@
 
 tmp1:=$(shell printf $(BINDIR) | sed 's/\//\\\//g')
 tmp2:=$(shell printf $(SYSCONFIGDIR) | sed 's/\//\\\//g')
 .PHONY: scripts
 scripts: arptables-save arptables-restore arptables.sysv
 	cat arptables-save | sed 's/__EXEC_PATH__/$(tmp1)/g' > arptables-save_
-	install -m 0755 -o root -g root arptables-save_ $(DESTDIR)$(BINDIR)/arptables-save
+	install -m 0755 arptables-save_ $(DESTDIR)$(BINDIR)/arptables-save
 	cat arptables-restore | sed 's/__EXEC_PATH__/$(tmp1)/g' > arptables-restore_
-	install -m 0755 -o root -g root arptables-restore_ $(DESTDIR)$(BINDIR)/arptables-restore
+	install -m 0755 arptables-restore_ $(DESTDIR)$(BINDIR)/arptables-restore
 	cat arptables.sysv | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__SYSCONFIG__/$(tmp2)/g' > arptables.sysv_
-	if test -d $(DESTDIR)$(INITDIR); then install -m 0755 -o root -g root arptables.sysv_ $(DESTDIR)$(INITDIR)/arptables; fi
+	if test -d $(DESTDIR)$(INITDIR); then install -m 0755 arptables.sysv_ $(DESTDIR)$(INITDIR)/arptables; fi
 	rm -f arptables-save_ arptables-restore_ arptables.sysv_
 
 .PHONY: install
