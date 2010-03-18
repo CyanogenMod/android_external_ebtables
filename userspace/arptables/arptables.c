@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <dlfcn.h>
 #include <ctype.h>
 #include <stdarg.h>
@@ -874,7 +875,7 @@ parse_target(const char *targetname)
 
 	if (strlen(targetname)+1 > sizeof(arpt_chainlabel))
 		exit_error(PARAMETER_PROBLEM,
-			   "Invalid target name `%s' (%i chars max)",
+			   "Invalid target name `%s' (%zu chars max)",
 			   targetname, sizeof(arpt_chainlabel)-1);
 
 	for (ptr = targetname; *ptr; ptr++)
@@ -1062,7 +1063,7 @@ register_match(struct arptables_match *me)
 	}
 
 	if (me->size != ARPT_ALIGN(me->size)) {
-		fprintf(stderr, "%s: match `%s' has invalid size %u.\n",
+		fprintf(stderr, "%s: match `%s' has invalid size %zu.\n",
 			program_name, me->name, me->size);
 		exit(1);
 	}
@@ -1092,7 +1093,7 @@ register_target(struct arptables_target *me)
 	}
 
 	if (me->size != ARPT_ALIGN(me->size)) {
-		fprintf(stderr, "%s: target `%s' has invalid size %u.\n",
+		fprintf(stderr, "%s: target `%s' has invalid size %zu.\n",
 			program_name, me->name, me->size);
 		exit(1);
 	}
@@ -1116,17 +1117,17 @@ print_num(u_int64_t number, unsigned int format)
 					number = (number + 500) / 1000;
 					if (number > 9999) {
 						number = (number + 500) / 1000;
-						printf(FMT("%4lluT ","%lluT "), number);
+						printf(FMT("%4lluT ","%"PRIu64"T "), number);
 					}
-					else printf(FMT("%4lluG ","%lluG "), number);
+					else printf(FMT("%4lluG ","%"PRIu64"G "), number);
 				}
-				else printf(FMT("%4lluM ","%lluM "), number);
+				else printf(FMT("%4lluM ","%"PRIu64"M "), number);
 			} else
-				printf(FMT("%4lluK ","%lluK "), number);
+				printf(FMT("%4lluK ","%"PRIu64"K "), number);
 		} else
-			printf(FMT("%5llu ","%llu "), number);
+			printf(FMT("%5llu ","%"PRIu64" "), number);
 	} else
-		printf(FMT("%8llu ","%llu "), number);
+		printf(FMT("%8llu ","%"PRIu64" "), number);
 }
 
 
@@ -1370,7 +1371,7 @@ after_devdst:
 			/* Print the target information. */
 			target->print(&fw->arp, t, format & FMT_NUMERIC);
 	} else if (t->u.target_size != sizeof(*t))
-		printf("[%u bytes of unknown target data] ",
+		printf("[%zu bytes of unknown target data] ",
 		       t->u.target_size - sizeof(*t));
 
 	if (!(format & FMT_NOCOUNTS)) {
@@ -2159,12 +2160,12 @@ int do_command(int argc, char *argv[], char **table, arptc_handle_t *handle)
 					"-%c requires packet and byte counter",
 					opt2char(OPT_COUNTERS));
 
-			if (sscanf(pcnt, "%llu", &fw.counters.pcnt) != 1)
+			if (sscanf(pcnt, "%"PRIu64, &fw.counters.pcnt) != 1)
 				exit_error(PARAMETER_PROBLEM,
 					"-%c packet counter not numeric",
 					opt2char(OPT_COUNTERS));
 
-			if (sscanf(bcnt, "%llu", &fw.counters.bcnt) != 1)
+			if (sscanf(bcnt, "%"PRIu64, &fw.counters.bcnt) != 1)
 				exit_error(PARAMETER_PROBLEM,
 					"-%c byte counter not numeric",
 					opt2char(OPT_COUNTERS));
