@@ -1117,17 +1117,17 @@ print_num(u_int64_t number, unsigned int format)
 					number = (number + 500) / 1000;
 					if (number > 9999) {
 						number = (number + 500) / 1000;
-						printf(FMT("%4lluT ","%"PRIu64"T "), number);
+						printf(FMT("%4"PRIu64"T ","%"PRIu64"T "), number);
 					}
-					else printf(FMT("%4lluG ","%"PRIu64"G "), number);
+					else printf(FMT("%4"PRIu64"G ","%"PRIu64"G "), number);
 				}
-				else printf(FMT("%4lluM ","%"PRIu64"M "), number);
+				else printf(FMT("%4"PRIu64"M ","%"PRIu64"M "), number);
 			} else
-				printf(FMT("%4lluK ","%"PRIu64"K "), number);
+				printf(FMT("%4"PRIu64"K ","%"PRIu64"K "), number);
 		} else
-			printf(FMT("%5llu ","%"PRIu64" "), number);
+			printf(FMT("%5"PRIu64" ","%"PRIu64" "), number);
 	} else
-		printf(FMT("%8llu ","%"PRIu64" "), number);
+		printf(FMT("%8"PRIu64" ","%"PRIu64" "), number);
 }
 
 
