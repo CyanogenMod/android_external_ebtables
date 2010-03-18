@@ -50,6 +50,7 @@ scripts: arptables-save arptables-restore arptables.sysv
 	cat arptables-restore | sed 's/__EXEC_PATH__/$(tmp1)/g' > arptables-restore_
 	install -m 0755 arptables-restore_ $(DESTDIR)$(BINDIR)/arptables-restore
 	cat arptables.sysv | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__SYSCONFIG__/$(tmp2)/g' > arptables.sysv_
+	if [ "$(DESTDIR)" != "" ]; then mkdir -p $(DESTDIR)$(INITDIR); fi
 	if test -d $(DESTDIR)$(INITDIR); then install -m 0755 arptables.sysv_ $(DESTDIR)$(INITDIR)/arptables; fi
 	rm -f arptables-save_ arptables-restore_ arptables.sysv_
 
