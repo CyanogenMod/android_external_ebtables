@@ -1,4 +1,4 @@
-/* Library which manipulates firewall rules.  Version $Revision: 1.6 $ */
+/* Library which manipulates firewall rules.  Version $Revision: 1.7 $ */
 
 /* Architecture of firewall rules is as follows:
  *
@@ -121,7 +121,7 @@ entry2index(const TC_HANDLE_T h, const STRUCT_ENTRY *seek)
 
 	if (ENTRY_ITERATE(h->entries.entrytable, h->entries.size,
 			  get_number, seek, &pos) == 0) {
-		fprintf(stderr, "ERROR: offset %i not an entry!\n",
+		fprintf(stderr, "ERROR: offset %zu not an entry!\n",
 			(char *)seek - (char *)h->entries.entrytable);
 		abort();
 	}
@@ -581,6 +581,7 @@ static const char *
 target_name(TC_HANDLE_T handle, const STRUCT_ENTRY *ce)
 {
 	int spos;
+	const unsigned char *data;
 	unsigned int labelidx;
 	STRUCT_ENTRY *jumpto;
 
@@ -591,7 +592,8 @@ target_name(TC_HANDLE_T handle, const STRUCT_ENTRY *ce)
 		return GET_TARGET(e)->u.user.name;
 
 	/* Standard target: evaluate */
-	spos = *(int *)GET_TARGET(e)->data;
+	data = GET_TARGET(e)->data;
+	spos = *(const int *)data;
 	if (spos < 0) {
 		if (spos == RETURN)
 			return LABEL_RETURN;
