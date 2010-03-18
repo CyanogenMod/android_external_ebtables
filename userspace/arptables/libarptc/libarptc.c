@@ -15,6 +15,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -132,7 +133,7 @@ dump_entry(STRUCT_ENTRY *e, const TC_HANDLE_T handle)
 		printf("%c", e->arp.outiface_mask[i] ? 'X' : '.');
 	printf("Flags: %02X\n", e->arp.flags);
 	printf("Invflags: %02X\n", e->arp.invflags);
-	printf("Counters: %llu packets, %llu bytes\n",
+	printf("Counters: %"PRIu64" packets, %"PRIu64" bytes\n",
 	       e->counters.pcnt, e->counters.bcnt);
 /*
 	printf("Cache: %08X ", e->nfcache);
@@ -159,7 +160,8 @@ dump_entry(STRUCT_ENTRY *e, const TC_HANDLE_T handle)
 	t = GET_TARGET(e);
 	printf("Target name: `%s' [%u]\n", t->u.user.name, t->u.target_size);
 	if (strcmp(t->u.user.name, STANDARD_TARGET) == 0) {
-		int pos = *(int *)t->data;
+		const unsigned char *data = t->data;
+		const int pos = *(const int *)data;
 		if (pos < 0)
 			printf("verdict=%s\n",
 			       pos == -NF_ACCEPT-1 ? "NF_ACCEPT"
