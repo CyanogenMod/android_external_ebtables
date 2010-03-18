@@ -156,10 +156,10 @@ scripts: ebtables-save ebtables.sysv ebtables-config
 	mkdir -p $(DESTDIR)$(BINDIR)
 	install -m 0755 -o root -g root ebtables-save_ $(DESTDIR)$(BINDIR)/ebtables-save
 	cat ebtables.sysv | sed 's/__EXEC_PATH__/$(tmp1)/g' | sed 's/__SYSCONFIG__/$(tmp2)/g' > ebtables.sysv_
-	if [ $(DESTDIR) != "" ]; then mkdir -p $(DESTDIR)$(INITDIR); fi
+	if [ "$(DESTDIR)" != "" ]; then mkdir -p $(DESTDIR)$(INITDIR); fi
 	if test -d $(DESTDIR)$(INITDIR); then install -m 0755 -o root -g root ebtables.sysv_ $(DESTDIR)$(INITDIR)/ebtables; fi
 	cat ebtables-config | sed 's/__SYSCONFIG__/$(tmp2)/g' > ebtables-config_
-	if [ $(DESTDIR) != "" ]; then mkdir -p $(DESTDIR)$(SYSCONFIGDIR); fi
+	if [ "$(DESTDIR)" != "" ]; then mkdir -p $(DESTDIR)$(SYSCONFIGDIR); fi
 	if test -d $(DESTDIR)$(SYSCONFIGDIR); then install -m 0600 -o root -g root ebtables-config_ $(DESTDIR)$(SYSCONFIGDIR)/ebtables-config; fi
 	rm -f ebtables-save_ ebtables.sysv_ ebtables-config_
 
