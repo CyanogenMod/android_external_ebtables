@@ -13,16 +13,15 @@
 # 25 November 2004: added ebt_ulog.h and ebt_ulog.c
 # 13 March 2005: added ip_tables.h, arp_tables.h and ip6_tables.h
 # 15 September 2005: added br_stp_bpdu.c
+# 9 March 2010: added include/net/ip.h, net/ipv4/netfilter/ip_conntrack_core.c
 
-#export FROM=linux-2.4.22
-#export TO=fedora-kernel-2.4.22-1.2174
-#export FILE=ebtables-brnf-3_vs_fedora-kernel-2.4.22-1.2174.diff
-export FROM=linux-2.4.31
-export TO=linux-2.4.31-ebt-brnf
-export FILE=ebtables-brnf-11_vs_2.4.31.diff
+export FROM=linux-2.4.37.9
+export TO=linux-2.4.37.9-ebt-brnf
+export FILE=ebtables-brnf-13_vs_2.4.37.9.diff
 
 diff -urNp --exclude TAGS $FROM/net/bridge/br_private.h $TO/net/bridge/br_private.h > $FILE
 diff -urNp --exclude TAGS $FROM/include/linux/if_bridge.h $TO/include/linux/if_bridge.h >> $FILE
+diff -urNp --exclude TAGS $FROM/include/net/ip.h $TO/include/net/ip.h >> $FILE
 diff -urNp --exclude TAGS $FROM/net/core/dev.c $TO/net/core/dev.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/br_input.c $TO/net/bridge/br_input.c >> $FILE
 diff -urNp --exclude TAGS $FROM/net/bridge/br_stp_bpdu.c $TO/net/bridge/br_stp_bpdu.c >> $FILE
@@ -85,6 +84,7 @@ diff -urNp $FROM/include/linux/skbuff.h $TO/include/linux/skbuff.h >> $FILE
 diff -urNp $FROM/net/core/netfilter.c $TO/net/core/netfilter.c >> $FILE
 diff -urNp $FROM/net/core/skbuff.c $TO/net/core/skbuff.c >> $FILE
 diff -urNp $FROM/net/ipv4/netfilter/ip_tables.c $TO/net/ipv4/netfilter/ip_tables.c >> $FILE
+diff -urNp $FROM/net/ipv4/netfilter/ip_conntrack_core.c $TO/net/ipv4/netfilter/ip_conntrack_core.c >> $FILE
 diff -urNp $FROM/net/ipv4/ip_output.c $TO/net/ipv4/ip_output.c >> $FILE
 diff -urNp $FROM/net/ipv4/netfilter/ipt_LOG.c $TO/net/ipv4/netfilter/ipt_LOG.c >> $FILE
 diff -urNp $FROM/net/ipv4/netfilter/Makefile $TO/net/ipv4/netfilter/Makefile >> $FILE
