@@ -365,7 +365,7 @@ static int parse(int c, char **argv, int argc,
 		       ebt_mac_wormhash_size(wh));
 		h->match_size = EBT_ALIGN(new_size);
 		info = (struct ebt_among_info *) h->data;
-		if (c == AMONG_DST) {
+		if (c == AMONG_DST || c == AMONG_DST_F) {
 			info->wh_dst_ofs = old_size;
 		} else {
 			info->wh_src_ofs = old_size;
