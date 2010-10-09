@@ -2040,7 +2040,7 @@ int do_command(int argc, char *argv[], char **table, arptc_handle_t *handle)
 			check_inverse(optarg, &invert, &optind, argc);
 			set_option(&options, OPT_P_TYPE, &fw.arp.invflags,
 				   invert);
-			if (get16_and_mask(argv[optind - 1], &fw.arp.arpro, &fw.arp.arpro_mask, 10)) {
+			if (get16_and_mask(argv[optind - 1], &fw.arp.arpro, &fw.arp.arpro_mask, 0)) {
 				if (strcasecmp(argv[optind-1], "ipv4"))
 					exit_error(PARAMETER_PROBLEM, "Problem with specified protocol type");
 				fw.arp.arpro = htons(0x800);
