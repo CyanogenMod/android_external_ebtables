@@ -31,7 +31,7 @@ libarptc/libarptc.o: libarptc/libarptc.c libarptc/libarptc_incl.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 arptables: arptables-standalone.o arptables.o libarptc/libarptc.o $(EXT_OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 $(DESTDIR)$(MANDIR)/man8/arptables.8: arptables.8
 	mkdir -p $(@D)
