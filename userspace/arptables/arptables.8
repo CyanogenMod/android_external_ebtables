@@ -297,6 +297,15 @@ Mangles Destination MAC Address to given value.
 .BR "--mangle-target target "
 Target of ARP mangle operation
 .BR "" ( DROP ", " CONTINUE " or " ACCEPT " -- default is " ACCEPT ).
+.SS CLASSIFY
+This  module  allows you to set the skb->priority value (and thus clas-
+sify the packet into a specific CBQ class).
+
+.TP
+.BR "--set-class major:minor"
+
+Set the major and minor  class  value.  The  values  are  always
+interpreted as hexadecimal even if no 0x prefix is given.
 
 .SH MAILINGLISTS
 .BR "" "See " http://netfilter.org/mailinglists.html
