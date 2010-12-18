@@ -23,6 +23,7 @@
 
 #ifndef EBTABLES_U_H
 #define EBTABLES_U_H
+#define __EXPORTED_HEADERS__
 #include <netinet/in.h>
 #include <linux/netfilter_bridge/ebtables.h>
 #include <linux/netfilter/x_tables.h>
