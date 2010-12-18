@@ -12,8 +12,8 @@
 #include <getopt.h>
 #include <ctype.h>
 #include <unistd.h>
-#include <netinet/ether.h>
 #include "../include/ebtables_u.h"
+#include <netinet/ether.h>
 #include "../include/ethernetdb.h"
 #include <linux/if_ether.h>
 #include <linux/netfilter_bridge/ebt_among.h>
