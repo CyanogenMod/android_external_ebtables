@@ -700,6 +700,17 @@ If
 The flag
 .B --ip6-dport
 is an alias for this option.
+.TP
+.BR "--ip6-icmp-type " "[!] {\fItype\fP[:\fItype\fP]/\fIcode\fP[:\fIcode\fP]|\fItypename\fP}"
+Specify ipv6\-icmp type and code to match.
+Ranges for both type and code are supported. Type and code are
+separated by a slash. Valid numbers for type and range are 0 to 255.
+To match a single type including all valid codes, symbolic names can
+be used instead of numbers. The list of known type names is shown by the command
+.nf
+  ebtables \-\-help ip6
+.fi
+This option is only valid for \-\-ip6-prococol ipv6-icmp.
 .SS limit
 This module matches at a limited rate using a token bucket filter.
 A rule using this extension will match until this limit is reached.

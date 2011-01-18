@@ -377,4 +377,8 @@ extern int ebt_printstyle_mac;
 #define PROC_SYS_MODPROBE "/proc/sys/kernel/modprobe"
 #endif
 #define ATOMIC_ENV_VARIABLE "EBTABLES_ATOMIC_FILE"
+
+#ifndef ARRAY_SIZE
+# define ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
+#endif
 #endif /* EBTABLES_U_H */
