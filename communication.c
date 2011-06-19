@@ -238,9 +238,13 @@ void ebt_deliver_table(struct ebt_u_replace *u_repl)
 			goto free_repl;
 	}
 
-	ebt_print_error("The kernel doesn't support a certain ebtables"
-		    " extension, consider recompiling your kernel or insmod"
-		    " the extension");
+	ebt_print_error("Unable to update the kernel. Two possible causes:\n"
+			"1. Multiple ebtables programs were executing simultaneously. The ebtables\n"
+			"   userspace tool doesn't by default support multiple ebtables programs running\n"
+			"   concurrently. The ebtables option --concurrent or a tool like flock can be\n"
+			"   used to support concurrent scripts that update the ebtables kernel tables.\n"
+			"2. The kernel doesn't support a certain ebtables extension, consider\n"
+			"   recompiling your kernel or insmod the extension.\n");
 free_repl:
 	if (repl) {
 		free(repl->entries);
