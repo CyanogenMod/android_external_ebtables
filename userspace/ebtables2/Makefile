@@ -82,11 +82,10 @@ ebtables.o: ebtables.c include/ebtables_u.h
 ebtables-standalone.o: ebtables-standalone.c include/ebtables_u.h
 	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) $(PROGSPECS) -c $< -o $@ -I$(KERNEL_INCLUDES)
 
-.PHONY: libebtc
-libebtc: $(OBJECTS2)
+libebtc.so: $(OBJECTS2)
 	$(CC) -shared $(LDFLAGS) -Wl,-soname,libebtc.so -o libebtc.so -lc $(OBJECTS2)
 
-ebtables: $(OBJECTS) ebtables-standalone.o libebtc
+ebtables: $(OBJECTS) ebtables-standalone.o libebtc.so
 	$(CC) $(CFLAGS) $(CFLAGS_SH_LIB) $(LDFLAGS) -o $@ ebtables-standalone.o -I$(KERNEL_INCLUDES) -L. -Lextensions -lebtc $(EXT_LIBSI) \
 	-Wl,-rpath,$(LIBDIR)
 
@@ -96,14 +95,14 @@ ebtablesu: ebtablesu.c
 ebtablesd.o: ebtablesd.c include/ebtables_u.h
 	$(CC) $(CFLAGS) $(PROGSPECSD) -c $< -o $@  -I$(KERNEL_INCLUDES)
 
-ebtablesd: $(OBJECTS) ebtablesd.o libebtc
+ebtablesd: $(OBJECTS) ebtablesd.o libebtc.so
 	$(CC) $(CFLAGS) -o $@ ebtablesd.o -I$(KERNEL_INCLUDES) -L. -Lextensions -lebtc $(EXT_LIBSI) \
 	-Wl,-rpath,$(LIBDIR)
 
 ebtables-restore.o: ebtables-restore.c include/ebtables_u.h
 	$(CC) $(CFLAGS) $(PROGSPECS) -c $< -o $@  -I$(KERNEL_INCLUDES)
 
-ebtables-restore: $(OBJECTS) ebtables-restore.o libebtc
+ebtables-restore: $(OBJECTS) ebtables-restore.o libebtc.so
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ ebtables-restore.o -I$(KERNEL_INCLUDES) -L. -Lextensions -lebtc $(EXT_LIBSI) \
 	-Wl,-rpath,$(LIBDIR)
 
