@@ -202,11 +202,13 @@ static struct ebt_mac_wormhash *create_wormhash(const char *arg)
 			if (read_until(&pc, ":", token, 2) < 0
 			    || token[0] == 0) {
 				ebt_print_error("MAC parse error: %.20s", anchor);
+				free(workcopy);
 				return NULL;
 			}
 			mac[i] = strtol(token, &endptr, 16);
 			if (*endptr) {
 				ebt_print_error("MAC parse error: %.20s", anchor);
+				free(workcopy);
 				return NULL;
 			}
 			pc++;
