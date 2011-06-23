@@ -473,8 +473,8 @@ void ebt_delete_cc(struct ebt_cntchanges *cc)
 		cc->prev->next = cc->next;
 		cc->next->prev = cc->prev;
 		free(cc);
-	}
-	cc->type = CNT_DEL;
+	} else
+		cc->type = CNT_DEL;
 }
 
 void ebt_empty_chain(struct ebt_u_entries *entries)
