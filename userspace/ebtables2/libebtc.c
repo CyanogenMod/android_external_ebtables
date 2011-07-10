@@ -32,6 +32,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <errno.h>
 
 static void decrease_chain_jumps(struct ebt_u_replace *replace);
@@ -131,8 +133,10 @@ void ebt_list_extensions()
 	}
 }
 
+#ifndef LOCKFILE
 #define LOCKDIR "/var/lib/ebtables"
 #define LOCKFILE LOCKDIR"/lock"
+#endif
 static int lockfd = -1, locked;
 int use_lockfd;
 /* Returns 0 on success, -1 when the file is locked by another process
