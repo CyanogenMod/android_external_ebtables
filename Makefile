@@ -1,10 +1,12 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGRELEASE:=2
-PROGVERSION_:=2.0.9
+PROGRELEASE:=1
+PROGVERSION_:=2.0.10
 PROGVERSION:=$(PROGVERSION_)-$(PROGRELEASE)
-PROGDATE:=June\ 2009
+PROGDATE:=July\ 2011
+LOCKFILE?=/var/lib/ebtables/lock
+LOCKDIR:=$(shell echo $(LOCKFILE) | sed 's/\(.*\)\/.*/\1/')/
 
 # default paths
 LIBDIR:=/usr/lib
@@ -15,7 +17,7 @@ INITDIR:=/etc/rc.d/init.d
 SYSCONFIGDIR:=/etc/sysconfig
 DESTDIR:=
 
-CFLAGS:=-Wall -Wunused
+CFLAGS:=-Wall -Wunused -Werror
 CFLAGS_SH_LIB:=-fPIC
 CC:=gcc
 
@@ -45,7 +47,9 @@ PROGSPECS:=-DPROGVERSION=\"$(PROGVERSION)\" \
 	-DPROGDATE=\"$(PROGDATE)\" \
 	-D_PATH_ETHERTYPES=\"$(ETHERTYPESFILE)\" \
 	-DEBTD_ARGC_MAX=$(EBTD_ARGC_MAX) \
-	-DEBTD_CMDLINE_MAXLN=$(EBTD_CMDLINE_MAXLN)
+	-DEBTD_CMDLINE_MAXLN=$(EBTD_CMDLINE_MAXLN) \
+	-DLOCKFILE=\"$(LOCKFILE)\" \
+	-DLOCKDIR=\"$(LOCKDIR)\"
 
 # You can probably ignore this, ebtables{u,d} are normally not used
 PROGSPECSD:=-DPROGVERSION=\"$(PROGVERSION)\" \
@@ -162,9 +166,10 @@ scripts: ebtables-save ebtables.sysv ebtables-config
 	if test -d $(DESTDIR)$(SYSCONFIGDIR); then install -m 0600 -o root -g root ebtables-config_ $(DESTDIR)$(SYSCONFIGDIR)/ebtables-config; fi
 	rm -f ebtables-save_ ebtables.sysv_ ebtables-config_
 
+tmp4:=$(shell printf $(LOCKFILE) | sed 's/\//\\\//g')
 $(MANDIR)/man8/ebtables.8: ebtables.8
 	mkdir -p $(DESTDIR)$(@D)
-	sed 's/$$(VERSION)/$(PROGVERSION)/' ebtables.8 | sed 's/$$(DATE)/$(PROGDATE)/' > ebtables.8_
+	sed -e 's/$$(VERSION)/$(PROGVERSION)/' -e 's/$$(DATE)/$(PROGDATE)/' -e 's/$$(LOCKFILE)/$(tmp4)/' ebtables.8 > ebtables.8_
 	install -m 0644 -o root -g root ebtables.8_ $(DESTDIR)$@
 	rm -f ebtables.8_
 
@@ -219,10 +224,8 @@ release:
 	touch include/*
 	touch include/linux/*
 	touch include/linux/netfilter_bridge/*
-	sed -i 's/$$(VERSION)/$(PROGVERSION)/' ebtables.8
-	sed -i 's/$$(DATE)/$(PROGDATE)/' ebtables.8
-	sed -i 's/$$(VERSION)/$(PROGVERSION_)/' ebtables.spec
-	sed -i 's/$$(RELEASE)/$(PROGRELEASE)/' ebtables.spec
+	sed -i -e 's/$$(VERSION)/$(PROGVERSION)/' -e 's/$$(DATE)/$(PROGDATE)/' -e 's/$$(LOCKFILE)/$(tmp4)/' ebtables.8
+	sed -i -e 's/$$(VERSION)/$(PROGVERSION_)/' -e 's/$$(RELEASE)/$(PROGRELEASE)/' ebtables.spec
 	cd ..;tar -c $(DIR) | gzip >$(DIR).tar.gz; cd -
 	rm -rf include/linux
 
