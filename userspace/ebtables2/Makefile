@@ -1,7 +1,7 @@
 # ebtables Makefile
 
 PROGNAME:=ebtables
-PROGRELEASE:=1
+PROGRELEASE:=2
 PROGVERSION_:=2.0.10
 PROGVERSION:=$(PROGVERSION_)-$(PROGRELEASE)
 PROGDATE:=July\ 2011
@@ -18,7 +18,7 @@ SYSCONFIGDIR:=/etc/sysconfig
 DESTDIR:=
 
 CFLAGS:=-Wall -Wunused -Werror
-CFLAGS_SH_LIB:=-fPIC
+CFLAGS_SH_LIB:=-fPIC -O3
 CC:=gcc
 
 ifeq ($(shell uname -m),sparc64)
