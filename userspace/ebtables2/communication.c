@@ -309,6 +309,7 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl)
 	new = newcounters;
 	while (cc != u_repl->cc) {
 		if (!next || next == entries->entries) {
+			chainnr++;
 			while (chainnr < u_repl->num_chains && (!(entries = u_repl->chains[chainnr]) ||
 			       (next = entries->entries->next) == entries->entries))
 				chainnr++;
