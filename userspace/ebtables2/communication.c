@@ -295,7 +295,7 @@ void ebt_deliver_counters(struct ebt_u_replace *u_repl)
 	struct ebt_cntchanges *cc = u_repl->cc->next, *cc2;
 	struct ebt_u_entries *entries = NULL;
 	struct ebt_u_entry *next = NULL;
-	int i, chainnr = 0;
+	int i, chainnr = -1;
 
 	if (u_repl->nentries == 0)
 		return;
