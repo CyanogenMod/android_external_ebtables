@@ -24,7 +24,14 @@
 #ifndef EBTABLES_U_H
 #define EBTABLES_U_H
 #include <netinet/in.h>
+
+#ifdef __ANDROID_API__
+#pragma message "Found __ANDRIOD_API__, #undef __unused"
+#undef __unused
+#include <ebtables.h>
+#else
 #include <linux/netfilter_bridge/ebtables.h>
+#endif
 #include <linux/netfilter/x_tables.h>
 
 #ifndef IPPROTO_SCTP

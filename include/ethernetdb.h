@@ -30,6 +30,8 @@
 #define	_PATH_ETHERTYPES	"/etc/ethertypes"
 #endif				/* _PATH_ETHERTYPES */
 
+#define __THROW
+
 struct ethertypeent {
 	char *e_name;		/* Official ethernet type name.  */
 	char **e_aliases;	/* Alias list.  */
