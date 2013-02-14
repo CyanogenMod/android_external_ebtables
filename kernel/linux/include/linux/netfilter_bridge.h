@@ -6,6 +6,7 @@
 
 #include <linux/config.h>
 #include <linux/netfilter.h>
+#include  <limits.h>
 
 /* Bridge Hooks */
 /* After promisc drops, checksum checks. */
