@@ -31,19 +31,21 @@ LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
 
 # sources and intermediate files are separated
+include $(CLEAR_VARS)
 
-c_includes := $(LOCAL_PATH)/include
-c_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-local_additional_dependencies := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
-cflags := -O2 -g \
+LOCAL_CFLAGS := -O2 -g \
         -DPROGNAME=\"ebtables\" \
         -DPROGVERSION=\"2.0.10\" \
         -DPROGDATE=\"December\ 2011\" \
         -Wno-sign-compare -Wno-missing-field-initializers \
         -Wno-ignored-qualifiers
 
-extensions_src_files := \
+LOCAL_SRC_FILES := \
+	    ebtables-standalone.c \
         extensions/ebt_802_3.c \
         extensions/ebt_among.c \
         extensions/ebt_arp.c \
@@ -65,39 +67,6 @@ extensions_src_files := \
         extensions/ebtable_broute.c \
         extensions/ebtable_filter.c \
         extensions/ebtable_nat.c
-
-ld_flags := -nostartfiles
-shared_libs := libebtc
-module_tags := eng
-
-$(foreach file,$(extensions_src_files), \
-    $(eval include $(CLEAR_VARS)) \
-    $(eval LOCAL_C_INCLUDES := $(c_includes)) \
-    $(eval LOCAL_ADDITIONAL_DEPENDENCIES := $(local_additional_dependencies)) \
-    $(eval LOCAL_SRC_FILES := $(file)) \
-    $(eval tmp_file := $(notdir $(file:%.c=%))) \
-    $(eval tmp_file := $(addprefix lib, $(tmp_file))) \
-    $(eval LOCAL_MODULE := $(tmp_file)) \
-    $(eval LOCAL_MODULE_TAGS := $(module_tags)) \
-    $(eval LOCAL_LDFLAGS := $(ld_flags)) \
-    $(eval LOCAL_CFLAGS := $(cflags)) \
-    $(eval LOCAL_SHARED_LIBRARIES := $(shared_libs)) \
-    $(eval include $(BUILD_SHARED_LIBRARY)) \
-)
-
-
-###############################
-include $(CLEAR_VARS)
-
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/include
-LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-
-LOCAL_CFLAGS += -DPROGNAME=\"ebtables\" \
-        -DPROGVERSION=\"2.0.10\" \
-        -DPROGDATE=\"December\ 2011\"
-
-LOCAL_SRC_FILES := ebtables-standalone.c
 
 LOCAL_SHARED_LIBRARIES += \
         libebtc \
@@ -124,9 +93,7 @@ LOCAL_SHARED_LIBRARIES += \
         libebtable_nat
 
 LOCAL_MODULE := ebtables
-
 LOCAL_MODULE_TAGS := optional
-
 include $(BUILD_EXECUTABLE)
 
 

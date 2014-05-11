@@ -166,7 +166,7 @@ static struct ebt_u_watcher nflog_watcher = {
 	.extra_ops = nflog_opts,
 };
 
-void _init(void)
+void _nflog_init(void)
 {
 	ebt_register_watcher(&nflog_watcher);
 }
