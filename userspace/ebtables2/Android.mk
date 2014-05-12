@@ -69,28 +69,7 @@ LOCAL_SRC_FILES := \
         extensions/ebtable_nat.c
 
 LOCAL_SHARED_LIBRARIES += \
-        libebtc \
-        libebt_802_3 \
-        libebt_among \
-        libebt_arp \
-        libebt_arpreply \
-        libebt_ip \
-        libebt_ip6 \
-        libebt_limit \
-        libebt_log \
-        libebt_mark \
-        libebt_mark_m \
-        libebt_nat \
-        libebt_nflog \
-        libebt_pkttype \
-        libebt_redirect \
-        libebt_standard \
-        libebt_stp \
-        libebt_ulog \
-        libebt_vlan \
-        libebtable_broute \
-        libebtable_filter \
-        libebtable_nat
+        libebtc
 
 LOCAL_MODULE := ebtables
 LOCAL_MODULE_TAGS := optional
